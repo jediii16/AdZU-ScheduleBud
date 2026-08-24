@@ -8,11 +8,17 @@ export const initialEditorState: EditorSlice["editor"] = {
   previewZoom: 1,
   previewPan: { x: 0, y: 0 },
   dragging: false,
+  alignmentGuides: { verticalCenter: false, horizontalCenter: false },
 };
 
 export function createEditorSlice(context: StoreContext): EditorSlice {
   return {
     editor: initialEditorState,
+    setActiveEditorSection(activeSection) {
+      context.set((state) => ({
+        editor: { ...state.editor, activeSection, inspectorOpen: true },
+      }));
+    },
     setEditorSelection(subjectId, meetingId = null) {
       context.set((state) => ({
         editor: {
@@ -32,6 +38,11 @@ export function createEditorSlice(context: StoreContext): EditorSlice {
     },
     setDragging(dragging) {
       context.set((state) => ({ editor: { ...state.editor, dragging } }));
+    },
+    setAlignmentGuides(alignmentGuides) {
+      context.set((state) => ({
+        editor: { ...state.editor, alignmentGuides },
+      }));
     },
   };
 }

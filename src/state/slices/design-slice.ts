@@ -42,6 +42,8 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
       }));
     },
     setDensity: (value) => edit("Change density", "density", value),
+    setDayVisibility: (value) =>
+      edit("Change day visibility", "dayVisibility", value),
     setVisibleField(field, visible) {
       context.commit("Change visible fields", (project) => ({
         ...project,

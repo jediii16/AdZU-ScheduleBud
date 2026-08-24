@@ -45,8 +45,10 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         dimensionSource: input.dimensionSource ?? "custom",
         presetId: input.presetId ?? null,
         orientation: inferOrientation(input.dimensions),
-        compositionId: "default",
-        schedulePosition: { x: 0.5, y: 0.5 },
+        compositionId: input.compositionId ?? "default",
+        schedulePosition: clampNormalizedPoint(
+          input.schedulePosition ?? { x: 0.5, y: 0.5 },
+        ),
         layoutOverride: null,
         densityOverride: null,
         visibleFieldsOverride: null,

@@ -26,6 +26,7 @@ export function createBlankProject({
       layoutId: "cards",
       photoComposition: null,
       weekMode: "full",
+      dayVisibility: "scheduled-only",
       clockFormat: "12-hour",
       density: "comfortable",
       visibleFields: {

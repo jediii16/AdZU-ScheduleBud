@@ -69,6 +69,7 @@ export type EditorState = {
   previewZoom: number;
   previewPan: { x: number; y: number };
   dragging: boolean;
+  alignmentGuides: { verticalCenter: boolean; horizontalCenter: boolean };
 };
 
 export interface ProjectSlice {
@@ -128,6 +129,7 @@ export interface DesignSlice {
     design: Omit<ProjectDesign, "baseTemplateId" | "templateModified">,
   ): void;
   setDensity(density: Density): void;
+  setDayVisibility(value: ProjectDesign["dayVisibility"]): void;
   setVisibleField(field: keyof VisibleFields, visible: boolean): void;
   setSubjectColorMode(mode: ProjectDesign["subjectColors"]["mode"]): void;
   setSubjectColor(subjectId: string, color: string | null): void;
@@ -148,6 +150,8 @@ export interface DeviceSlice {
     dimensions: DeviceDimensions;
     dimensionSource?: DeviceVariant["dimensionSource"];
     presetId?: string | null;
+    schedulePosition?: NormalizedPoint;
+    compositionId?: string;
   }): string | null;
   removeDeviceVariant(variantId: string): void;
   setActiveDeviceVariant(variantId: string): void;
@@ -183,10 +187,12 @@ export interface DeviceSlice {
 
 export interface EditorSlice {
   editor: EditorState;
+  setActiveEditorSection(section: EditorState["activeSection"]): void;
   setEditorSelection(subjectId: string | null, meetingId?: string | null): void;
   setPreviewViewport(zoom: number, pan: { x: number; y: number }): void;
   setInspectorOpen(open: boolean): void;
   setDragging(dragging: boolean): void;
+  setAlignmentGuides(guides: EditorState["alignmentGuides"]): void;
 }
 
 export interface HistorySlice {

@@ -45,7 +45,7 @@ The domain preserves these invariants:
 
 ## Project and state boundaries
 
-`src/domain/project` defines schema version 1 of `ScheduleProject`. It contains metadata, the canonical `Subject[]` schedule, shared `ProjectDesign`, independent device variants, asset IDs, and ISO timestamps. Project title is local-library metadata; wallpaper title and optional semester, school-year, program, and section labels are independent display controls. A blank project has no invented subjects and an explicit no-device-yet state.
+`src/domain/project` defines schema version 1 of `ScheduleProject`. It contains metadata, the canonical `Subject[]` schedule, shared `ProjectDesign`, independent device variants, asset IDs, and ISO timestamps. Project title is local-library metadata; wallpaper title and optional semester, school-year, program, and section labels are independent display controls. Cards day visibility (`scheduled-only` or `full-week`) is a typed design choice separate from occurrence week interpretation. A blank project has no invented subjects and an explicit no-device-yet state.
 
 One Zustand vanilla store is composed from project, schedule, design, device, editor, and history slice creators. Project/schedule/design/device data is persistent. Editor zoom, pan, selections, inspector state, and drag state are temporary. Calculated conflicts, occurrences, time ranges, overlap columns, resolved themes, render models, and safe-area collision results are never persisted. Focused selectors expose active/project/subject/design/device views without requiring whole-store subscriptions.
 
@@ -53,9 +53,9 @@ Every meaningful project mutation passes through a Zod-validated commit boundary
 
 ## Renderer boundary
 
-`src/domain/render` defines a plain `RenderModel` containing the exact target width, height, an ordered five-layer tuple, and resolved node geometry. `RenderNode` is a discriminated union of rectangle, text, image, and line nodes. Text nodes expose typed font IDs, typography, wrapping, and alignment; image nodes require stable asset IDs and typed fit/crop data; lines use point arrays instead of rectangle geometry. Future layout builders will construct this model from a validated project. React Konva components in `src/renderer/konva` will only draw it; they will not run core schedule layout algorithms or read the whole Zustand store.
+`src/domain/render` defines a plain `RenderModel` containing the exact target width, height, an ordered five-layer tuple, and resolved node geometry. `RenderNode` is a discriminated union of rectangle, text, image, and line nodes. Text nodes expose typed font IDs, typography, wrapping, and alignment; image nodes require stable asset IDs and typed fit/crop data; lines use point arrays instead of rectangle geometry. The Phase 4 pure Cards builder now resolves Clean Slate Phone and Desktop geometry from a validated project and active device variant. React Konva components only draw that result; they do not run schedule layout algorithms or read Zustand.
 
-Export layers are background, scenery, photos, schedule, and foreground. `EditorOverlayModel` is separate. PNG export will use the selected canvas dimensions exactly, independent of preview zoom. PDF export will reuse the same rendered wallpaper image on a matching-aspect page.
+Export layers are background, scenery, photos, schedule, and foreground. `EditorOverlayModel` is separate. The preview and exact-size PNG export use the same RenderModel and React Konva scene; only the preview adds the separate selection/drag layer and view scale. Phone exports at 1080 × 2400 and Desktop at 1920 × 1080, independent of preview zoom. PDF remains deferred.
 
 ## Persistence and binary assets
 

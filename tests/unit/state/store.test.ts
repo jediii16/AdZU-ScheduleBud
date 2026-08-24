@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createBlankProject } from "@/domain/project";
+import { resolveAlignmentSnap } from "@/domain/render";
 import {
   selectActiveDeviceVariant,
   selectActiveProject,
@@ -386,5 +387,37 @@ describe("autosave and history", () => {
     expect(
       selectActiveDeviceVariant(store.getState())?.schedulePosition,
     ).toEqual({ x: 0.5, y: 0.5 });
+  });
+
+  it("keeps a snapped drag and its guide intermediates in one history transaction", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    const variant = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+      schedulePosition: { x: 0.2, y: 0.2 },
+    })!;
+    const before = store.getState().history.past.length;
+    store.getState().beginHistoryTransaction("Move schedule");
+    const snap = resolveAlignmentSnap({
+      proposedOrigin: { x: 342, y: 1048 },
+      scheduleSize: { width: 400, height: 300 },
+      canvasSize: { width: 1080, height: 2400 },
+      positionRange: { minX: 50, maxX: 630, minY: 50, maxY: 2050 },
+      previewScale: 0.25,
+      enabled: true,
+    });
+    store.getState().setAlignmentGuides(snap.guides);
+    store.getState().setSchedulePosition(variant, { x: 0.5, y: 0.5 });
+    store.getState().setAlignmentGuides({
+      verticalCenter: false,
+      horizontalCenter: false,
+    });
+    store.getState().commitHistoryTransaction();
+    expect(store.getState().history.past).toHaveLength(before + 1);
+    expect(store.getState().editor.alignmentGuides).toEqual({
+      verticalCenter: false,
+      horizontalCenter: false,
+    });
   });
 });

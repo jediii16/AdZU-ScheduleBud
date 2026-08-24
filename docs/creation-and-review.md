@@ -11,7 +11,7 @@
 | `/create/manual`        | Manual class entry and common class editing.                                                |
 | `/create/manual?edit=1` | Edit the active project without starting another project.                                   |
 | `/review`               | Chronological schedule review, incomplete meetings, conflicts, and warning acknowledgement. |
-| `/studio`               | Phase 3 handoff placeholder only; no renderer or artboard.                                  |
+| `/studio`               | Active-project Clean Slate + Cards editor and exact PNG export.                             |
 
 ## Project creation policy
 

@@ -14,6 +14,9 @@ export type LayoutId = z.infer<typeof layoutIdSchema>;
 export const photoCompositionSchema = z.enum(["hero", "split", "polaroid"]);
 export type PhotoComposition = z.infer<typeof photoCompositionSchema>;
 
+export const dayVisibilitySchema = z.enum(["scheduled-only", "full-week"]);
+export type DayVisibility = z.infer<typeof dayVisibilitySchema>;
+
 export const fontIdSchema = z.enum(FONT_IDS);
 
 export const themeDefinitionSchema = z.object({

@@ -1,3 +1,9 @@
 # Konva renderer boundary
 
-Phase 5 will add React Konva components that draw a resolved `RenderModel`. Core schedule and layout calculations must remain in `src/domain`; editor overlays must consume `EditorOverlayModel` separately and must never enter export layers.
+`ScheduleScene` draws the resolved discriminated nodes from a plain
+`RenderModel`. `ScheduleArtboard` uses that same scene for a scaled preview and
+an exact-size export stage. The selection/drag layer lives under
+`editor-overlay` and mounts only on the preview stage.
+
+Core geometry remains in `src/domain/render`; these components do not derive
+schedule occurrences, read the project store, or reinterpret layout.

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  dayVisibilitySchema,
   fontIdSchema,
   layoutIdSchema,
   photoCompositionSchema,
@@ -53,6 +54,7 @@ export const projectDesignSchema = z.object({
   layoutId: layoutIdSchema,
   photoComposition: photoCompositionSchema.nullable(),
   weekMode: z.enum(["full", "compact"]),
+  dayVisibility: dayVisibilitySchema.default("scheduled-only"),
   clockFormat: z.enum(["12-hour", "24-hour"]),
   density: densitySchema,
   visibleFields: visibleFieldsSchema,

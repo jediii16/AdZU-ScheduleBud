@@ -12,6 +12,8 @@
 
 `ProjectDesign` uses stable IDs for themes, variants, layouts, photo compositions, and fonts. Only Clean Slate is currently selectable. Applying a template keeps `baseTemplateId` and sets `templateModified` to false. Later template-controlled edits retain that ID and set `templateModified` to true.
 
+Cards day visibility is persistent design intent and defaults to `scheduled-only`. Per-device “Snap to guides” is a preview preference; transient alignment-guide visibility and drag state remain editor-only and are never persisted or added to history. Only the final normalized schedule position is committed.
+
 A device variant owns semantic category, exact dimensions, dimension provenance, orientation, composition, normalized schedule position, small design overrides, photo transforms, and preview preferences. Preview mode, safe areas, warnings, snapping, and guide IDs are structurally separate from export design.
 
 ## State boundaries
