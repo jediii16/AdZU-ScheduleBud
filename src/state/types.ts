@@ -84,6 +84,18 @@ export interface ProjectSlice {
 }
 
 export interface ScheduleSlice {
+  replaceSchedule(
+    schedule: readonly Subject[],
+    origin: {
+      source: "portal" | "curriculum" | "manual" | "mixed";
+      term?: { schoolYear: string | null; semester: string | null } | null;
+      curriculum?: {
+        programId: string;
+        yearLevel: number;
+        semesterId: string;
+      } | null;
+    },
+  ): void;
   addSubject(input?: SubjectInput): string | null;
   updateSubject(
     subjectId: string,

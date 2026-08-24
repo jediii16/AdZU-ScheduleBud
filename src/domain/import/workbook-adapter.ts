@@ -2,11 +2,7 @@ import { read, utils } from "xlsx";
 
 import type { IdFactory } from "@/domain/schedule";
 
-import {
-  parsePortalRows,
-  type PendingPortalImport,
-  type PortalSubjectResolver,
-} from "./portal-parser";
+import { parsePortalRows, type PendingPortalImport } from "./portal-parser";
 
 export const MAX_PORTAL_WORKBOOK_BYTES = 5 * 1024 * 1024;
 
@@ -23,7 +19,7 @@ export function validatePortalFile(
 
 export function parsePortalWorkbook(
   bytes: ArrayBuffer,
-  options: { idFactory: IdFactory; resolveSubject?: PortalSubjectResolver },
+  options: { idFactory: IdFactory },
 ): PendingPortalImport {
   // Normalize cross-realm ArrayBuffers (worker, browser, and test environments)
   // before passing bytes to SheetJS.

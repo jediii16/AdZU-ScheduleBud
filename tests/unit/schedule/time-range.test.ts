@@ -64,4 +64,29 @@ describe("time range calculation", () => {
       source: "default",
     });
   });
+
+  it("ignores disabled subjects when calculating timetable bounds", () => {
+    const disabled = subject({
+      enabled: false,
+      meetings: [
+        { ...subject().meetings[0]!, startTime: "07:00", endTime: "21:00" },
+      ],
+    });
+    const included = subject({
+      id: "included",
+      meetings: [
+        { ...subject().meetings[0]!, startTime: "10:15", endTime: "11:45" },
+      ],
+    });
+    expect(calculateAutomaticTimeRange([disabled, included])).toEqual({
+      startTime: "10:00",
+      endTime: "12:00",
+      source: "automatic",
+    });
+    expect(calculateAutomaticTimeRange([disabled])).toEqual({
+      startTime: "07:00",
+      endTime: "18:00",
+      source: "default",
+    });
+  });
 });

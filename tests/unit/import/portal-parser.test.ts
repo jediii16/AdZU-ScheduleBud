@@ -51,27 +51,16 @@ describe("Portal row parsing", () => {
         ],
         [null, null, null, null, null, null, null, null],
       ],
-      {
-        idFactory: sequentialIds(),
-        resolveSubject: (code) =>
-          code === "LAB.201"
-            ? {
-                status: "matched",
-                scope: "current-term",
-                subject: { name: "Fictional Laboratory", units: 4 },
-              }
-            : { status: "unmatched" },
-      },
+      { idFactory: sequentialIds() },
     );
     expect(result.kind).toBe("pending-portal-import");
     expect(result.subjects).toHaveLength(1);
     expect(result.subjects[0]).toMatchObject({
-      name: "Fictional Laboratory",
-      units: 4,
-      isCustom: false,
-      importMetadata: {
-        subjectResolution: { status: "matched", scope: "current-term" },
-      },
+      code: "LAB.201",
+      name: "",
+      units: 0,
+      enabled: true,
+      isCustom: true,
     });
     expect(result.subjects[0]?.meetings).toHaveLength(2);
     expect(result.metadata.sourceRowCount).toBe(2);
@@ -138,7 +127,7 @@ describe("Portal row parsing", () => {
     }
   });
 
-  it("keeps an explicitly unmatched subject custom with review metadata", () => {
+  it("treats an enrolled subject code as authoritative without curriculum lookup", () => {
     const result = parsePortalRows(
       [
         headers,
@@ -153,70 +142,13 @@ describe("Portal row parsing", () => {
           "2099-2100-1",
         ],
       ],
-      {
-        idFactory: sequentialIds(),
-        resolveSubject: () => ({
-          status: "unmatched",
-          reason: "No verified definition exists.",
-        }),
-      },
+      { idFactory: sequentialIds() },
     );
     expect(result.subjects[0]).toMatchObject({
-      name: "UNKNOWN.1",
+      name: "",
       units: 0,
       isCustom: true,
-      importMetadata: {
-        subjectResolution: {
-          status: "unmatched",
-          reason: "No verified definition exists.",
-        },
-      },
     });
-    expect(result.warnings[0]?.code).toBe("unmatched-subject");
-  });
-
-  it("never guesses an ambiguous global code", () => {
-    const candidates = [
-      { code: "SHARED.1", name: "First supplied definition", units: 3 },
-      { code: "SHARED.1", name: "Second supplied definition", units: 6 },
-    ] as const;
-    const result = parsePortalRows(
-      [
-        headers,
-        [
-          "SHARED.1",
-          "A",
-          "TH",
-          "10:00 AM - 11:00 AM",
-          1,
-          "",
-          "",
-          "2099-2100-1",
-        ],
-      ],
-      {
-        idFactory: sequentialIds(),
-        resolveSubject: () => ({
-          status: "ambiguous",
-          candidates,
-          reason: "Multiple global definitions share this code.",
-        }),
-      },
-    );
-    expect(result.subjects[0]).toMatchObject({
-      name: "SHARED.1",
-      units: 0,
-      isCustom: true,
-      importMetadata: {
-        subjectResolution: {
-          status: "ambiguous",
-          candidates: [...candidates],
-        },
-      },
-    });
-    expect(result.warnings[0]).toMatchObject({
-      code: "ambiguous-subject",
-      rowNumber: 2,
-    });
+    expect(result.warnings).toEqual([]);
   });
 });

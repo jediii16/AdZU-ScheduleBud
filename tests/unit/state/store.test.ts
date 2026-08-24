@@ -16,6 +16,33 @@ import {
 afterEach(() => vi.useRealTimers());
 
 describe("project and schedule slices", () => {
+  it("atomically replaces a confirmed creation draft with source metadata", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    const subjectId = store
+      .getState()
+      .addSubject({ code: "DRAFT", name: "Existing draft" })!;
+    const subject = store
+      .getState()
+      .projectsById[store.getState().activeProjectId!]!.schedule.find(
+        (item) => item.id === subjectId,
+      )!;
+    const historyBefore = store.getState().history.past.length;
+    store.getState().replaceSchedule([subject], {
+      source: "portal",
+      term: { schoolYear: "2099-2100", semester: null },
+      curriculum: null,
+    });
+    const project =
+      store.getState().projectsById[store.getState().activeProjectId!];
+    expect(project?.metadata).toMatchObject({
+      source: "portal",
+      term: { schoolYear: "2099-2100" },
+      curriculum: null,
+    });
+    expect(store.getState().history.past).toHaveLength(historyBefore + 1);
+  });
+
   it("creates, renames, switches, duplicates, and deletes independent projects", async () => {
     const { store, projects, assets } = createTestStore();
     const first = store.getState().createProject("First");
@@ -277,6 +304,46 @@ describe("autosave and history", () => {
     store.getState().undo();
     store.getState().setWallpaperTitle("New branch");
     expect(store.getState().history.future).toEqual([]);
+  });
+
+  it("keeps exclusion separate from undoable, autosaved removal", async () => {
+    const projects = new MemoryProjectRepository();
+    const { store } = createTestStore({ projects });
+    store.getState().createProject();
+    const subjectId = store
+      .getState()
+      .addSubject({ code: "THESIS1", name: "Thesis I" })!;
+
+    store.getState().setSubjectEnabled(subjectId, false);
+    expect(selectSubjectById(subjectId)(store.getState())).toMatchObject({
+      enabled: false,
+    });
+    store.getState().setSubjectEnabled(subjectId, true);
+    expect(selectSubjectById(subjectId)(store.getState())).toMatchObject({
+      enabled: true,
+    });
+
+    const historyBeforeRemoval = store.getState().history.past.length;
+    store.getState().removeSubject(subjectId);
+    expect(selectSubjectById(subjectId)(store.getState())).toBeUndefined();
+    expect(store.getState().history.past).toHaveLength(
+      historyBeforeRemoval + 1,
+    );
+    await store.getState().flushAutosave();
+    expect(projects.writes.at(-1)?.schedule).toEqual([]);
+
+    store.getState().undo();
+    expect(selectSubjectById(subjectId)(store.getState())).toMatchObject({
+      code: "THESIS1",
+      enabled: true,
+    });
+    await store.getState().flushAutosave();
+    expect(projects.writes.at(-1)?.schedule[0]).toMatchObject({
+      id: subjectId,
+      code: "THESIS1",
+    });
+    store.getState().redo();
+    expect(selectSubjectById(subjectId)(store.getState())).toBeUndefined();
   });
 
   it("bounds history and ignores temporary editor or preview-only changes", () => {

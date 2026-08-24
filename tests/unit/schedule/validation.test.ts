@@ -40,6 +40,24 @@ describe("meeting and schedule validation", () => {
     expect(isSubjectComplete(value)).toBe(false);
   });
 
+  it("does not require disabled subjects or meetings to be complete", () => {
+    expect(
+      isSubjectComplete(
+        subject({
+          enabled: false,
+          meetings: [{ ...subject().meetings[0]!, days: [] }],
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isSubjectComplete(
+        subject({
+          meetings: [{ ...subject().meetings[0]!, enabled: false, days: [] }],
+        }),
+      ),
+    ).toBe(true);
+  });
+
   it("accepts exact supported boundaries and rejects times outside them", () => {
     expect(
       validateMeeting({

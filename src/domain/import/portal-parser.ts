@@ -1,8 +1,6 @@
 import {
   normalizeSubject,
   type IdFactory,
-  type SubjectImportResolution,
-  type SubjectResolutionCandidate,
   type Subject,
 } from "@/domain/schedule";
 
@@ -35,12 +33,7 @@ const HEADER_ALIASES: Record<string, string> = {
 };
 
 export type PortalImportWarning = {
-  code:
-    | "missing-subject"
-    | "invalid-day"
-    | "invalid-time"
-    | "ambiguous-subject"
-    | "unmatched-subject";
+  code: "missing-subject" | "invalid-day" | "invalid-time";
   message: string;
   rowNumber: number;
 };
@@ -55,46 +48,6 @@ export type PendingPortalImport = {
     sourceRowCount: number;
   };
 };
-
-export type PortalSubjectResolution =
-  | {
-      status: "matched";
-      scope: "current-term" | "global";
-      subject: { name: string; units: number };
-    }
-  | {
-      status: "ambiguous";
-      candidates?: readonly SubjectResolutionCandidate[];
-      reason?: string;
-    }
-  | { status: "unmatched"; reason?: string };
-
-export type PortalSubjectResolver = (code: string) => PortalSubjectResolution;
-
-function toImportResolution(
-  resolution: PortalSubjectResolution,
-): SubjectImportResolution {
-  if (resolution.status === "matched") {
-    return { status: "matched", scope: resolution.scope };
-  }
-  if (resolution.status === "ambiguous") {
-    return {
-      status: "ambiguous",
-      ...(resolution.candidates
-        ? {
-            candidates: resolution.candidates.map((candidate) => ({
-              ...candidate,
-            })),
-          }
-        : {}),
-      ...(resolution.reason ? { reason: resolution.reason } : {}),
-    };
-  }
-  return {
-    status: "unmatched",
-    ...(resolution.reason ? { reason: resolution.reason } : {}),
-  };
-}
 
 export class PortalImportError extends Error {
   constructor(
@@ -122,7 +75,6 @@ export function parsePortalRows(
   rawRows: readonly (readonly unknown[])[],
   options: {
     idFactory: IdFactory;
-    resolveSubject?: PortalSubjectResolver;
     sheetName?: string;
   },
 ): PendingPortalImport {
@@ -172,29 +124,6 @@ export function parsePortalRows(
   const schoolYears = new Set<string>();
   const subjects: Subject[] = [];
   for (const group of groups.values()) {
-    const resolution = options.resolveSubject?.(group.code) ?? {
-      status: "unmatched",
-      reason: "No curriculum resolver was provided.",
-    };
-    const firstRowNumber = group.rows[0]!.rowNumber;
-    if (options.resolveSubject && resolution.status === "ambiguous") {
-      warnings.push({
-        code: "ambiguous-subject",
-        message:
-          resolution.reason ??
-          `Subject '${group.code}' has multiple curriculum definitions and was kept custom.`,
-        rowNumber: firstRowNumber,
-      });
-    }
-    if (options.resolveSubject && resolution.status === "unmatched") {
-      warnings.push({
-        code: "unmatched-subject",
-        message:
-          resolution.reason ??
-          `Subject '${group.code}' could not be matched and was kept custom.`,
-        rowNumber: firstRowNumber,
-      });
-    }
     const meetings = group.rows.map(({ row, rowNumber }) => {
       const day = parsePortalDays(row[column("Day")]);
       const time = parsePortalTimeRange(row[column("Time")]);
@@ -241,19 +170,15 @@ export function parsePortalRows(
       normalizeSubject(
         {
           code: group.code,
-          name:
-            resolution.status === "matched"
-              ? resolution.subject.name
-              : group.code,
-          units: resolution.status === "matched" ? resolution.subject.units : 0,
+          name: "",
+          units: 0,
           section: group.section,
           enabled: true,
-          isCustom: resolution.status !== "matched",
+          isCustom: true,
           importMetadata: {
             source: "portal",
             sourceRows: group.rows.map(({ rowNumber }) => rowNumber),
             rawSubject: group.code,
-            subjectResolution: toImportResolution(resolution),
           },
           meetings,
         },

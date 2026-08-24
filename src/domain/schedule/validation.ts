@@ -43,7 +43,12 @@ export function isMeetingComplete(
 }
 
 export function isSubjectComplete(subject: Subject): boolean {
-  return subject.meetings.every(isMeetingComplete);
+  return (
+    !subject.enabled ||
+    subject.meetings.every(
+      (meeting) => !meeting.enabled || isMeetingComplete(meeting),
+    )
+  );
 }
 
 export function validateSchedule(value: unknown): Schedule {

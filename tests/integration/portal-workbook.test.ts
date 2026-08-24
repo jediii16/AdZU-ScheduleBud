@@ -52,6 +52,17 @@ describe("sanitized Portal XLSX fixtures", () => {
         (subject) => subject.meetings[0]?.importMetadata?.session,
       ),
     ).toEqual([1, 1, 1]);
+    expect(
+      result.subjects.map(({ name, units, enabled }) => ({
+        name,
+        units,
+        enabled,
+      })),
+    ).toEqual([
+      { name: "", units: 0, enabled: true },
+      { name: "", units: 0, enabled: true },
+      { name: "", units: 0, enabled: true },
+    ]);
     expect(result.warnings).toEqual([]);
   });
 

@@ -27,7 +27,7 @@ Nineteen of the theoretical 384 four-year/three-term combinations are not suppli
 
 The source uses an additional `countForGPA` field on 128 current subject rows. It is intentionally omitted from the normalized ScheduleBud data because GPA calculation is outside this product's domain.
 
-Forty-two subject codes have more than one supplied name and/or unit definition across programs and terms. Many are punctuation or wording variants, while some are materially different courses or unit values. Examples include `ENG.132`, `ENG.321`, `MAT 106`, `THESIS1`, `FINACC1`, and `ACCAPS 1`. The normalizer preserves every term's supplied values. Portal resolution now represents `matched`, `ambiguous`, and `unmatched` outcomes explicitly: a selected term may provide safe context, while global code-only ambiguity is retained as a custom subject with candidates/reason metadata for review.
+Forty-two subject codes have more than one supplied name and/or unit definition across programs and terms. Many are punctuation or wording variants, while some are materially different courses or unit values. Examples include `ENG.132`, `ENG.321`, `MAT 106`, `THESIS1`, `FINACC1`, and `ACCAPS 1`. The normalizer preserves every term's supplied values. This ambiguity matters only inside the separate curriculum creation flow: Portal import deliberately performs no curriculum lookup because an enrolled Portal schedule is authoritative and may legitimately contain codes outside the static dataset.
 
 Normalized output is under `src/data/curriculum/programs`, one JSON file per program, with deterministic IDs inherited from the supplied current program IDs. `src/data/curriculum/schema.ts` provides Zod validation and development-time error messages.
 

@@ -33,6 +33,7 @@ The domain preserves these invariants:
 - a subject always retains at least one meeting;
 - incomplete meetings remain editable but do not create occurrences;
 - disabled subjects and meetings do not affect layout or conflicts;
+- `Subject.enabled` is the single inclusion contract across Portal, curriculum, and manual creation; disabled subjects remain stored and editable but are ignored by completeness, occurrences, conflicts, timetable bounds, review placement, and future rendering;
 - duplicate operations create independent subject IDs, meeting IDs, and day arrays;
 - back-to-back intervals do not conflict;
 - compact week collapses only exact Monday/Thursday and Tuesday/Friday pairs;
@@ -80,7 +81,7 @@ The browser receives workbook bytes and parses the first worksheet locally with 
 
 Day parsing uses longest-token-first decoding. Time parsing preserves minutes and validates positive 12-hour ranges within 7:00 AM–9:00 PM. Invalid rows become incomplete meetings with their room, professor, raw time, session, school year, and source row metadata intact. Rows with no subject code cannot be grouped; they are skipped only with a row-specific warning.
 
-Parsing returns a discriminated `pending-portal-import` result and has no store dependency. A later confirmation action will replace schedule state atomically. Curriculum-aware resolution is injected through a discriminated `matched | ambiguous | unmatched` contract. A selected term can return a contextual `matched` result; a safe global match can identify its global scope. Ambiguous and unmatched results always remain zero-unit custom subjects, retain typed resolution metadata and optional candidates for review, and are never guessed.
+Parsing returns a discriminated `pending-portal-import` result and has no store or curriculum dependency. Portal rows are authoritative for the student's enrolled schedule: the parser never looks up subject codes in the static curriculum, never infers units, and never emits curriculum-match warnings. When the workbook provides only a code, the canonical subject keeps an empty friendly name and neutral `0` units; code-only display is supported throughout the application. Every pending subject starts included and can be excluded before confirmation without losing its rows, meetings, or import metadata. A later confirmation action replaces schedule state atomically, preserving excluded subjects with `enabled: false`.
 
 ## Layout, theme, and template separation
 
@@ -93,3 +94,11 @@ Only Clean Slate is marked available in the initial theme registry. Other named 
 Shared design intent lives once per project, while composition is stored per semantic phone, tablet, laptop, desktop, or square variant. Pixel dimensions have an independent `preset | custom | matched-screen` source, so every semantic category can use custom dimensions without becoming a generic “custom device.” Variant positions use clamped normalized X/Y coordinates. Layout, density, and visible-field overrides remain target-specific rather than copying the full design. Switching targets selects a preserved variant rather than overwriting another variant. The device registry currently defines categories only; exact model presets are deferred until verified data is supplied.
 
 Match My Screen derives dimensions and orientation from local image metadata. Exact squares can be recommended as square with high confidence; portrait and landscape screenshots return conservative candidate lists and require confirmation rather than using raw pixel thresholds. The optional screenshot remains an editor overlay, is never used for content-based model identification, and will never be exported.
+
+## Creation and review application layer
+
+Phase 3 routes are thin App Router entries over client feature components. A root provider hydrates the singleton local store before interactive children render, preventing creation actions from racing IndexedDB restoration. Tests inject isolated vanilla stores through the same provider.
+
+Creation drafts do not enter Zustand prematurely. Portal uses `PendingPortalImport`; curriculum selection remains component state until a supplied term is confirmed; manual entry commits on the first added class. The shared deterministic policy reuses only an empty active project and otherwise creates a separate project. `replaceSchedule()` is the explicit validated atomic boundary for confirmed Portal and curriculum schedules. Exclusion uses the history-aware `setSubjectEnabled` action, while permanent removal uses the separate history-aware `removeSubject` action; both autosave like other meaningful project changes.
+
+The common Review view calls the existing pure occurrence, validation, conflict, and warning-gate modules. It does not persist derived results and does not share code with a future wallpaper renderer. See `docs/creation-and-review.md` for route and interaction details.

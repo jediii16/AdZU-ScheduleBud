@@ -5,13 +5,33 @@ import {
   normalizeSubject,
   removeMeeting as removeMeetingSafely,
 } from "@/domain/schedule/normalization";
-import { meetingSchema, subjectSchema } from "@/domain/schedule/types";
+import {
+  meetingSchema,
+  scheduleSchema,
+  subjectSchema,
+} from "@/domain/schedule/types";
 import type { ScheduleSlice, StoreContext } from "../types";
 
 export function createScheduleSlice(context: StoreContext): ScheduleSlice {
   const ids = (kind: "subject" | "meeting") =>
     context.dependencies.idFactory!(kind);
   return {
+    replaceSchedule(schedule, origin) {
+      const validated = scheduleSchema.parse(schedule);
+      context.commit("Replace schedule", (project) => ({
+        ...project,
+        metadata: {
+          ...project.metadata,
+          source: origin.source,
+          term: origin.term === undefined ? project.metadata.term : origin.term,
+          curriculum:
+            origin.curriculum === undefined
+              ? project.metadata.curriculum
+              : origin.curriculum,
+        },
+        schedule: validated,
+      }));
+    },
     addSubject(input = {}) {
       const subject = normalizeSubject(input, ids);
       const result = context.commit("Add subject", (project) => ({
@@ -36,7 +56,7 @@ export function createScheduleSlice(context: StoreContext): ScheduleSlice {
       }));
     },
     removeSubject(subjectId) {
-      context.commit("Remove subject", (project) => ({
+      context.commit("Remove subject from project", (project) => ({
         ...project,
         schedule: project.schedule.filter(
           (subject) => subject.id !== subjectId,
@@ -59,7 +79,7 @@ export function createScheduleSlice(context: StoreContext): ScheduleSlice {
     },
     setSubjectEnabled(subjectId, enabled) {
       context.commit(
-        enabled ? "Enable subject" : "Disable subject",
+        enabled ? "Include subject" : "Exclude subject",
         (project) => ({
           ...project,
           schedule: project.schedule.map((subject) =>
