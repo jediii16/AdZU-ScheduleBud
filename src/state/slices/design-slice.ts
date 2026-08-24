@@ -1,4 +1,5 @@
 import type { DesignSlice, StoreContext } from "../types";
+import { layoutById } from "@/data/layouts/registry";
 import { themeById } from "@/data/themes/registry";
 
 export function createDesignSlice(context: StoreContext): DesignSlice {
@@ -29,7 +30,10 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
     },
     setThemeVariant: (value) =>
       edit("Change theme variant", "themeVariantId", value),
-    setLayout: (value) => edit("Change layout", "layoutId", value),
+    setLayout(value) {
+      if (layoutById.get(value)?.status !== "available") return;
+      edit("Change layout", "layoutId", value);
+    },
     applyTemplateMetadata(templateId, design) {
       if (themeById.get(design.themeId)?.status !== "available") return;
       context.commit("Apply template", (project) => ({

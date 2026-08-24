@@ -11,10 +11,10 @@ import { useScheduleBudReady, useScheduleBudStore } from "@/state/react";
 
 function CleanSlatePreview() {
   const rows = [
-    ["MON", "8:00", "CS 201", "Data Structures"],
-    ["TUE", "10:30", "HIST 12", "Philippine History"],
-    ["THU", "1:00", "CS 201", "Data Structures"],
-    ["FRI", "3:30", "ENG 14", "Academic Writing"],
+    ["MON", "8:00", "CS 201"],
+    ["TUE", "10:30", "HIST 12"],
+    ["THU", "1:00", "CS 201"],
+    ["FRI", "3:30", "ENG 14"],
   ] as const;
   return (
     <div className="relative mx-auto aspect-[9/19] w-full max-w-73 overflow-hidden rounded-[1.4rem] border-[5px] border-slate-800 bg-[#f7fafc] p-4 shadow-[0_24px_60px_-32px_rgba(20,45,75,.55)] sm:max-w-82 sm:p-5 lg:max-w-96">
@@ -28,7 +28,7 @@ function CleanSlatePreview() {
         </p>
       </div>
       <div className="divide-y divide-slate-200">
-        {rows.map(([day, time, code, name]) => (
+        {rows.map(([day, time, code]) => (
           <div
             key={`${day}-${code}`}
             className="grid grid-cols-[2.4rem_2.6rem_1fr] gap-2 py-3"
@@ -39,14 +39,9 @@ function CleanSlatePreview() {
             <span className="font-mono text-[0.55rem] font-semibold text-slate-500">
               {time}
             </span>
-            <span>
-              <strong className="block text-[0.65rem] leading-none text-slate-800">
-                {code}
-              </strong>
-              <span className="mt-1 block text-[0.52rem] leading-tight text-slate-500">
-                {name}
-              </span>
-            </span>
+            <strong className="block text-[0.65rem] leading-none text-slate-800">
+              {code}
+            </strong>
           </div>
         ))}
       </div>

@@ -7,6 +7,7 @@ import {
   migrateProject,
   scheduleProjectSchema,
 } from "@/domain/project";
+import { normalizeSubject } from "@/domain/schedule";
 
 const NOW = "2026-08-24T01:02:03.000Z";
 
@@ -84,6 +85,40 @@ describe("ScheduleProject", () => {
       schemaVersion: 2,
     });
     expect(migrateProject({ schemaVersion: 1 }).status).toBe("invalid");
+  });
+
+  it("strips legacy subject-name fields from saved schema-1 projects", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const subject = normalizeSubject(
+      { code: "CS.412", meetings: [{ days: ["Mon"] }] },
+      (kind) => `${kind}-1`,
+    );
+    const raw = {
+      ...project,
+      schedule: [{ ...subject, name: "Data Mining" }],
+      design: {
+        ...project.design,
+        visibleFields: {
+          ...project.design.visibleFields,
+          subjectCode: false,
+          subjectName: true,
+        },
+      },
+    };
+    const migrated = migrateProject(raw);
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.schedule[0]).not.toHaveProperty("name");
+    expect(migrated.project.design.visibleFields).not.toHaveProperty(
+      "subjectName",
+    );
+    expect(migrated.project.design.visibleFields).not.toHaveProperty(
+      "subjectCode",
+    );
+    expect(migrated.project.schedule[0]).toMatchObject({
+      code: "CS.412",
+      meetings: [{ days: ["Mon"] }],
+    });
   });
 
   it("detects schema 13 but refuses to guess its undocumented shape", () => {

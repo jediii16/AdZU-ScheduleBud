@@ -1,16 +1,10 @@
-# Studio rendering vertical slice
+# Studio rendering architecture
 
 ## Scope
 
-Phase 4 implements one production rendering path: the Clean Slate theme with the Cards layout. It supports a generic portrait Phone target at 1080 × 2400 and a Full HD Desktop target at 1920 × 1080. Other layouts, themes, target categories, safe-area previews, photos, PDF, and device-model presets remain deferred.
+The production renderer supports the Clean Slate theme with two real layouts: Cards and Minimal. It supports Phone, Tablet, Laptop, Desktop, Square, preset, custom, and matched-screen target dimensions. Additional layouts/themes, Photo mode, templates, PDF, transparent/background-only export, and arbitrary freeform editing remain deferred.
 
-## Studio structure
-
-The desktop Studio uses a compact top bar, a narrow Classes/Design/Device tool rail, a central artboard workspace, and a contextual right inspector. The top bar exposes project identity, undo/redo, autosave state, and PNG export. Workspace controls show the selected target and provide Fit, zoom in, and zoom out.
-
-At tablet and mobile browser widths, the permanent side columns disappear. The artboard remains the primary surface, the three tools move to safe-area-aware bottom navigation, and the selected inspector appears as a bounded bottom/right overlay. This is an editor adaptation only; the selected wallpaper target remains independent from the browser viewport.
-
-## RenderModel pipeline
+## Shared pipeline
 
 ```text
 active ScheduleProject
@@ -19,59 +13,51 @@ enabled, complete full-week occurrences
         ↓
 resolved ProjectDesign + active DeviceVariant
         ↓
-Clean Slate visual tokens + Cards geometry builder
+available typed layout registry
         ↓
-CardsRenderResult
+Cards or Minimal pure layout builder
+        ↓
+ScheduleRenderResult
   ├── exact RenderModel
-  ├── schedule bounds
+  ├── schedule bounds + position range
   └── separate EditorOverlayModel
         ↓
 shared React Konva ScheduleScene
-  ├── scaled preview Stage
+  ├── scaled preview Stage + editor-only overlays
   └── exact-size export Stage
 ```
 
-`buildCardsRenderModel()` is pure TypeScript. It resolves every canvas, title, day heading, card, text, and line coordinate before Konva receives the model. It uses canonical occurrences, so disabled subjects, disabled meetings, and incomplete meetings never become wallpaper nodes. Code-only subjects render their code once per real occurrence and never synthesize a duplicate friendly name.
+`buildScheduleRenderModel()` is the single layout-selection boundary. It resolves a valid variant override or the shared project layout and delegates to `buildCardsRenderModel()` or `buildMinimalRenderModel()`. Planned/unavailable layout IDs fall back safely to Cards rather than invoking unfinished geometry. Konva components receive resolved nodes and never calculate schedule layout or read Zustand.
 
-## Cards compositions
+The shared `ScheduleRenderResult` exposes only the exact `RenderModel`, separate overlay metadata, compact schedule bounds, and normalized-position range required by the editor. Layout-specific results may additionally expose day/class plans and typography for deterministic tests.
 
-Phone packs active days into compact two-column rows: six days use 2+2+2, five use 2+2+1, four use 2+2, three use 2+1, two use 2, and one uses a centered wider section. A final singleton is centered rather than paired with an invisible slot. Each row takes the height of its taller day section, and the next row follows after a fixed intentional gap. The schedule therefore remains one content-sized composition instead of occupying equal fractions of the wallpaper height.
+## Layout selection and state
 
-Desktop builds one balanced column per visible day. Five scheduled days create five real columns; full-week mode restores Saturday as an intentional empty heading without a fake card. A maximum day-column width prevents one or two days from stretching excessively, and the complete grid remains centered as a movable block.
+The Design inspector exposes a compact keyboard-accessible Cards/Minimal radio group backed by the typed layout registry. Switching layouts changes only `ProjectDesign.layoutId`, produces one history/autosave commit, and is immediately reflected by preview and export. Undo restores Cards and redo restores Minimal without changing academic data, target variants, title, fields, subject colors, or day visibility.
 
-`ProjectDesign.dayVisibility` is independent from compact/full occurrence interpretation. Clean Slate Cards defaults to `scheduled-only`; only days with occurrences from enabled subjects and complete enabled meetings are active. The Design inspector exposes this as “Hide days without classes.”
+Each `DeviceVariant.schedulePosition` remains authoritative and is not reset on layout change. Both builders resolve that normalized point against their own current compact bounds, so content stays clamped inside the target even when layout dimensions differ. Reset to balanced is layout-aware: Cards retains Phase 4.1 defaults; Minimal uses its documented optical defaults in [layouts/minimal.md](layouts/minimal.md).
 
-Phone and Desktop use independent target-pixel typography scales. Phone uses an approximately 80 px title, 40 px day headings, 38 px codes, 30 px names, and 26–28 px meeting details. Desktop remains editorial at smaller target-pixel sizes. Cards resolve code, optional name, time, room/section, and optional professor as distinct hierarchy levels. A code-only subject omits the name node and its spacing entirely.
+## Theme/layout separation
 
-Wallpaper-title geometry belongs to the Cards builder, not the theme. A visible nonblank title reserves a measured layout region. Hiding it removes the title node and moves the day grid upward, reclaiming the space.
+Clean Slate owns its off-white background, foreground hierarchy, blue accent, border color, font identities, and subject palette. Cards owns filled-card geometry and its information layout. Minimal owns unfilled typographic blocks, weekday-rule treatments, subject markers, target packing, and spacing. Theme data contains no target coordinates, and neither layout owns editor behavior.
 
-## Clean Slate responsibilities
+Both builders consume canonical full-week occurrences, so disabled subjects, disabled meetings, and incomplete meetings never render or keep a day visible. `dayVisibility` controls whether empty weekday headings are removed/reflowed or intentionally retained; it does not change compact-week semantics.
 
-Clean Slate supplies only visual identity: off-white background, white surfaces, dark and muted text colors, line colors, a blue day accent, and a restrained subject palette. It contains no Cards geometry or editor behavior. The current export layers use `background` and `schedule`; scenery, photos, and foreground remain valid empty layers.
+## Preview, guides, and safe areas
 
-## Preview, positioning, and overlays
+All geometry remains in target pixels. Preview fit and editor zoom apply only to the Stage view transform. The same smart-guide resolver uses display-space acquisition/release thresholds for Cards and Minimal schedule bounds, including canvas-center and safe-area anchors. One drag remains one history transaction.
 
-All model geometry stays in target pixels. The preview Stage applies a view-only scale derived from the available workspace and temporary editor zoom. Fit resets zoom to 100% of the calculated fit; zoom is not persisted and creates no history.
+OS preview environments, uploaded screen guides, safe/caution/blocked zones, warnings, selection bounds, guide lines, and crosshairs are drawn only after `ScheduleScene` in the preview Stage. The hidden export Stage contains only `ScheduleScene`, so no editor overlay or private screen-guide asset can enter a PNG.
 
-The schedule bounds are drawn by a separate editor layer. While actively dragging, the editor can snap the compact group to the vertical canvas center, horizontal canvas center, or both. The 8 px acquisition and 14 px release thresholds are defined in preview/display pixels and converted by preview scale, so zoom does not alter the feel. Thin ScheduleBud-blue lines and a small center crosshair exist only in the preview overlay and disappear on drag end. “Snap to guides” defaults on and can be disabled per device variant.
+## Exact PNG export
 
-Dragging begins one history transaction, updates normalized target-specific X/Y coordinates while moving, and commits one history/autosave entry on release. Guide intermediates are temporary editor state and never create history or persistence work. The Device inspector exposes equivalent keyboard-accessible sliders and a balanced reset. Phone and Desktop variants retain independent positions.
-
-After the compact reflow, balanced defaults are `{ x: 0.5, y: 0.42 }` for Phone and `{ x: 0.5, y: 0.45 }` for Desktop. Both are horizontally centered; the slight upward optical placement leaves breathing room below the composition without forcing mathematical center.
-
-No selection or guide node enters any export layer. The export Stage renders only `ScheduleScene`, while the preview Stage adds the editor overlay afterward.
-
-## PNG export
-
-Export waits for all font IDs referenced by the RenderModel, then captures the exact-size Konva export Stage at pixel ratio 1. Preview scale and zoom are absent from this Stage. Phone downloads as `adzu-schedule-phone.png` at exactly 1080 × 2400; Desktop downloads as `adzu-schedule-desktop.png` at exactly 1920 × 1080.
-
-An export coordinator rejects concurrent requests and always unlocks after success or failure. Failures leave project state untouched and provide a student-facing retry message while retaining console diagnostics. Enabled schedule issues reuse the existing two-step warning acknowledgement before export. The implementation contains no DOM screenshot, `html2canvas`, or DOM-to-image fallback.
+Export waits for RenderModel fonts and captures the exact-size shared Konva scene at pixel ratio 1. Preview zoom never changes output. Phone, Tablet, Laptop, Desktop, Square, preset, custom, and matched-screen variants export at their selected width and height for both Cards and Minimal. There is no DOM capture or layout-specific export implementation.
 
 ## Current limitations
 
-- Clean Slate and Cards are fixed read-only context in this phase.
-- Only Phone and Desktop target selection is exposed.
-- Image render nodes are not used because Photo mode is deferred.
-- Lock-screen, desktop chrome, safe areas, Match My Screen, and device databases are deferred.
+- Clean Slate is the only available theme.
+- Cards and Minimal are the only available layouts.
+- Image nodes and Photo composition are not used.
 - PNG is the only export format.
-- Schedule positioning is the only direct artboard manipulation.
+- Safe areas are conservative generic editor guides, not an exhaustive device database.
+- Schedule-group movement is the only direct artboard manipulation.

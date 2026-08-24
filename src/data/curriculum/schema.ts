@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const curriculumSubjectSchema = z.object({
   code: z.string().min(1),
-  name: z.string().min(1),
   units: z.number().finite().nonnegative(),
 });
 

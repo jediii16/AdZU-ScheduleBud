@@ -170,7 +170,6 @@ export function parsePortalRows(
       normalizeSubject(
         {
           code: group.code,
-          name: "",
           units: 0,
           section: group.section,
           enabled: true,

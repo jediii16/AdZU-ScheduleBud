@@ -28,8 +28,12 @@ import {
   resolveSafeAreaModel,
   safeAreaSnapAnchors,
 } from "@/domain/device/safe-areas";
-import type { DeviceCategory } from "@/domain/device/types";
-import { buildCardsRenderModel, resolveAlignmentSnap } from "@/domain/render";
+import { inferOrientation, type DeviceCategory } from "@/domain/device/types";
+import {
+  buildScheduleRenderModel,
+  resolveAlignmentSnap,
+  resolveProjectLayout,
+} from "@/domain/render";
 import { detectConflicts } from "@/domain/schedule/conflicts";
 import { validateMeeting } from "@/domain/schedule/validation";
 import {
@@ -171,7 +175,7 @@ export function StudioExperience() {
   const renderResult = useMemo(
     () =>
       project && activeVariant && target
-        ? buildCardsRenderModel(project, activeVariant)
+        ? buildScheduleRenderModel(project, activeVariant)
         : null,
     [activeVariant, project, target],
   );
@@ -241,6 +245,8 @@ export function StudioExperience() {
       </div>
     );
 
+  const activeLayout = resolveProjectLayout(project, activeVariant);
+
   const setSection = (section: NonNullable<EditorState["activeSection"]>) => {
     store.getState().setActiveEditorSection(section);
   };
@@ -309,7 +315,11 @@ export function StudioExperience() {
       dimensions,
       dimensionSource: source,
       presetId,
-      schedulePosition: balancedPositionFor(category),
+      schedulePosition: balancedPositionFor(
+        category,
+        activeLayout,
+        inferOrientation(dimensions),
+      ),
       compositionId: `cards-${category}`,
     });
   };
@@ -390,7 +400,14 @@ export function StudioExperience() {
         onReset={() =>
           store
             .getState()
-            .setSchedulePosition(activeVariant.id, target.defaultPosition)
+            .setSchedulePosition(
+              activeVariant.id,
+              balancedPositionFor(
+                activeVariant.category,
+                activeLayout,
+                activeVariant.orientation,
+              ),
+            )
         }
         onSnapping={(enabled) =>
           store.getState().setSnappingEnabled(activeVariant.id, enabled)
@@ -421,6 +438,8 @@ export function StudioExperience() {
     ) : (
       <DesignStudioPanel
         design={project.design}
+        activeLayout={activeLayout}
+        onLayout={(layoutId) => store.getState().setLayout(layoutId)}
         onTitleVisible={(visible) =>
           store.getState().setWallpaperTitleVisible(visible)
         }

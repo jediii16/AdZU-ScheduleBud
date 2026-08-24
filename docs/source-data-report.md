@@ -19,7 +19,7 @@ Current/new data statistics:
 - 365 explicitly supplied program/year/semester keys;
 - 332 populated terms and 33 explicitly empty terms;
 - 1,939 subject rows;
-- no malformed subject rows (all have string code/name and numeric units);
+- no malformed source subject rows (all have string code/name and numeric units);
 - no exact duplicate subject rows within a term;
 - no current-map program IDs missing from course metadata and no course metadata IDs wholly absent from the current map.
 
@@ -27,9 +27,9 @@ Nineteen of the theoretical 384 four-year/three-term combinations are not suppli
 
 The source uses an additional `countForGPA` field on 128 current subject rows. It is intentionally omitted from the normalized ScheduleBud data because GPA calculation is outside this product's domain.
 
-Forty-two subject codes have more than one supplied name and/or unit definition across programs and terms. Many are punctuation or wording variants, while some are materially different courses or unit values. Examples include `ENG.132`, `ENG.321`, `MAT 106`, `THESIS1`, `FINACC1`, and `ACCAPS 1`. The normalizer preserves every term's supplied values. This ambiguity matters only inside the separate curriculum creation flow: Portal import deliberately performs no curriculum lookup because an enrolled Portal schedule is authoritative and may legitimately contain codes outside the static dataset.
+Forty-two subject codes have more than one supplied name and/or unit definition across programs and terms. ScheduleBud now identifies classes exclusively by subject code, so normalized application data intentionally omits all supplied subject names while preserving each term's supplied code and unit value. Program names remain intact. Portal import remains independent from this dataset because an enrolled Portal schedule is authoritative and may legitimately contain codes outside the static curriculum.
 
-Normalized output is under `src/data/curriculum/programs`, one JSON file per program, with deterministic IDs inherited from the supplied current program IDs. `src/data/curriculum/schema.ts` provides Zod validation and development-time error messages.
+Normalized output is under `src/data/curriculum/programs`, one JSON file per program, with deterministic IDs inherited from the supplied current program IDs. Curriculum subjects contain only `code` and `units`; `src/data/curriculum/schema.ts` provides Zod validation and development-time error messages.
 
 ## Portal workbook findings
 

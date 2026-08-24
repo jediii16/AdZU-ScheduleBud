@@ -15,7 +15,6 @@ function projectWithDays(
       ...structuredClone(template),
       id: `subject-${day}-${meetingIndex}`,
       code: `SUB ${dayIndex + 1}${meetingIndex + 1}`,
-      name: `Subject for ${day}`,
       meetings: [
         {
           ...structuredClone(template.meetings[0]!),
@@ -45,14 +44,12 @@ describe("Clean Slate Cards RenderModel", () => {
       title: 80,
       day: 40,
       code: 38,
-      name: 30,
       time: 28,
     });
     expect(desktop.typography).toMatchObject({
       title: 50,
       day: 27,
       code: 21,
-      name: 17,
       time: 16,
     });
     expect(phone.typography.code).toBeGreaterThan(desktop.typography.code);
@@ -216,7 +213,7 @@ describe("Clean Slate Cards RenderModel", () => {
     ).toBe(154);
   });
 
-  it("renders code-only cards without a fabricated name node or name gap", () => {
+  it("renders the subject code as the sole class identifier", () => {
     const result = render();
     const codeNodes = result.model.layers[3].nodes.filter(
       (node) =>
@@ -224,14 +221,33 @@ describe("Clean Slate Cards RenderModel", () => {
         node.kind === "text" &&
         node.text === "CS.412",
     );
-    const matchingNames = result.model.layers[3].nodes.filter(
-      (node) =>
-        node.id.startsWith("name-") &&
-        node.kind === "text" &&
-        node.text.includes("CS.412"),
-    );
     expect(codeNodes).toHaveLength(2);
-    expect(matchingNames).toHaveLength(0);
+  });
+
+  it.each(["CS.412", "COMPINTRO", "PATHFIT1n"])(
+    "renders realistic subject code %s without a secondary identifier",
+    (code) => {
+      const project = projectWithDays(["Mon"]);
+      project.schedule[0]!.code = code;
+      const result = render(project);
+      const codeNode = result.model.layers[3].nodes.find(
+        (node) => node.kind === "text" && node.id.startsWith("code-"),
+      );
+      expect(codeNode?.kind === "text" ? codeNode.text : null).toBe(code);
+    },
+  );
+
+  it("fits an unusually long subject code without hiding the identifier", () => {
+    const project = projectWithDays(["Mon"]);
+    project.schedule[0]!.code = "VERY-LONG-SUBJECT-CODE-WITH-PUNCTUATION.401A";
+    const result = render(project);
+    const codeNode = result.model.layers[3].nodes.find(
+      (node) => node.kind === "text" && node.id.startsWith("code-"),
+    );
+    expect(codeNode?.kind).toBe("text");
+    expect(
+      codeNode?.kind === "text" ? codeNode.text.length : 0,
+    ).toBeGreaterThan(0);
   });
 
   it("honors visible detail settings and preserves chronological order", () => {

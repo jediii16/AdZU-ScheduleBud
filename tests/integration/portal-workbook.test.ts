@@ -53,15 +53,14 @@ describe("sanitized Portal XLSX fixtures", () => {
       ),
     ).toEqual([1, 1, 1]);
     expect(
-      result.subjects.map(({ name, units, enabled }) => ({
-        name,
+      result.subjects.map(({ units, enabled }) => ({
         units,
         enabled,
       })),
     ).toEqual([
-      { name: "", units: 0, enabled: true },
-      { name: "", units: 0, enabled: true },
-      { name: "", units: 0, enabled: true },
+      { units: 0, enabled: true },
+      { units: 0, enabled: true },
+      { units: 0, enabled: true },
     ]);
     expect(result.warnings).toEqual([]);
   });

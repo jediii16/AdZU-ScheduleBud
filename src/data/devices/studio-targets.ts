@@ -1,12 +1,25 @@
 import { devicePresetById } from "./registry";
-import type { DeviceVariant } from "@/domain/device/types";
+import type { DeviceVariant, Orientation } from "@/domain/device/types";
+import type { LayoutId } from "@/domain/design/types";
 
 export const INITIAL_STUDIO_PRESET_IDS = [
   "generic-phone-1080x2400",
   "desktop-1920x1080",
 ] as const;
 export type StudioTargetId = "phone" | "desktop";
-export function balancedPositionFor(category: DeviceVariant["category"]) {
+export function balancedPositionFor(
+  category: DeviceVariant["category"],
+  layoutId: LayoutId = "cards",
+  orientation?: Orientation,
+) {
+  if (layoutId === "minimal") {
+    if (category === "phone") return { x: 0.5, y: 0.38 };
+    if (category === "tablet")
+      return { x: 0.5, y: orientation === "landscape" ? 0.37 : 0.4 };
+    if (category === "desktop" || category === "laptop")
+      return { x: 0.5, y: 0.42 };
+    return { x: 0.5, y: 0.44 };
+  }
   return category === "phone" ? { x: 0.5, y: 0.42 } : { x: 0.5, y: 0.45 };
 }
 export const STUDIO_TARGETS = INITIAL_STUDIO_PRESET_IDS.map(
@@ -37,7 +50,11 @@ export function studioTargetForVariant(variant: DeviceVariant) {
     category: variant.category,
     dimensions: variant.dimensions,
     presetId: variant.presetId,
-    defaultPosition: balancedPositionFor(variant.category),
+    defaultPosition: balancedPositionFor(
+      variant.category,
+      "cards",
+      variant.orientation,
+    ),
     filename:
       variant.presetId === "generic-phone-1080x2400"
         ? "adzu-schedule-phone.png"

@@ -42,8 +42,7 @@ export type Meeting = z.infer<typeof meetingSchema>;
 
 export const subjectSchema = z.object({
   id: z.string().min(1),
-  code: z.string(),
-  name: z.string(),
+  code: z.string().trim().min(1, "Every subject must have a code"),
   units: z.number().finite().nonnegative(),
   section: z.string(),
   enabled: z.boolean(),

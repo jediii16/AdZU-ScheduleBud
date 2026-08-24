@@ -86,6 +86,13 @@ export type RenderModel = {
   layers: OrderedRenderLayers;
 };
 
+export type ScheduleRenderResult = {
+  model: RenderModel;
+  overlay: EditorOverlayModel;
+  scheduleBounds: Rect;
+  positionRange: { minX: number; maxX: number; minY: number; maxY: number };
+};
+
 export type EditorOverlayModel = {
   safeAreas: readonly Rect[];
   selection?: Rect;

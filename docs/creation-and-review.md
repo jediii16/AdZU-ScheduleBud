@@ -25,17 +25,17 @@ The file control and drag target accept `.xlsx` files up to 5 MB. Browser bytes 
 
 Validation and parser exceptions are mapped to short student-facing messages. Missing columns are named; otherwise malformed workbooks suggest downloading a fresh Portal file. Development builds retain console diagnostics.
 
-Parsing produces a local `PendingPortalImport`. The review lists subject/meeting totals, every subject, and every meeting. Warnings cover only workbook or schedule data and are aggregated by affected meeting or skipped row; the original row-specific metadata remains available under **Show details**. Invalid meetings remain editable. A workbook that supplies only a subject code produces a code-only subject with a blank friendly name and neutral zero-unit representation, without a warning. Each imported subject starts included and has an **Include in schedule** control. Exclusion preserves the complete pending subject and its imported metadata; confirmation carries it into the project with `enabled: false`. Cancel discards only the pending object. Confirm creates/reuses a safe project and atomically replaces its schedule through the validated store action.
+Parsing produces a local `PendingPortalImport`. The review lists subject/meeting totals, every subject, and every meeting. Warnings cover only workbook or schedule data and are aggregated by affected meeting or skipped row; the original row-specific metadata remains available under **Show details**. Invalid meetings remain editable. Imported subjects use their Portal code as the sole identifier and neutral zero-unit representation. Each imported subject starts included and has an **Include in schedule** control. Exclusion preserves the complete pending subject and its imported metadata; confirmation carries it into the project with `enabled: false`. Cancel discards only the pending object. Confirm creates/reuses a safe project and atomically replaces its schedule through the validated store action.
 
 ## Curriculum flow
 
 Only normalized current curriculum programs are imported. Desktop uses a searchable Base UI combobox; mobile uses a searchable full-width dialog picker. Year and semester controls are revealed in sequence and derived from the selected program’s real terms, so absent combinations cannot appear. Explicitly empty supplied terms display an explanation and cannot fabricate subjects.
 
-Confirming a populated term creates canonical subjects with authoritative code, name, and units. Each subject receives one intentionally incomplete meeting. Days, times, section, room, and professor remain student-entered. Subjects can be included or excluded, edited, duplicated, or permanently removed through controlled store actions.
+Confirming a populated term creates canonical subjects with authoritative code and units. Source subject names are intentionally not copied into ScheduleBud. Each subject receives one intentionally incomplete meeting. Days, times, section, room, and professor remain student-entered. Subjects can be included or excluded, edited, duplicated, or permanently removed through controlled store actions.
 
 ## Manual flow
 
-The form groups subject identity separately from meetings. Day checkboxes are keyboard-accessible, time inputs use five-minute steps and the supported 07:00–21:00 boundary, and optional room/professor fields are clearly marked. Multiple draft meetings can be added before a class is committed. Incomplete meetings are allowed and remain repairable.
+The form uses subject code as the sole class identifier and groups it separately from meetings. Day checkboxes are keyboard-accessible, time inputs use five-minute steps and the supported 07:00–21:00 boundary, and optional room/professor fields are clearly marked. Multiple draft meetings can be added before a class is committed. Incomplete meetings are allowed and remain repairable.
 
 The class list separates **Included** and **Not included** rows with expandable editing. It supports inclusion changes, subject edits, meeting edits, additional meetings, duplication, and the distinct **Remove from project** action while preserving the last-meeting invariant. Inclusion changes and permanent removal enter undo history and autosave; exclusion retains the subject and allows later re-enabling.
 
@@ -43,7 +43,7 @@ The class list separates **Included** and **Not included** rows with expandable 
 
 Review expands complete enabled meetings into actual days, groups Monday through Saturday, and sorts by exact start minute. It is an application review view, not a wallpaper renderer.
 
-The summary reports included subjects, included meetings, and actionable issues. Disabled subjects are retained in the project but create no incomplete warnings, occurrences, conflicts, or timetable influence and do not appear in the chronological schedule. Incomplete enabled meetings are named and excluded from chronological placement. Conflicts list both subject codes, actual day, and exact shared interval. Back-to-back meetings remain valid.
+The summary reports included subjects, included meetings, and actionable issues. Disabled subjects are retained in the project but create no incomplete warnings, occurrences, conflicts, or timetable influence and do not appear in the chronological schedule. Incomplete enabled meetings are identified by subject code and excluded from chronological placement. Conflicts list both subject codes, actual day, and exact shared interval. Back-to-back meetings remain valid.
 
 Issues are warning-colored rather than destructive and link back to relevant class editing. When issues exist, `Fix issues` is the primary action. `Continue anyway` reveals a second explicit acknowledgement before opening the `/studio` placeholder. A valid schedule shows `Start designing` and proceeds immediately.
 

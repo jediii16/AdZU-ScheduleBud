@@ -108,9 +108,6 @@ export function ScheduleReview() {
     0,
   );
   const issueCount = review.incomplete.length + review.conflicts.length;
-  const subjectName = new Map(
-    review.subjects.map((subject) => [subject.id, subject.name]),
-  );
 
   const attemptDesign = () => {
     const result = attemptWarningGate(issueCount > 0, gate);
@@ -221,11 +218,6 @@ export function ScheduleReview() {
                           <div>
                             <p className="text-sm font-bold text-foreground">
                               {item.subjectCode}
-                              {subjectName.get(item.subjectId) ? (
-                                <span className="ml-1 font-normal text-text-secondary">
-                                  {subjectName.get(item.subjectId)}
-                                </span>
-                              ) : null}
                             </p>
                             <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-text-muted">
                               <span>

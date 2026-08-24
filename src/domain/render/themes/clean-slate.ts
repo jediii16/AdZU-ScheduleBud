@@ -5,6 +5,7 @@ export const CLEAN_SLATE_RENDER_THEME = {
   foreground: "#172033",
   secondary: "#526075",
   muted: "#7A8798",
+  minimalSupport: "#66758A",
   border: "#DDE3EA",
   dayAccent: "#145F9B",
   subjectPalette: [
@@ -14,6 +15,14 @@ export const CLEAN_SLATE_RENDER_THEME = {
     "#E9E4F2",
     "#F1E5E8",
     "#E3EDF0",
+  ],
+  minimalMarkerPalette: [
+    "#9AC7E4",
+    "#A9CDB8",
+    "#D8B999",
+    "#BFB3D9",
+    "#D7AFBB",
+    "#A7CAD3",
   ],
 } as const;
 

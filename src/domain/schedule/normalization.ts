@@ -45,8 +45,11 @@ export function normalizeMeeting(
   };
 }
 
-export type SubjectInput = Partial<Omit<Subject, "id" | "meetings">> & {
+export type SubjectInput = Partial<
+  Omit<Subject, "id" | "meetings" | "code">
+> & {
   id?: string;
+  code: string;
   meetings?: readonly MeetingInput[];
 };
 
@@ -60,7 +63,6 @@ export function normalizeSubject(
   return {
     id: input.id?.trim() || idFactory("subject"),
     code: input.code?.trim() ?? "",
-    name: input.name?.trim() ?? "",
     units:
       Number.isFinite(input.units) && (input.units ?? 0) >= 0
         ? input.units!

@@ -78,7 +78,7 @@ describe("landing and creation entry", () => {
   it("shows a returning project and keeps start-new separate", () => {
     const { store } = createTestStore();
     store.getState().createProject("My semester");
-    store.getState().addSubject({ code: "FIC 101", name: "Fictional Studies" });
+    store.getState().addSubject({ code: "FIC 101" });
     render(
       <ScheduleBudProvider store={store} hydrate={false}>
         <HomeExperience />
@@ -99,8 +99,8 @@ describe("manual creation", () => {
   it("adds a subject with multiple meetings and supported time controls", async () => {
     const user = userEvent.setup();
     const { store, projects } = renderWithStore(<ManualCreation />);
+    expect(screen.getByLabelText("Subject code")).toBeRequired();
     await user.type(screen.getByLabelText("Subject code"), "CS 201");
-    await user.type(screen.getByLabelText("Subject name"), "Data Structures");
     await user.click(screen.getByRole("checkbox", { name: "Mon" }));
     const startTime = screen.getByLabelText("Start time");
     const endTime = screen.getByLabelText("End time");
@@ -132,7 +132,6 @@ describe("manual creation", () => {
     });
     expect(screen.getByText("CS 201")).toBeVisible();
     await user.type(screen.getAllByLabelText("Subject code")[0]!, "HIST 12");
-    await user.type(screen.getAllByLabelText("Subject name")[0]!, "History");
     await user.click(screen.getByRole("button", { name: "Add class" }));
     expect(
       store.getState().projectsById[store.getState().activeProjectId!]
@@ -145,11 +144,19 @@ describe("manual creation", () => {
     });
   });
 
+  it("does not create a project or subject without a code", async () => {
+    const user = userEvent.setup();
+    const { store } = renderWithStore(<ManualCreation />);
+    await user.click(screen.getByRole("button", { name: "Add class" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Add a subject code");
+    expect(store.getState().activeProjectId).toBeNull();
+  });
+
   it("edits and removes classes through controlled store actions", async () => {
     const user = userEvent.setup();
     const { store } = createTestStore();
     store.getState().createProject();
-    store.getState().addSubject({ code: "OLD", name: "Old name" });
+    store.getState().addSubject({ code: "OLD" });
     render(
       <ScheduleBudProvider store={store} hydrate={false}>
         <ManualCreation editingExisting />
@@ -161,6 +168,13 @@ describe("manual creation", () => {
     await user.clear(code);
     await user.type(code, "NEW");
     fireEvent.blur(code);
+    expect(
+      store.getState().projectsById[store.getState().activeProjectId!]
+        ?.schedule[0]?.code,
+    ).toBe("NEW");
+    await user.clear(code);
+    fireEvent.blur(code);
+    expect(code).toHaveValue("NEW");
     expect(
       store.getState().projectsById[store.getState().activeProjectId!]
         ?.schedule[0]?.code,
@@ -294,7 +308,6 @@ describe("Portal creation", () => {
     expect(schedule.length).toBeGreaterThan(0);
     expect(schedule[0]).toMatchObject({
       enabled: false,
-      name: "",
       units: 0,
       importMetadata: { source: "portal", sourceRows: [2] },
     });
@@ -303,6 +316,32 @@ describe("Portal creation", () => {
       store.getState().projectsById[store.getState().activeProjectId!]
         ?.schedule[0]?.enabled,
     ).toBe(true);
+  });
+
+  it("requires every pending imported subject to retain a code", async () => {
+    renderWithStore(<PortalCreation />);
+    fireEvent.change(document.querySelector('input[type="file"]')!, {
+      target: { files: [fixtureFile("portal-normal.xlsx")] },
+    });
+    await screen.findByRole("heading", { name: "Check the imported classes." });
+    const firstSubject = screen
+      .getByRole("heading", { name: "FIC.101" })
+      .closest("article")!;
+    fireEvent.click(
+      within(firstSubject).getByText("Edit subject and meetings"),
+    );
+    const code = within(firstSubject).getByLabelText("Code");
+    fireEvent.change(code, { target: { value: "" } });
+    expect(
+      screen.getByRole("button", { name: /Confirm import/i }),
+    ).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /Every imported subject needs a code/i,
+    );
+    fireEvent.change(code, { target: { value: "FIC.101" } });
+    expect(
+      screen.getByRole("button", { name: /Confirm import/i }),
+    ).toBeEnabled();
   });
 
   it("shows malformed workbook feedback without technical exceptions", async () => {
@@ -325,7 +364,6 @@ describe("Portal creation", () => {
     const subject = normalizeSubject(
       {
         code: "OPEN.101",
-        name: "",
         units: 0,
         importMetadata: { source: "portal", sourceRows: [2] },
       },
@@ -359,7 +397,6 @@ describe("Portal creation", () => {
     const subject = normalizeSubject(
       {
         code: "THESIS1",
-        name: "Thesis I",
         units: 0,
         importMetadata: { source: "portal", sourceRows: [2] },
       },

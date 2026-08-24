@@ -59,8 +59,6 @@ export const densitySchema = z.enum(["compact", "comfortable", "detailed"]);
 export type Density = z.infer<typeof densitySchema>;
 
 export const visibleFieldsSchema = z.object({
-  subjectCode: z.boolean(),
-  subjectName: z.boolean(),
   time: z.boolean(),
   room: z.boolean(),
   professor: z.boolean(),

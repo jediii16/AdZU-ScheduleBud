@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { availableLayouts } from "@/data/layouts/registry";
+import type { LayoutId } from "@/domain/design/types";
 import type { DeviceVariant, VisibleFields } from "@/domain/device/types";
 import type { ProjectDesign } from "@/domain/project";
 import { StoreSubjectList } from "@/features/classes/class-editor";
@@ -23,8 +25,6 @@ export function ClassesStudioPanel() {
 }
 
 const FIELD_LABELS: Record<keyof VisibleFields, string> = {
-  subjectCode: "Subject code",
-  subjectName: "Subject name",
   time: "Time",
   room: "Room",
   professor: "Professor",
@@ -33,12 +33,16 @@ const FIELD_LABELS: Record<keyof VisibleFields, string> = {
 
 export function DesignStudioPanel({
   design,
+  activeLayout,
+  onLayout,
   onTitleVisible,
   onTitleText,
   onField,
   onDayVisibility,
 }: {
   design: ProjectDesign;
+  activeLayout: LayoutId;
+  onLayout(value: LayoutId): void;
   onTitleVisible(value: boolean): void;
   onTitleText(value: string): void;
   onField(field: keyof VisibleFields, value: boolean): void;
@@ -50,17 +54,34 @@ export function DesignStudioPanel({
         <h2 id="studio-design-heading" className="sb-section-title">
           Design
         </h2>
-        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+        <dl className="mt-3 text-sm">
           <div>
             <dt className="text-text-muted">Theme</dt>
             <dd className="font-semibold">Clean Slate</dd>
           </div>
-          <div>
-            <dt className="text-text-muted">Layout</dt>
-            <dd className="font-semibold">Cards</dd>
-          </div>
         </dl>
       </div>
+      <fieldset>
+        <legend className="sb-label">Layout</legend>
+        <div
+          role="radiogroup"
+          aria-label="Schedule layout"
+          className="grid grid-cols-2 border border-border bg-muted/40 p-1"
+        >
+          {availableLayouts.map((layout) => (
+            <button
+              key={layout.id}
+              type="button"
+              role="radio"
+              aria-checked={activeLayout === layout.id}
+              className={`min-h-10 rounded-sm px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${activeLayout === layout.id ? "bg-surface-elevated text-brand shadow-sm" : "text-text-secondary hover:bg-surface"}`}
+              onClick={() => onLayout(layout.id)}
+            >
+              {layout.name}
+            </button>
+          ))}
+        </div>
+      </fieldset>
       <fieldset className="space-y-3">
         <legend className="sb-label">Wallpaper title</legend>
         <label className="flex min-h-10 items-center justify-between gap-3 border-y border-border py-2 text-sm font-semibold">

@@ -38,7 +38,6 @@ export function ManualCreation({
   );
   const subjects = activeProject?.schedule ?? [];
   const [code, setCode] = useState("");
-  const [name, setName] = useState("");
   const [units, setUnits] = useState("0");
   const [section, setSection] = useState("");
   const [meetings, setMeetings] = useState<Meeting[]>([newMeeting()]);
@@ -67,8 +66,8 @@ export function ManualCreation({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!code.trim() || !name.trim()) {
-      setError("Add a subject code and name.");
+    if (!code.trim()) {
+      setError("Add a subject code.");
       return;
     }
     if (!editingExisting || !activeId) {
@@ -82,7 +81,6 @@ export function ManualCreation({
     }
     addSubject({
       code,
-      name,
       units: Number(units) || 0,
       section,
       enabled: true,
@@ -98,7 +96,6 @@ export function ManualCreation({
       importMetadata: { source: "manual" },
     });
     setCode("");
-    setName("");
     setUnits("0");
     setSection("");
     setMeetings([newMeeting()]);
@@ -139,20 +136,10 @@ export function ManualCreation({
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? "manual-error" : undefined}
                   className="sb-control"
+                  required
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
                   placeholder="e.g. CS 201"
-                />
-              </label>
-              <label>
-                <span className="sb-label">Subject name</span>
-                <input
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? "manual-error" : undefined}
-                  className="sb-control"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. Data Structures"
                 />
               </label>
               <label>

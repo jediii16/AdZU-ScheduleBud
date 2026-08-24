@@ -10,10 +10,7 @@ import { sequentialIds, subject } from "./fixtures";
 
 describe("schedule normalization", () => {
   it("always creates at least one editable meeting", () => {
-    const normalized = normalizeSubject(
-      { code: "  CUSTOM ", name: " Untitled class " },
-      sequentialIds(),
-    );
+    const normalized = normalizeSubject({ code: "  CUSTOM " }, sequentialIds());
     expect(normalized.code).toBe("CUSTOM");
     expect(normalized.meetings).toHaveLength(1);
     expect(normalized.meetings[0]?.days).toEqual([]);
@@ -21,7 +18,10 @@ describe("schedule normalization", () => {
 
   it("deduplicates days and trims editable fields", () => {
     const normalized = normalizeSubject(
-      { meetings: [{ days: ["Mon", "Mon", "Thu"], room: "  F101 " }] },
+      {
+        code: "CS.412",
+        meetings: [{ days: ["Mon", "Mon", "Thu"], room: "  F101 " }],
+      },
       sequentialIds(),
     );
     expect(normalized.meetings[0]).toMatchObject({

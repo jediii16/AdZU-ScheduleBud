@@ -10,11 +10,11 @@ import {
 } from "@/domain/schedule/occurrences";
 import type { ScheduleDay, Subject } from "@/domain/schedule/types";
 import type {
-  EditorOverlayModel,
   Rect,
   RenderLayer,
   RenderModel,
   RenderNode,
+  ScheduleRenderResult,
   TextRenderNode,
 } from "./types";
 import { fitText } from "./text-fit";
@@ -38,7 +38,6 @@ export type CardsTypography = {
   title: number;
   day: number;
   code: number;
-  name: number;
   time: number;
   support: number;
   professor: number;
@@ -53,11 +52,7 @@ export type CardsDayLayout = {
   column: number;
   occurrenceCount: number;
 };
-export type CardsRenderResult = {
-  model: RenderModel;
-  overlay: EditorOverlayModel;
-  scheduleBounds: Rect;
-  positionRange: { minX: number; maxX: number; minY: number; maxY: number };
+export type CardsRenderResult = ScheduleRenderResult & {
   composition: CardsComposition;
   compositionFamily: TargetCompositionFamily;
   typography: CardsTypography;
@@ -68,7 +63,6 @@ type CardPlan = {
   occurrence: ScheduleOccurrence;
   subject: Subject;
   height: number;
-  nameFit: ReturnType<typeof fitText> | null;
   time: string;
   support: string;
   professor: string;
@@ -176,7 +170,6 @@ function typographyFor(
           title: 80,
           day: 40,
           code: 38,
-          name: 30,
           time: 28,
           support: 26,
           professor: 26,
@@ -185,7 +178,6 @@ function typographyFor(
           title: 50,
           day: 27,
           code: 21,
-          name: 17,
           time: 16,
           support: 14,
           professor: 14,
@@ -203,24 +195,9 @@ function createCardPlan(
   occurrence: ScheduleOccurrence,
   subject: Subject,
   fields: VisibleFields,
-  width: number,
   composition: CardsComposition,
-  typography: CardsTypography,
 ): CardPlan {
-  const pad = composition === "phone" ? 22 : 16;
-  const textWidth = width - pad * 2;
-  const code = fields.subjectCode ? subject.code.trim() : "";
-  const name = fields.subjectName ? subject.name.trim() : "";
-  const secondaryName = code && name ? name : "";
-  const nameFit = secondaryName
-    ? fitText({
-        text: secondaryName,
-        width: textWidth,
-        preferredFontSize: typography.name,
-        minimumFontSize: composition === "phone" ? 26 : 14,
-        maximumLines: 2,
-      })
-    : null;
+  const code = subject.code.trim();
   const time = fields.time
     ? `${timeLabel(occurrence.startTime, project.design.clockFormat)}–${timeLabel(occurrence.endTime, project.design.clockFormat)}`
     : "";
@@ -233,13 +210,11 @@ function createCardPlan(
     .filter(Boolean)
     .join(" · ");
   const professor = fields.professor ? occurrence.professor.trim() : "";
-  const primary = code || name;
   const vertical =
     composition === "phone"
       ? {
           pad: 22,
           code: 46,
-          nameGap: 4,
           sectionGap: 13,
           time: 35,
           support: 33,
@@ -248,17 +223,13 @@ function createCardPlan(
       : {
           pad: 16,
           code: 27,
-          nameGap: 2,
           sectionGap: 9,
           time: 22,
           support: 20,
           professor: 20,
         };
   let cardHeight = vertical.pad * 2;
-  if (primary) cardHeight += vertical.code;
-  if (nameFit)
-    cardHeight +=
-      vertical.nameGap + nameFit.lines * nameFit.fontSize * nameFit.lineHeight;
+  if (code) cardHeight += vertical.code;
   if (time || support || professor) cardHeight += vertical.sectionGap;
   if (time) cardHeight += vertical.time;
   if (support) cardHeight += vertical.support;
@@ -267,7 +238,6 @@ function createCardPlan(
     occurrence,
     subject,
     height: Math.ceil(cardHeight),
-    nameFit,
     time,
     support,
     professor,
@@ -290,9 +260,7 @@ function drawCard(
   const { occurrence, subject } = plan;
   const pad = composition === "phone" ? 22 : 16;
   const textWidth = width - pad * 2;
-  const code = fields.subjectCode ? subject.code.trim() : "";
-  const name = fields.subjectName ? subject.name.trim() : "";
-  const primary = code || name;
+  const code = subject.code.trim();
   const id = `${day}-${occurrence.id}`;
   nodes.push({
     id: `card-${id}`,
@@ -304,9 +272,9 @@ function drawCard(
     cornerRadius: composition === "phone" ? 15 : 11,
   });
   let cursor = y + pad;
-  if (primary) {
+  if (code) {
     const fit = fitText({
-      text: primary,
+      text: code,
       width: textWidth,
       preferredFontSize: typography.code,
       minimumFontSize: composition === "phone" ? 33 : 17,
@@ -325,31 +293,6 @@ function drawCard(
       ),
     );
     cursor += composition === "phone" ? 46 : 27;
-  }
-  if (plan.nameFit) {
-    cursor += composition === "phone" ? 4 : 2;
-    nodes.push(
-      textNode(
-        `name-${id}`,
-        plan.nameFit.text,
-        x + pad,
-        cursor,
-        textWidth,
-        plan.nameFit.fontSize,
-        theme.secondary,
-        {
-          lineHeight: plan.nameFit.lineHeight,
-          height:
-            plan.nameFit.lines *
-            plan.nameFit.fontSize *
-            plan.nameFit.lineHeight,
-          wrap: "word",
-          fontWeight: 500,
-        },
-      ),
-    );
-    cursor +=
-      plan.nameFit.lines * plan.nameFit.fontSize * plan.nameFit.lineHeight;
   }
   if (plan.time || plan.support || plan.professor)
     cursor += composition === "phone" ? 13 : 9;
@@ -517,9 +460,7 @@ export function buildCardsRenderModel(
         occurrence,
         subjects.get(occurrence.subjectId)!,
         fields,
-        dayWidth,
         composition,
-        typography,
       ),
     );
     const dayHeight =

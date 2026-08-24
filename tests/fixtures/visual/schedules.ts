@@ -52,7 +52,6 @@ export function visualScheduleProject() {
     normalizeSubject(
       {
         code: "CS.412",
-        name: "",
         section: "A",
         meetings: [
           {
@@ -69,7 +68,6 @@ export function visualScheduleProject() {
     normalizeSubject(
       {
         code: "HCI 320",
-        name: "Human Computer Interaction and Interface Design Studio",
         meetings: [
           {
             days: ["Tue", "Fri"],
@@ -85,7 +83,6 @@ export function visualScheduleProject() {
     normalizeSubject(
       {
         code: "THESIS1",
-        name: "Thesis I",
         enabled: false,
         meetings: [{ days: [], startTime: "07:00", endTime: "07:00" }],
       },
@@ -94,7 +91,6 @@ export function visualScheduleProject() {
     normalizeSubject(
       {
         code: "OPEN 1",
-        name: "Incomplete class",
         meetings: [{ days: [], startTime: "07:00", endTime: "07:00" }],
       },
       idFactory,
@@ -113,4 +109,17 @@ export const VISUAL_RENDER_FIXTURES = [
   "phone-cards-clean-5-days-no-title",
   "desktop-cards-clean-5-days-title",
   "desktop-cards-clean-full-week",
+  "phone-minimal-clean-5-days-title",
+  "phone-minimal-clean-5-days-no-title",
+  "phone-minimal-clean-3-days",
+  "tablet-portrait-minimal-clean",
+  "tablet-landscape-minimal-clean",
+  "tablet-landscape-minimal-clean-6-days",
+  "desktop-minimal-clean-5-days",
+  "desktop-minimal-clean-3-days",
+  "desktop-minimal-clean-6-days",
+  "square-minimal-clean-5-days",
+  "phone-minimal-clean-long-content",
+  "phone-minimal-clean-display-390",
+  "phone-minimal-clean-export-display-390",
 ] as const;

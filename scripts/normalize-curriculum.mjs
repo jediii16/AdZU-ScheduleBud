@@ -24,9 +24,8 @@ const programs = source.COURSES.map((course) => {
       return {
         yearLevel: Number(match[1]),
         semester: Number(match[2]),
-        subjects: subjects.map(({ code, name, units }) => ({
+        subjects: subjects.map(({ code, units }) => ({
           code,
-          name,
           units,
         })),
       };

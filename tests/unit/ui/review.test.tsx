@@ -21,12 +21,10 @@ describe("schedule review", () => {
     const store = reviewStore();
     store.getState().addSubject({
       code: "LATE",
-      name: "Later",
       meetings: [{ days: ["Mon"], startTime: "10:00", endTime: "11:00" }],
     });
     store.getState().addSubject({
       code: "EARLY",
-      name: "Earlier",
       meetings: [
         { days: ["Mon", "Thu"], startTime: "08:00", endTime: "09:00" },
       ],
@@ -52,15 +50,13 @@ describe("schedule review", () => {
     const store = reviewStore();
     store.getState().addSubject({
       code: "ONE",
-      name: "One",
       meetings: [{ days: ["Tue"], startTime: "09:00", endTime: "10:30" }],
     });
     store.getState().addSubject({
       code: "TWO",
-      name: "Two",
       meetings: [{ days: ["Tue"], startTime: "10:00", endTime: "11:00" }],
     });
-    store.getState().addSubject({ code: "OPEN", name: "Incomplete" });
+    store.getState().addSubject({ code: "OPEN" });
     render(
       <ScheduleBudProvider store={store} hydrate={false}>
         <ScheduleReview />
@@ -93,12 +89,10 @@ describe("schedule review", () => {
     const store = reviewStore();
     store.getState().addSubject({
       code: "ONE",
-      name: "One",
       meetings: [{ days: ["Wed"], startTime: "09:00", endTime: "10:00" }],
     });
     store.getState().addSubject({
       code: "TWO",
-      name: "Two",
       meetings: [{ days: ["Wed"], startTime: "10:00", endTime: "11:00" }],
     });
     render(
@@ -116,13 +110,11 @@ describe("schedule review", () => {
     const store = reviewStore();
     const disabledId = store.getState().addSubject({
       code: "THESIS1",
-      name: "Thesis I",
       enabled: false,
       meetings: [{ days: [], startTime: "", endTime: "" }],
     })!;
     store.getState().addSubject({
       code: "VISIBLE",
-      name: "Visible class",
       meetings: [{ days: ["Fri"], startTime: "13:00", endTime: "14:00" }],
     });
     render(

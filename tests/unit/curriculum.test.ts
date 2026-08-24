@@ -9,11 +9,11 @@ describe("normalized current curriculum", () => {
     expect(curriculumPrograms.flatMap((program) => program.terms).length).toBe(
       365,
     );
-    expect(
-      curriculumPrograms.flatMap((program) =>
-        program.terms.flatMap((term) => term.subjects),
-      ),
-    ).toHaveLength(1939);
+    const subjects = curriculumPrograms.flatMap((program) =>
+      program.terms.flatMap((term) => term.subjects),
+    );
+    expect(subjects).toHaveLength(1939);
+    expect(subjects.every((subject) => !("name" in subject))).toBe(true);
     expect(new Set(curriculumPrograms.map((program) => program.id)).size).toBe(
       32,
     );

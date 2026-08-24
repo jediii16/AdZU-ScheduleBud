@@ -84,6 +84,9 @@ describe("meeting and schedule validation", () => {
 
   it("returns validated schedule data and throws helpful paths", () => {
     expect(validateSchedule([subject()])).toHaveLength(1);
+    expect(() => validateSchedule([{ ...subject(), code: "   " }])).toThrow(
+      /0\.code/,
+    );
     expect(() => validateSchedule([{ id: "broken", meetings: [] }])).toThrow(
       /0\.meetings/,
     );

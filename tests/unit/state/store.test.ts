@@ -20,9 +20,7 @@ describe("project and schedule slices", () => {
   it("atomically replaces a confirmed creation draft with source metadata", () => {
     const { store } = createTestStore();
     store.getState().createProject();
-    const subjectId = store
-      .getState()
-      .addSubject({ code: "DRAFT", name: "Existing draft" })!;
+    const subjectId = store.getState().addSubject({ code: "DRAFT" })!;
     const subject = store
       .getState()
       .projectsById[store.getState().activeProjectId!]!.schedule.find(
@@ -47,9 +45,7 @@ describe("project and schedule slices", () => {
   it("creates, renames, switches, duplicates, and deletes independent projects", async () => {
     const { store, projects, assets } = createTestStore();
     const first = store.getState().createProject("First");
-    const subjectId = store
-      .getState()
-      .addSubject({ code: "FIC 101", name: "Fictional Class" })!;
+    const subjectId = store.getState().addSubject({ code: "FIC 101" })!;
     const duplicate = await store.getState().duplicateProject(first);
     expect(duplicate).not.toBe(first);
     expect(store.getState().projectsById[duplicate!]?.schedule[0]?.id).not.toBe(
@@ -95,9 +91,7 @@ describe("project and schedule slices", () => {
   it("preserves subject and meeting invariants through controlled actions", () => {
     const { store } = createTestStore();
     store.getState().createProject();
-    const subjectId = store
-      .getState()
-      .addSubject({ code: "CUSTOM", name: "Editable" })!;
+    const subjectId = store.getState().addSubject({ code: "CUSTOM" })!;
     const subject = selectSubjectById(subjectId)(store.getState())!;
     expect(subject.meetings).toHaveLength(1);
     store.getState().removeMeeting(subjectId, subject.meetings[0]!.id);
@@ -123,6 +117,31 @@ describe("project and schedule slices", () => {
 });
 
 describe("design and device slices", () => {
+  it("switches layouts as one undoable, redoable autosaved project change", async () => {
+    const { store, projects } = createTestStore();
+    store.getState().createProject();
+    await store.getState().flushAutosave();
+    const historyBefore = store.getState().history.past.length;
+    store.getState().setLayout("minimal");
+    expect(selectActiveProject(store.getState())?.design.layoutId).toBe(
+      "minimal",
+    );
+    expect(store.getState().history.past).toHaveLength(historyBefore + 1);
+    await store.getState().flushAutosave();
+    const saved = await projects.read(store.getState().activeProjectId!);
+    expect(
+      saved.status === "found" ? saved.project.design.layoutId : null,
+    ).toBe("minimal");
+    store.getState().undo();
+    expect(selectActiveProject(store.getState())?.design.layoutId).toBe(
+      "cards",
+    );
+    store.getState().redo();
+    expect(selectActiveProject(store.getState())?.design.layoutId).toBe(
+      "minimal",
+    );
+  });
+
   it("preserves template provenance and marks controlled edits as modified", () => {
     const { store } = createTestStore();
     store.getState().createProject();
@@ -162,6 +181,20 @@ describe("design and device slices", () => {
     expect(selectActiveProject(store.getState())?.design.themeId).toBe(
       "clean-slate",
     );
+  });
+
+  it("stores visibility only for optional class details", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    store.getState().setVisibleField("professor", false);
+    expect(
+      selectActiveProject(store.getState())?.design.visibleFields,
+    ).toMatchObject({
+      time: true,
+      room: true,
+      professor: false,
+      section: true,
+    });
   });
 
   it("keeps variants independent, clamps positions, and preserves semantic category", () => {
@@ -311,9 +344,7 @@ describe("autosave and history", () => {
     const projects = new MemoryProjectRepository();
     const { store } = createTestStore({ projects });
     store.getState().createProject();
-    const subjectId = store
-      .getState()
-      .addSubject({ code: "THESIS1", name: "Thesis I" })!;
+    const subjectId = store.getState().addSubject({ code: "THESIS1" })!;
 
     store.getState().setSubjectEnabled(subjectId, false);
     expect(selectSubjectById(subjectId)(store.getState())).toMatchObject({

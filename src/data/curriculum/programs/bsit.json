@@ -10,37 +10,30 @@
       "subjects": [
         {
           "code": "COMPINTRO",
-          "name": "Introduction to Computing",
           "units": 3
         },
         {
           "code": "COMPROG1",
-          "name": "Programming 1 (Fundamentals)",
           "units": 6
         },
         {
           "code": "WEBPROG",
-          "name": "Web Programming Fundamentals",
           "units": 3
         },
         {
           "code": "MATMOD",
-          "name": "Mathematics in the Modern World",
           "units": 3
         },
         {
           "code": "FFP1",
-          "name": "Freshman Formation Program 1",
           "units": 3
         },
         {
           "code": "NSTP1",
-          "name": "National Service Training Program 1",
           "units": 3
         },
         {
           "code": "PATHFIT1",
-          "name": "Movement Enhancement",
           "units": 2
         }
       ]
@@ -51,42 +44,34 @@
       "subjects": [
         {
           "code": "COMPROG2",
-          "name": "Programming 2 (Advance Programming)",
           "units": 6
         },
         {
           "code": "PHIHIS",
-          "name": "Readings in Philippine History",
           "units": 3
         },
         {
           "code": "PURCOM",
-          "name": "Purposive Communication",
           "units": 3
         },
         {
           "code": "SPIECO",
-          "name": "Spirituality and Ecology in the Christian, Ignatian, and Islamic Traditions",
           "units": 3
         },
         {
           "code": "UNDSELF",
-          "name": "Understanding the Self",
           "units": 3
         },
         {
           "code": "FFP2",
-          "name": "Freshman Formation Program 2",
           "units": 3
         },
         {
           "code": "NSTP2",
-          "name": "National Service Training Program 2",
           "units": 3
         },
         {
           "code": "PATHFIT2",
-          "name": "Fitness Exercise",
           "units": 2
         }
       ]
@@ -97,12 +82,10 @@
       "subjects": [
         {
           "code": "DISCMATH",
-          "name": "Discrete Mathematics",
           "units": 3
         },
         {
           "code": "DIGIMUL",
-          "name": "Digital Multimedia",
           "units": 3
         }
       ]
@@ -113,42 +96,34 @@
       "subjects": [
         {
           "code": "DATASTRUCT",
-          "name": "Data Structures",
           "units": 6
         },
         {
           "code": "OOP",
-          "name": "Object-Oriented Programming",
           "units": 3
         },
         {
           "code": "SAD",
-          "name": "Systems Analysis and Design",
           "units": 3
         },
         {
           "code": "ACADWRI",
-          "name": "Academic Writing",
           "units": 3
         },
         {
           "code": "ARTAPP",
-          "name": "Art Appreciation",
           "units": 3
         },
         {
           "code": "PATHFIT3",
-          "name": "Dance/Sports/Rec & Games I",
           "units": 2
         },
         {
           "code": "RIZAL",
-          "name": "Rizal",
           "units": 3
         },
         {
           "code": "SCITECS",
-          "name": "Science, Technology, and Society",
           "units": 3
         }
       ]
@@ -159,37 +134,30 @@
       "subjects": [
         {
           "code": "COGNATE1",
-          "name": "Elective Course 1",
           "units": 3
         },
         {
           "code": "DATAMAN",
-          "name": "Database Management",
           "units": 3
         },
         {
           "code": "SERSCRIPT",
-          "name": "Server-side Scripting",
           "units": 3
         },
         {
           "code": "GE ELECT-DA",
-          "name": "Business Analytics",
           "units": 3
         },
         {
           "code": "PATHFIT4",
-          "name": "Dance/Sports/Rec & Games II",
           "units": 2
         },
         {
           "code": "PHIHUM",
-          "name": "Philosophy of the Human Person",
           "units": 3
         },
         {
           "code": "VOCMIS",
-          "name": "Vocation and Mission in the Christian, Ignatian, and Islamic Traditions",
           "units": 3
         }
       ]
@@ -200,12 +168,10 @@
       "subjects": [
         {
           "code": "STATISTICS",
-          "name": "Statistics",
           "units": 3
         },
         {
           "code": "TECHPRE",
-          "name": "Technopreneurship",
           "units": 3
         }
       ]
@@ -216,37 +182,30 @@
       "subjects": [
         {
           "code": "COGNATE2",
-          "name": "Elective 2",
           "units": 3
         },
         {
           "code": "HCI",
-          "name": "Human-Computer Interaction",
           "units": 3
         },
         {
           "code": "PROJMAN",
-          "name": "Project Management",
           "units": 3
         },
         {
           "code": "SOFTENG",
-          "name": "Software Engineering",
           "units": 3
         },
         {
           "code": "WEBADMIN",
-          "name": "Web Server Administration",
           "units": 3
         },
         {
           "code": "WEBSYSTECH",
-          "name": "Web Systems and Technologies",
           "units": 3
         },
         {
           "code": "ETHICS",
-          "name": "Ethics",
           "units": 3
         }
       ]
@@ -257,42 +216,34 @@
       "subjects": [
         {
           "code": "COGNATE3",
-          "name": "Elective 3",
           "units": 3
         },
         {
           "code": "COGNATE4",
-          "name": "Elective 4",
           "units": 3
         },
         {
           "code": "ITRESEARCH",
-          "name": "IT Research (Capstone Approach)",
           "units": 3
         },
         {
           "code": "SYSINTEG",
-          "name": "Systems Integration Fundamentals",
           "units": 3
         },
         {
           "code": "SYSTESTEVAL",
-          "name": "Systems Testing and Evaluation",
           "units": 3
         },
         {
           "code": "CONWOR",
-          "name": "Contemporary World",
           "units": 3
         },
         {
           "code": "GE ELECT-LM",
-          "name": "Literatures of Mindanao",
           "units": 3
         },
         {
           "code": "PRACTICUM1",
-          "name": "Orientation and Linkage",
           "units": 1
         }
       ]
@@ -303,7 +254,6 @@
       "subjects": [
         {
           "code": "PRACTICUM2",
-          "name": "Practicum Proper/Immersion",
           "units": 5
         }
       ]
@@ -314,22 +264,18 @@
       "subjects": [
         {
           "code": "CAPSTONE1",
-          "name": "Capstone 1",
           "units": 3
         },
         {
           "code": "ECOMMERCE",
-          "name": "E-commerce",
           "units": 3
         },
         {
           "code": "INFOSEC",
-          "name": "Information Assurance and Security",
           "units": 3
         },
         {
           "code": "PROFETHICS",
-          "name": "Social and Professional Ethics",
           "units": 3
         }
       ]
@@ -340,12 +286,10 @@
       "subjects": [
         {
           "code": "CAPSTONE2",
-          "name": "Capstone 2",
           "units": 3
         },
         {
           "code": "DATACOMM",
-          "name": "Data Communications",
           "units": 3
         }
       ]

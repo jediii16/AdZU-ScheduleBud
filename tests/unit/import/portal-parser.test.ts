@@ -57,7 +57,6 @@ describe("Portal row parsing", () => {
     expect(result.subjects).toHaveLength(1);
     expect(result.subjects[0]).toMatchObject({
       code: "LAB.201",
-      name: "",
       units: 0,
       enabled: true,
       isCustom: true,
@@ -145,7 +144,6 @@ describe("Portal row parsing", () => {
       { idFactory: sequentialIds() },
     );
     expect(result.subjects[0]).toMatchObject({
-      name: "",
       units: 0,
       isCustom: true,
     });

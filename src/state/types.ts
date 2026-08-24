@@ -98,7 +98,7 @@ export interface ScheduleSlice {
       } | null;
     },
   ): void;
-  addSubject(input?: SubjectInput): string | null;
+  addSubject(input: SubjectInput): string | null;
   updateSubject(
     subjectId: string,
     updates: Partial<Omit<Subject, "id" | "meetings">>,

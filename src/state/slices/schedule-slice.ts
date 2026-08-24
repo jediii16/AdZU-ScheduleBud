@@ -32,7 +32,7 @@ export function createScheduleSlice(context: StoreContext): ScheduleSlice {
         schedule: validated,
       }));
     },
-    addSubject(input = {}) {
+    addSubject(input) {
       const subject = normalizeSubject(input, ids);
       const result = context.commit("Add subject", (project) => ({
         ...project,

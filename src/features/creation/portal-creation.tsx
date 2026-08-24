@@ -120,6 +120,9 @@ export function PendingPortalReview({
   );
   const actionableWarnings = actionablePortalWarnings(pending);
   const warningSummaries = summarizePortalWarnings(actionableWarnings);
+  const hasMissingCode = pending.subjects.some(
+    (subject) => subject.code.trim().length === 0,
+  );
   const updateSubject = (subjectId: string, updates: Partial<Subject>) =>
     onChange({
       ...pending,
@@ -208,14 +211,7 @@ export function PendingPortalReview({
           <article key={subject.id} className="py-4 sm:py-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h3 className="font-heading font-bold">{subject.code}</h3>
-                  {subject.name ? (
-                    <p className="text-sm text-text-secondary">
-                      {subject.name}
-                    </p>
-                  ) : null}
-                </div>
+                <h3 className="font-heading font-bold">{subject.code}</h3>
                 <p className="mt-1 text-xs leading-5 text-text-muted">
                   {subject.enabled
                     ? subject.meetings.map(meetingSummary).join(" · ")
@@ -240,27 +236,17 @@ export function PendingPortalReview({
                 Edit subject and meetings
               </summary>
               <div className="mt-5 space-y-5 rounded-md bg-card p-4 sm:p-5">
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <label>
                     <span className="sb-label">Code</span>
                     <input
                       className="sb-control"
+                      required
+                      aria-invalid={!subject.code.trim() || undefined}
                       value={subject.code}
                       onChange={(event) =>
                         updateSubject(subject.id, {
                           code: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    <span className="sb-label">Name</span>
-                    <input
-                      className="sb-control"
-                      value={subject.name}
-                      onChange={(event) =>
-                        updateSubject(subject.id, {
-                          name: event.target.value,
                         })
                       }
                     />
@@ -303,10 +289,15 @@ export function PendingPortalReview({
         <Button variant="outline" size="lg" onClick={onCancel}>
           Cancel import
         </Button>
-        <Button size="lg" onClick={onConfirm}>
+        <Button size="lg" disabled={hasMissingCode} onClick={onConfirm}>
           Confirm import <ArrowRight aria-hidden="true" />
         </Button>
       </div>
+      {hasMissingCode ? (
+        <p role="alert" className="mt-3 text-right text-sm text-warning">
+          Every imported subject needs a code before it can be confirmed.
+        </p>
+      ) : null}
     </section>
   );
 }

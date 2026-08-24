@@ -4,7 +4,7 @@ import type Konva from "konva";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Stage } from "react-konva";
 
-import type { CardsRenderResult } from "@/domain/render";
+import type { ScheduleRenderResult } from "@/domain/render";
 import type { AlignmentGuides } from "@/domain/render";
 import type { DeviceVariant } from "@/domain/device/types";
 import type { SafeAreaModel } from "@/domain/device/safe-areas";
@@ -26,7 +26,7 @@ export function ScheduleArtboard({
   guideImage,
   guideOpacity,
 }: {
-  result: CardsRenderResult;
+  result: ScheduleRenderResult;
   zoom: number;
   exportStageRef: RefObject<Konva.Stage | null>;
   onDragStart(): void;
@@ -67,6 +67,13 @@ export function ScheduleArtboard({
         data-target-width={result.model.width}
         data-target-height={result.model.height}
         data-preview-scale={scale}
+        data-schedule-x={result.scheduleBounds.x}
+        data-schedule-y={result.scheduleBounds.y}
+        data-schedule-width={result.scheduleBounds.width}
+        data-schedule-height={result.scheduleBounds.height}
+        data-dragging={dragging ? "true" : "false"}
+        data-guide-vertical={guides.verticalCenter ? "true" : "false"}
+        data-guide-horizontal={guides.horizontalCenter ? "true" : "false"}
         className="shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
         style={{
           width: result.model.width * scale,

@@ -63,7 +63,6 @@ export function CurriculumCreation() {
       normalizeSubject(
         {
           code: subject.code,
-          name: subject.name,
           units: subject.units,
           section: "",
           enabled: true,
@@ -100,7 +99,7 @@ export function CurriculumCreation() {
           </p>
           <h1 className="sb-page-title">Choose your curriculum term.</h1>
           <p className="mt-3 max-w-2xl text-text-secondary">
-            We’ll add the supplied subject names and units. You’ll enter your
+            We’ll add the supplied subject codes and units. You’ll enter your
             own days, times, section, room, and professor.
           </p>
         </header>
@@ -184,15 +183,12 @@ export function CurriculumCreation() {
                 </div>
                 {term.subjects.length > 0 ? (
                   <ul className="divide-y divide-border-muted">
-                    {term.subjects.map((subject) => (
+                    {term.subjects.map((subject, index) => (
                       <li
-                        key={`${subject.code}-${subject.name}`}
-                        className="grid grid-cols-[minmax(5rem,.3fr)_1fr_auto] gap-3 py-3 text-sm"
+                        key={`${subject.code}-${index}`}
+                        className="flex items-center justify-between gap-3 py-3 text-sm"
                       >
                         <strong>{subject.code}</strong>
-                        <span className="text-text-secondary">
-                          {subject.name}
-                        </span>
                         <span className="font-mono text-xs text-text-muted">
                           {subject.units}u
                         </span>

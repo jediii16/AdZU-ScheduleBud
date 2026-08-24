@@ -10,42 +10,34 @@
       "subjects": [
         {
           "code": "PURCOM",
-          "name": "Purposive Communication",
           "units": 3
         },
         {
           "code": "UNDSELF",
-          "name": "Understanding the Self",
           "units": 3
         },
         {
           "code": "SPIECO",
-          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Traditions",
           "units": 3
         },
         {
           "code": "PHIHIS",
-          "name": "Readings in Philippine History",
           "units": 3
         },
         {
           "code": "FFP1",
-          "name": "Freshmen Formation Program 1",
           "units": 3
         },
         {
           "code": "NSTP1",
-          "name": "National Service Training Program 1",
           "units": 3
         },
         {
           "code": "PATHFIT1",
-          "name": "Movement Enhancement",
           "units": 2
         },
         {
           "code": "PED 1",
-          "name": "Adult Learners & Learning Principles",
           "units": 3
         }
       ]
@@ -56,42 +48,34 @@
       "subjects": [
         {
           "code": "MATMOD",
-          "name": "Mathematics in the Modern World",
           "units": 3
         },
         {
           "code": "HISCUL",
-          "name": "Historia y Cultura de Zamboanga",
           "units": 3
         },
         {
           "code": "FFP2",
-          "name": "Freshmen Formation Program 2",
           "units": 3
         },
         {
           "code": "PATHFIT2",
-          "name": "Fitness Exercises",
           "units": 2
         },
         {
           "code": "PHI 205",
-          "name": "Philosophical Writing Methods",
           "units": 3
         },
         {
           "code": "NSTP2",
-          "name": "National Service Training Program 2",
           "units": 3
         },
         {
           "code": "PHI201",
-          "name": "Introduction to Philosophy",
           "units": 3
         },
         {
           "code": "PED 3",
-          "name": "Facilitating Learner-Centered Teaching",
           "units": 3
         }
       ]
@@ -107,42 +91,34 @@
       "subjects": [
         {
           "code": "PHIHUM",
-          "name": "Philosophy of the Human Person: Social & Political Dimensions",
           "units": 3
         },
         {
           "code": "VOCMIS",
-          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
           "units": 3
         },
         {
           "code": "PATHFIT3",
-          "name": "Dance/Sports/Rec & Games I",
           "units": 2
         },
         {
           "code": "ARTAPP",
-          "name": "Art Appreciation",
           "units": 3
         },
         {
           "code": "PHI 203",
-          "name": "History of Western Philosophy I",
           "units": 3
         },
         {
           "code": "PHI202",
-          "name": "Logic",
           "units": 3
         },
         {
           "code": "PHI 307",
-          "name": "Seminar on Special Questions on Philosophy",
           "units": 3
         },
         {
           "code": "PED 4",
-          "name": "Technology for Teaching and Learning 1",
           "units": 3
         }
       ]
@@ -153,42 +129,34 @@
       "subjects": [
         {
           "code": "PHI 204",
-          "name": "Advanced Philosophy of Man",
           "units": 3
         },
         {
           "code": "PHI 304",
-          "name": "Philosophy of Science & Technology",
           "units": 3
         },
         {
           "code": "PATHFIT4",
-          "name": "Dance/Sports/Rec & Games II",
           "units": 2
         },
         {
           "code": "SCITECS",
-          "name": "Science, Technology & Society",
           "units": 3
         },
         {
           "code": "PHI 303",
-          "name": "History of Western Philosophy II",
           "units": 3
         },
         {
           "code": "RIZAL",
-          "name": "Life and Works of Rizal",
           "units": 3
         },
         {
           "code": "PHI 401",
-          "name": "Seminar on Plato/Aristotle",
           "units": 3
         },
         {
           "code": "PED 7",
-          "name": "Assessment of Learning II",
           "units": 3
         }
       ]
@@ -199,17 +167,14 @@
       "subjects": [
         {
           "code": "PHI 403",
-          "name": "Seminar on Contemporary Philosophy",
           "units": 3
         },
         {
           "code": "PHI ELECT1",
-          "name": "Philo Elective I (Philosophy of Law)",
           "units": 3
         },
         {
           "code": "PHI 310",
-          "name": "Philosophy of Language",
           "units": 3
         }
       ]
@@ -220,42 +185,34 @@
       "subjects": [
         {
           "code": "FL 1",
-          "name": "Foreign Language 1",
           "units": 3
         },
         {
           "code": "PHII 406",
-          "name": "Special Seminar on Filipino Philosophy",
           "units": 3
         },
         {
           "code": "PHI 301",
-          "name": "Metaphysics",
           "units": 3
         },
         {
           "code": "PHI 305",
-          "name": "History of Indian Philosophy",
           "units": 3
         },
         {
           "code": "PHI 306",
-          "name": "History of Chinese Philosophy",
           "units": 3
         },
         {
           "code": "KOMFIL",
-          "name": "Kontekswalisadong Komunikasyon sa Filipino",
           "units": 3
         },
         {
           "code": "CONWOR",
-          "name": "Contemporary World",
           "units": 3
         },
         {
           "code": "PED 8",
-          "name": "The Teaching Profession",
           "units": 3
         }
       ]
@@ -266,37 +223,30 @@
       "subjects": [
         {
           "code": "FL 2",
-          "name": "Foreign Language 2",
           "units": 3
         },
         {
           "code": "ETHICS",
-          "name": "Ethics",
           "units": 3
         },
         {
           "code": "PHI 302",
-          "name": "Epistemology",
           "units": 3
         },
         {
           "code": "PHI 308",
-          "name": "Philosophy of Religion",
           "units": 3
         },
         {
           "code": "PHI 198",
-          "name": "Philosophical Synthesis Paper (Proposal)",
           "units": 3
         },
         {
           "code": "LITMIN",
-          "name": "Literatures of Mindanao",
           "units": 3
         },
         {
           "code": "PED 9",
-          "name": "The Teacher and School Curriculum",
           "units": 3
         }
       ]
@@ -307,17 +257,14 @@
       "subjects": [
         {
           "code": "PHI ELECT2",
-          "name": "Philo Elective 2 (Legal Hermeneutics)",
           "units": 3
         },
         {
           "code": "PHI ELECT3",
-          "name": "Philo Elective 3 (Environmental Justice)",
           "units": 3
         },
         {
           "code": "PHI 402",
-          "name": "Existentialism/Phenomenology/Hermeneutics/Post Modernism",
           "units": 3
         }
       ]
@@ -328,27 +275,22 @@
       "subjects": [
         {
           "code": "PHI 404",
-          "name": "Social Political Philosophy",
           "units": 3
         },
         {
           "code": "PHI 407",
-          "name": "Special Questions in Legal Ethics",
           "units": 3
         },
         {
           "code": "PHI 408",
-          "name": "Aesthetics/Theories of Art",
           "units": 3
         },
         {
           "code": "PHI 409",
-          "name": "Comparative Philosophy",
           "units": 3
         },
         {
           "code": "PHI 199",
-          "name": "Philosophical Synthesis Paper Writing and Defense (Comprehensive Exam)",
           "units": 3
         }
       ]
@@ -359,7 +301,6 @@
       "subjects": [
         {
           "code": "PHI-PRACT",
-          "name": "Field Study & Teaching Internship",
           "units": 6
         }
       ]

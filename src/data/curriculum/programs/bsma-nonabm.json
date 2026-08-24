@@ -10,47 +10,38 @@
       "subjects": [
         {
           "code": "ABMBRC 2",
-          "name": "Organization, Management & Marketing",
           "units": 3
         },
         {
           "code": "FINACC1",
-          "name": "Financial Accounting & Reporting",
           "units": 6
         },
         {
           "code": "FINACC2",
-          "name": "Conceptual Frameworks & Accounting Standards",
           "units": 3
         },
         {
           "code": "MATMOD",
-          "name": "Mathematics in the Modern World",
           "units": 3
         },
         {
           "code": "PHIHIS",
-          "name": "Readings in Philippine History",
           "units": 3
         },
         {
           "code": "SPIECO",
-          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Traditions",
           "units": 3
         },
         {
           "code": "FFP1",
-          "name": "Freshman Formation Program 1",
           "units": 3
         },
         {
           "code": "NSTP1",
-          "name": "National Service Training Program 1",
           "units": 3
         },
         {
           "code": "PATHFIT1",
-          "name": "Movement Enhancement",
           "units": 2
         }
       ]
@@ -61,52 +52,42 @@
       "subjects": [
         {
           "code": "ABMBRC 4",
-          "name": "Business Finance",
           "units": 3
         },
         {
           "code": "FINACC3",
-          "name": "Intermediate Accounting 1",
           "units": 3
         },
         {
           "code": "BUSECO1",
-          "name": "Managerial Economics",
           "units": 3
         },
         {
           "code": "BUSMAN106",
-          "name": "Operations Management & TQM",
           "units": 3
         },
         {
           "code": "PURCOM",
-          "name": "Purposive Communication",
           "units": 3
         },
         {
           "code": "VOCMIS",
-          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
           "units": 3
         },
         {
           "code": "UNDSELF",
-          "name": "Understanding the Self",
           "units": 3
         },
         {
           "code": "FFP2",
-          "name": "Freshman Formation Program 2",
           "units": 3
         },
         {
           "code": "NSTP2",
-          "name": "National Service Training Program 2",
           "units": 3
         },
         {
           "code": "PATHFIT2",
-          "name": "Fitness Exercise",
           "units": 2
         }
       ]
@@ -117,17 +98,14 @@
       "subjects": [
         {
           "code": "ACCLAW1",
-          "name": "Laws on Obligations & Contracts",
           "units": 3
         },
         {
           "code": "AELECT1",
-          "name": "Accounting Elective 1",
           "units": 3
         },
         {
           "code": "FINMAN1",
-          "name": "Financial Markets",
           "units": 3
         }
       ]
@@ -138,47 +116,38 @@
       "subjects": [
         {
           "code": "ACCIST 1",
-          "name": "Accounting Information System",
           "units": 3
         },
         {
           "code": "ACCLAW 2",
-          "name": "Business Laws & Regulations",
           "units": 3
         },
         {
           "code": "ADVACC 1",
-          "name": "Accounting for Specialized Transactions",
           "units": 3
         },
         {
           "code": "COSMAN1",
-          "name": "Cost Accounting & Control",
           "units": 3
         },
         {
           "code": "FINACC 4",
-          "name": "Intermediate Accounting 2",
           "units": 3
         },
         {
           "code": "GERMIC 1",
-          "name": "Governance, Business Ethics, Risk Management & Internal Control",
           "units": 3
         },
         {
           "code": "CONWOR",
-          "name": "Contemporary World",
           "units": 3
         },
         {
           "code": "SCITECS",
-          "name": "Science, Technology & Society",
           "units": 3
         },
         {
           "code": "PATHFIT3",
-          "name": "Dance/Sports/Rec & Games I",
           "units": 2
         }
       ]
@@ -189,47 +158,38 @@
       "subjects": [
         {
           "code": "ACCLAW3",
-          "name": "Regulatory Framework & Legal Issues in Business",
           "units": 3
         },
         {
           "code": "ACCTAX 1",
-          "name": "Income Taxation",
           "units": 3
         },
         {
           "code": "COSMAN 2",
-          "name": "Strategic Cost Management",
           "units": 3
         },
         {
           "code": "FINACC 5",
-          "name": "Intermediate Accounting 3",
           "units": 3
         },
         {
           "code": "EXTAUD 1",
-          "name": "Auditing and Assurance Principles",
           "units": 3
         },
         {
           "code": "ARTAPP",
-          "name": "Art Appreciation",
           "units": 3
         },
         {
           "code": "PHIHUM",
-          "name": "Philosophy of the Human Person: Social & Political Dimensions",
           "units": 3
         },
         {
           "code": "RIZAL",
-          "name": "Life and Works of Rizal",
           "units": 3
         },
         {
           "code": "PATHFIT4",
-          "name": "Dance/Sports/Rec & Games II",
           "units": 2
         }
       ]
@@ -240,17 +200,14 @@
       "subjects": [
         {
           "code": "ACCIST 2",
-          "name": "IT Application Tools in Business",
           "units": 3
         },
         {
           "code": "BUSANA 1",
-          "name": "Management Science",
           "units": 3
         },
         {
           "code": "BUSECO 2",
-          "name": "Economic Development",
           "units": 3
         }
       ]
@@ -261,37 +218,30 @@
       "subjects": [
         {
           "code": "ACCTAX 2",
-          "name": "Business Tax",
           "units": 3
         },
         {
           "code": "ADVACC 3",
-          "name": "Accounting for Government & Non-profit Organizations",
           "units": 3
         },
         {
           "code": "FINACC 6",
-          "name": "Issues in Financial Reporting",
           "units": 3
         },
         {
           "code": "FINMAN 2",
-          "name": "Financial Management",
           "units": 3
         },
         {
           "code": "MAELECT 1",
-          "name": "Accounting Elective 1",
           "units": 3
         },
         {
           "code": "ETHICS",
-          "name": "Ethics",
           "units": 3
         },
         {
           "code": "GE ELECT-LM",
-          "name": "Literatures of Mindanao",
           "units": 3
         }
       ]
@@ -302,47 +252,38 @@
       "subjects": [
         {
           "code": "ACCTAX 3",
-          "name": "Strategic Tax Management",
           "units": 3
         },
         {
           "code": "ADVACC 2",
-          "name": "Accounting for Business Combinations",
           "units": 3
         },
         {
           "code": "BUSMAN 104",
-          "name": "Project Management",
           "units": 3
         },
         {
           "code": "COSMAN 3",
-          "name": "Strategic Business Analysis",
           "units": 3
         },
         {
           "code": "GERMIC 2",
-          "name": "Enterprise Risk Management",
           "units": 3
         },
         {
           "code": "MAELECT 2",
-          "name": "Management Accounting Elective 2",
           "units": 3
         },
         {
           "code": "FINMAN 3",
-          "name": "International Business, Trade & Finance",
           "units": 3
         },
         {
           "code": "PERMEA 1",
-          "name": "Performance Management & Measurement",
           "units": 3
         },
         {
           "code": "GE ELECT-GB",
-          "name": "Great Books: World Literary Classics",
           "units": 3
         }
       ]
@@ -358,37 +299,30 @@
       "subjects": [
         {
           "code": "BURMET 1",
-          "name": "Accounting Research Methods",
           "units": 3
         },
         {
           "code": "BURMET 2",
-          "name": "Statistical Analysis with Software Application",
           "units": 3
         },
         {
           "code": "BUSTRA 1",
-          "name": "Strategic Management",
           "units": 3
         },
         {
           "code": "BUSTRA 2",
-          "name": "Sustainability & Strategic Audit",
           "units": 3
         },
         {
           "code": "FINMAN4",
-          "name": "Valuation Techniques and Methods",
           "units": 3
         },
         {
           "code": "MAELECT3",
-          "name": "Management Accounting Elective 3",
           "units": 3
         },
         {
           "code": "MAELECT4",
-          "name": "Management Accounting Elective 4",
           "units": 3
         }
       ]
@@ -399,12 +333,10 @@
       "subjects": [
         {
           "code": "ACCAPS 1",
-          "name": "Accounting Internship",
           "units": 3
         },
         {
           "code": "ACCAPS 2",
-          "name": "Accounting Thesis",
           "units": 3
         }
       ]

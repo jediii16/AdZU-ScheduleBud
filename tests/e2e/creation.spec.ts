@@ -7,12 +7,12 @@ async function createStudioSchedule(
   days: readonly string[] = ["Mon"],
 ) {
   await page.goto("/create/manual");
-  await page.getByLabel("Subject code").fill(code);
-  await page.getByLabel("Subject name").fill("Interaction Design");
-  for (const day of days) await page.getByText(day, { exact: true }).click();
-  await page.getByLabel("Start time").fill("08:00");
-  await page.getByLabel("End time").fill("09:30");
-  await page.getByRole("button", { name: "Add class" }).click();
+  const form = page.locator("form").first();
+  await form.getByLabel("Subject code").fill(code);
+  for (const day of days) await form.getByText(day, { exact: true }).click();
+  await form.getByLabel("Start time").fill("08:00");
+  await form.getByLabel("End time").fill("09:30");
+  await form.getByRole("button", { name: "Add class" }).click();
   await page.getByRole("link", { name: /Review schedule/i }).click();
   await page.getByRole("button", { name: /Start designing/i }).click();
   await expect(page).toHaveURL(/\/studio$/);
@@ -23,7 +23,10 @@ async function pngDimensions(download: Download) {
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-  const png = Buffer.concat(chunks);
+  return pngBufferDimensions(Buffer.concat(chunks));
+}
+
+function pngBufferDimensions(png: Buffer) {
   expect(png.subarray(1, 4).toString()).toBe("PNG");
   return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
 }
@@ -46,10 +49,27 @@ async function openTargetPicker(page: Page) {
   ).toBeVisible();
 }
 
+async function choosePreset(
+  page: Page,
+  category: "Phone" | "Tablet" | "Laptop" | "Desktop" | "Square",
+  name: RegExp,
+) {
+  await openTargetPicker(page);
+  await page.getByRole("tab", { name: category, exact: true }).click();
+  await page.getByRole("button", { name }).click();
+}
+
+async function switchToMinimal(page: Page) {
+  await page.getByRole("button", { name: "Design", exact: true }).click();
+  await page.getByRole("radio", { name: "Minimal", exact: true }).click();
+  await expect(
+    page.getByRole("radio", { name: "Minimal", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+}
+
 test("manual schedule creation reaches review", async ({ page }) => {
   await page.goto("/create/manual");
   await page.getByLabel("Subject code").fill("CS 201");
-  await page.getByLabel("Subject name").fill("Data Structures");
   await page.getByText("Mon", { exact: true }).click();
   await page.getByLabel("Start time").fill("08:00");
   await page.getByLabel("End time").fill("09:30");
@@ -149,7 +169,6 @@ test("mobile review keeps warning actions inside the bottom safe area", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/create/manual");
   await page.getByLabel("Subject code").fill("OPEN 1");
-  await page.getByLabel("Subject name").fill("Incomplete class");
   await page.getByRole("button", { name: "Add class" }).click();
   await page.getByRole("link", { name: /Review schedule/i }).click();
   const footer = page.locator("footer");
@@ -157,15 +176,17 @@ test("mobile review keeps warning actions inside the bottom safe area", async ({
   await expect(
     footer.getByRole("button", { name: "Continue anyway" }),
   ).toBeVisible();
-  const placement = await footer.evaluate((element) => {
-    const box = element.getBoundingClientRect();
-    return {
-      bottom: box.bottom,
-      viewportHeight: window.innerHeight,
-      paddingBottom: Number.parseFloat(getComputedStyle(element).paddingBottom),
-    };
-  });
-  expect(placement.bottom).toBeLessThanOrEqual(placement.viewportHeight + 1);
+  await expect
+    .poll(() =>
+      footer.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return box.bottom - window.innerHeight;
+      }),
+    )
+    .toBeLessThanOrEqual(1);
+  const placement = await footer.evaluate((element) => ({
+    paddingBottom: Number.parseFloat(getComputedStyle(element).paddingBottom),
+  }));
   expect(placement.paddingBottom).toBeGreaterThanOrEqual(16);
 });
 
@@ -213,6 +234,10 @@ test("Studio edits title and class inclusion without deleting the class", async 
   await createStudioSchedule(page, "KEEP 1");
   await page.getByRole("button", { name: "Design", exact: true }).click();
   await expect(page.getByLabel("Hide days without classes")).toBeChecked();
+  await expect(page.getByLabel("Subject code")).toHaveCount(0);
+  for (const detail of ["Time", "Room", "Professor", "Section"]) {
+    await expect(page.getByLabel(detail, { exact: true })).toBeVisible();
+  }
   await page.getByLabel("Show title").uncheck();
   await expect(page.getByLabel("Title text")).toBeDisabled();
   await page.getByLabel("Show title").check();
@@ -472,4 +497,314 @@ test("device preview environments remain visually restrained", async ({
   await expect(preview).toHaveScreenshot("my-screen-guide-preview.png", {
     animations: "disabled",
   });
+});
+
+test("Minimal layout switches, shares editor behavior, and exports exact target sizes", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page, "MINIMAL 1", [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+  ]);
+  await switchToMinimal(page);
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(
+    page.getByRole("radio", { name: "Cards", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("button", { name: "Redo" }).click();
+  await expect(
+    page.getByRole("radio", { name: "Minimal", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+
+  await page.getByLabel("Show title").uncheck();
+  await page.getByLabel("Show title").check();
+  await page.getByLabel("Title text").fill("First Semester");
+  await page.getByLabel("Title text").blur();
+  await page.getByLabel("Hide days without classes").uncheck();
+  await page.getByLabel("Hide days without classes").check();
+
+  const preview = page.getByTestId("artboard-preview");
+  const geometry = await preview.evaluate((element) => ({
+    scale: Number(element.getAttribute("data-preview-scale")),
+    x: Number(element.getAttribute("data-schedule-x")),
+    y: Number(element.getAttribute("data-schedule-y")),
+    width: Number(element.getAttribute("data-schedule-width")),
+    height: Number(element.getAttribute("data-schedule-height")),
+    canvasWidth: Number(element.getAttribute("data-target-width")),
+    canvasHeight: Number(element.getAttribute("data-target-height")),
+  }));
+  const previewBox = await preview.boundingBox();
+  expect(previewBox).not.toBeNull();
+  const start = {
+    x: previewBox!.x + (geometry.x + geometry.width / 2) * geometry.scale,
+    y: previewBox!.y + (geometry.y + geometry.height / 2) * geometry.scale,
+  };
+  const delta = {
+    x:
+      (geometry.canvasWidth / 2 - geometry.width / 2 - geometry.x) *
+      geometry.scale,
+    y:
+      (geometry.canvasHeight / 2 - geometry.height / 2 - geometry.y) *
+      geometry.scale,
+  };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + delta.x, start.y + delta.y, { steps: 8 });
+  await expect(preview).toHaveAttribute("data-dragging", "true");
+  await expect(preview).toHaveAttribute("data-guide-vertical", "true");
+  await expect(preview).toHaveAttribute("data-guide-horizontal", "true");
+  await page.mouse.up();
+  await expect(preview).toHaveAttribute("data-dragging", "false");
+
+  const phoneDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export|Download again/i }).click();
+  expect(await pngDimensions(await phoneDownload)).toEqual({
+    width: 1080,
+    height: 2400,
+  });
+
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await page.getByRole("button", { name: "Lock screen" }).click();
+  await page.getByLabel("Show safe areas").check();
+  await page.getByLabel("Vertical schedule position").fill("0");
+  await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
+
+  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await expect(preview).toHaveAttribute("data-target-width", "1536");
+  await choosePreset(page, "Square", /Square 1080/);
+  await expect(preview).toHaveAttribute("data-target-width", "1080");
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  const desktopDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export|Download again/i }).click();
+  expect(await pngDimensions(await desktopDownload)).toEqual({
+    width: 1920,
+    height: 1080,
+  });
+
+  await choosePreset(page, "Phone", /Generic FHD\+ Portrait/);
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("tab", { name: "Phone", exact: true }).click();
+  await page.getByLabel("Custom width").fill("1170");
+  await page.getByLabel("Custom height").fill("2532");
+  await page.getByRole("button", { name: "Create custom phone" }).click();
+  const customDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export|Download again/i }).click();
+  expect(await pngDimensions(await customDownload)).toEqual({
+    width: 1170,
+    height: 2532,
+  });
+});
+
+test("Minimal visual baselines cover dense, sparse, long, and target-specific compositions", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page, "MIN 501", [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+  ]);
+  await switchToMinimal(page);
+  const preview = page.getByTestId("artboard-preview");
+
+  await expect(preview).toHaveScreenshot(
+    "phone-minimal-clean-5-days-title.png",
+    { animations: "disabled" },
+  );
+  const phoneTarget = await exportedPng(page);
+  expect(pngBufferDimensions(phoneTarget)).toEqual({
+    width: 1080,
+    height: 2400,
+  });
+  expect(phoneTarget).toMatchSnapshot(
+    "phone-minimal-clean-5-days-title-target.png",
+  );
+  await page.getByLabel("Show title").uncheck();
+  await expect(preview).toHaveScreenshot(
+    "phone-minimal-clean-5-days-no-title.png",
+    { animations: "disabled" },
+  );
+  await page.getByLabel("Show title").check();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(preview).toHaveScreenshot(
+    "phone-minimal-clean-display-390.png",
+    { animations: "disabled" },
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await expect(preview).toHaveScreenshot("tablet-portrait-minimal-clean.png", {
+    animations: "disabled",
+  });
+  const tabletPortraitTarget = await exportedPng(page);
+  expect(pngBufferDimensions(tabletPortraitTarget)).toEqual({
+    width: 1536,
+    height: 2048,
+  });
+  expect(tabletPortraitTarget).toMatchSnapshot(
+    "tablet-portrait-minimal-clean-target.png",
+  );
+  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await expect(preview).toHaveScreenshot("tablet-landscape-minimal-clean.png", {
+    animations: "disabled",
+  });
+  const tabletLandscapeTarget = await exportedPng(page);
+  expect(pngBufferDimensions(tabletLandscapeTarget)).toEqual({
+    width: 2048,
+    height: 1536,
+  });
+  expect(tabletLandscapeTarget).toMatchSnapshot(
+    "tablet-landscape-minimal-clean-target.png",
+  );
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await expect(preview).toHaveScreenshot("desktop-minimal-clean-5-days.png", {
+    animations: "disabled",
+  });
+  const desktopTarget = await exportedPng(page);
+  expect(pngBufferDimensions(desktopTarget)).toEqual({
+    width: 1920,
+    height: 1080,
+  });
+  expect(desktopTarget).toMatchSnapshot(
+    "desktop-minimal-clean-5-days-target.png",
+  );
+  await choosePreset(page, "Square", /Square 1080/);
+  await expect(preview).toHaveScreenshot("square-minimal-clean-5-days.png", {
+    animations: "disabled",
+  });
+  const squareTarget = await exportedPng(page);
+  expect(pngBufferDimensions(squareTarget)).toEqual({
+    width: 1080,
+    height: 1080,
+  });
+  expect(squareTarget).toMatchSnapshot(
+    "square-minimal-clean-5-days-target.png",
+  );
+
+  await createStudioSchedule(page, "MIN 301", ["Mon", "Wed", "Fri"]);
+  await switchToMinimal(page);
+  await expect(preview).toHaveScreenshot("phone-minimal-clean-3-days.png", {
+    animations: "disabled",
+  });
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await expect(preview).toHaveScreenshot("desktop-minimal-clean-3-days.png", {
+    animations: "disabled",
+  });
+  const sparseDesktopTarget = await exportedPng(page);
+  expect(pngBufferDimensions(sparseDesktopTarget)).toEqual({
+    width: 1920,
+    height: 1080,
+  });
+  expect(sparseDesktopTarget).toMatchSnapshot(
+    "desktop-minimal-clean-3-days-target.png",
+  );
+
+  await createStudioSchedule(page, "MIN 601", [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+  ]);
+  await switchToMinimal(page);
+  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await expect(preview).toHaveScreenshot(
+    "tablet-landscape-minimal-clean-6-days.png",
+    { animations: "disabled" },
+  );
+  const packedTabletLandscapeTarget = await exportedPng(page);
+  expect(pngBufferDimensions(packedTabletLandscapeTarget)).toEqual({
+    width: 2048,
+    height: 1536,
+  });
+  expect(packedTabletLandscapeTarget).toMatchSnapshot(
+    "tablet-landscape-minimal-clean-6-days-target.png",
+  );
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await expect(preview).toHaveScreenshot("desktop-minimal-clean-6-days.png", {
+    animations: "disabled",
+  });
+  const packedDesktopTarget = await exportedPng(page);
+  expect(pngBufferDimensions(packedDesktopTarget)).toEqual({
+    width: 1920,
+    height: 1080,
+  });
+  expect(packedDesktopTarget).toMatchSnapshot(
+    "desktop-minimal-clean-6-days-target.png",
+  );
+
+  await page.goto("/create/manual");
+  const longForm = page.locator("form").first();
+  await longForm.getByLabel("Subject code").fill("LONG 401");
+  await longForm.getByLabel("Section").fill("Research and Development A");
+  for (const day of ["Mon", "Thu"]) {
+    await longForm.getByText(day, { exact: true }).click();
+  }
+  await longForm.getByLabel("Start time").fill("08:00");
+  await longForm.getByLabel("End time").fill("09:30");
+  await longForm.getByLabel(/^Room/).fill("Advanced Computing Laboratory");
+  await longForm
+    .getByLabel(/^Professor/)
+    .fill("Professor With A Deliberately Long Display Name");
+  await longForm.getByRole("button", { name: "Add class" }).click();
+  await page.getByRole("link", { name: /Review schedule/i }).click();
+  await page.getByRole("button", { name: /Start designing/i }).click();
+  await switchToMinimal(page);
+  await expect(preview).toHaveScreenshot(
+    "phone-minimal-clean-long-content.png",
+    { animations: "disabled" },
+  );
+  const longPhoneTarget = await exportedPng(page);
+  expect(pngBufferDimensions(longPhoneTarget)).toEqual({
+    width: 1080,
+    height: 2400,
+  });
+  expect(longPhoneTarget).toMatchSnapshot(
+    "phone-minimal-clean-long-content-target.png",
+  );
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.setContent(
+    `<main style="margin:0;background:#f7f8fa"><img aria-label="Phone wallpaper at display size" style="display:block;width:390px;height:auto" src="data:image/png;base64,${phoneTarget.toString("base64")}"></main>`,
+  );
+  await expect(
+    page.getByRole("img", { name: "Phone wallpaper at display size" }),
+  ).toHaveScreenshot("phone-minimal-clean-export-display-390.png", {
+    animations: "disabled",
+  });
+});
+
+test("mobile Studio switches between Cards and Minimal without horizontal overflow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await createStudioSchedule(page, "MOBILE MIN", ["Mon", "Tue", "Wed"]);
+  await switchToMinimal(page);
+  await page.getByRole("radio", { name: "Cards", exact: true }).click();
+  await page.getByRole("radio", { name: "Minimal", exact: true }).click();
+  await expect(page.getByTestId("artboard-preview")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
 });

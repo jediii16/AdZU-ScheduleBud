@@ -17,6 +17,7 @@ import {
   DexieProjectRepository,
 } from "@/storage/repositories";
 import type { StoredAsset } from "@/storage/types";
+import { visualScheduleProject } from "../fixtures/visual/schedules";
 
 const NOW = "2026-08-24T00:00:00.000Z";
 let database: ScheduleBudDatabase;
@@ -73,6 +74,71 @@ describe("Dexie repositories", () => {
       schemaVersion: 99,
     });
     expect((await projects.list()).failures).toHaveLength(2);
+  });
+
+  it("loads pre-removal projects without losing schedule, design, device, or asset data", async () => {
+    const current = visualScheduleProject();
+    const oldPayload = {
+      ...current,
+      schedule: current.schedule.map((subject) => ({
+        ...subject,
+        name: `Obsolete name for ${subject.code}`,
+      })),
+      design: {
+        ...current.design,
+        visibleFields: {
+          ...current.design.visibleFields,
+          subjectCode: false,
+          subjectName: true,
+        },
+      },
+      deviceVariants: current.deviceVariants.map((variant, index) => ({
+        ...variant,
+        visibleFieldsOverride:
+          index === 0 ? { room: false, subjectName: true } : null,
+      })),
+      assetReferences: {
+        photoAssetIds: ["photo-preserved"],
+        screenGuideAssetIds: ["guide-preserved"],
+      },
+    };
+    await database.projects.put({
+      id: current.id,
+      updatedAt: current.updatedAt,
+      payload: oldPayload,
+    });
+
+    const result = await projects.read(current.id);
+    expect(result.status).toBe("found");
+    if (result.status !== "found") return;
+    expect(result.project.schemaVersion).toBe(1);
+    expect(result.project.schedule).toHaveLength(current.schedule.length);
+    expect(result.project.schedule[0]).toMatchObject({
+      code: "CS.412",
+      meetings: current.schedule[0]!.meetings,
+    });
+    expect(
+      result.project.schedule.every((subject) => !("name" in subject)),
+    ).toBe(true);
+    expect(result.project.design).toMatchObject({
+      layoutId: current.design.layoutId,
+      wallpaperTitle: current.design.wallpaperTitle,
+    });
+    expect(result.project.design.visibleFields).toEqual(
+      current.design.visibleFields,
+    );
+    expect(
+      result.project.deviceVariants.map((variant) => variant.schedulePosition),
+    ).toEqual(
+      current.deviceVariants.map((variant) => variant.schedulePosition),
+    );
+    expect(result.project.deviceVariants[0]?.visibleFieldsOverride).toEqual({
+      room: false,
+    });
+    expect(result.project.activeDeviceVariantId).toBe(
+      current.activeDeviceVariantId,
+    );
+    expect(result.project.assetReferences).toEqual(oldPayload.assetReferences);
   });
 
   it("stores binary assets separately and looks them up by project", async () => {

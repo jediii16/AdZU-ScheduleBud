@@ -10,42 +10,34 @@
       "subjects": [
         {
           "code": "PED CALPRIN",
-          "name": "Child and Adolescent Learners & Learning Principles",
           "units": 3
         },
         {
           "code": "UNDSELF",
-          "name": "Understanding the Self",
           "units": 3
         },
         {
           "code": "SPIECO",
-          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Traditions",
           "units": 3
         },
         {
           "code": "PHIHIS",
-          "name": "Readings in Philippine History",
           "units": 3
         },
         {
           "code": "PURCOM",
-          "name": "Purposive Communication",
           "units": 3
         },
         {
           "code": "FFP1",
-          "name": "Freshman Formation Program 1",
           "units": 3
         },
         {
           "code": "NSTP1",
-          "name": "National Service Training Program 1",
           "units": 3
         },
         {
           "code": "PATHFIT1",
-          "name": "Movement Enhancement",
           "units": 2
         }
       ]
@@ -56,42 +48,34 @@
       "subjects": [
         {
           "code": "PED FSIED",
-          "name": "Foundations of Special & Inclusive Education",
           "units": 3
         },
         {
           "code": "PED FACILCT",
-          "name": "Facilitating Learner Centered Teaching",
           "units": 3
         },
         {
           "code": "MATMOD",
-          "name": "Mathematics in the Modern World",
           "units": 3
         },
         {
           "code": "KOMFIL",
-          "name": "Kontekstwalisadong Komunikasyon sa Filipino",
           "units": 3
         },
         {
           "code": "SCITECS",
-          "name": "Science, Technology & Society",
           "units": 3
         },
         {
           "code": "FFP2",
-          "name": "Freshman Formation Program 2",
           "units": 3
         },
         {
           "code": "NSTP2",
-          "name": "National Service Training Program 2",
           "units": 3
         },
         {
           "code": "PATHFIT2",
-          "name": "Fitness Exercise",
           "units": 2
         }
       ]
@@ -102,17 +86,14 @@
       "subjects": [
         {
           "code": "CONWOR",
-          "name": "Contemporary World",
           "units": 3
         },
         {
           "code": "LITMIN",
-          "name": "Literatures of Mindanao",
           "units": 3
         },
         {
           "code": "ARTAPP",
-          "name": "Art Appreciation",
           "units": 3
         }
       ]
@@ -123,47 +104,38 @@
       "subjects": [
         {
           "code": "PED TECHTCH",
-          "name": "Technology for Teaching & Learning 1",
           "units": 3
         },
         {
           "code": "PED ASSESS 1",
-          "name": "Assessment of Learning 1",
           "units": 3
         },
         {
           "code": "SF INTROPW",
-          "name": "Introduksyon sa Pag-aaral ng Wika",
           "units": 3
         },
         {
           "code": "SF PANLING",
-          "name": "Panimulang Linggwistika",
           "units": 3
         },
         {
           "code": "SF EWF",
-          "name": "Estruktura ng Wikang Filipino",
           "units": 3
         },
         {
           "code": "SF SANTAL",
-          "name": "Sanaysay at Talumpati",
           "units": 3
         },
         {
           "code": "PHIHUM",
-          "name": "Philosophy of the Human Person: Social & Political Dimensions",
           "units": 3
         },
         {
           "code": "VOCMIS",
-          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
           "units": 3
         },
         {
           "code": "PATHFIT3",
-          "name": "Dance/Sports/Rec & Games I",
           "units": 2
         }
       ]
@@ -174,47 +146,38 @@
       "subjects": [
         {
           "code": "PED ASSESS 2",
-          "name": "Assessment of Learning 2",
           "units": 3
         },
         {
           "code": "PED BENLIT",
-          "name": "Building & Enhancing Literacy Skills Across the Curriculum",
           "units": 3
         },
         {
           "code": "SF BBW",
-          "name": "Barayti at Baryasyon ng Wika",
           "units": 3
         },
         {
           "code": "SF TEKFIL",
-          "name": "Technology for Teaching and Learning 2",
           "units": 3
         },
         {
           "code": "SF UGNAYAN",
-          "name": "Ugnayan ng Wika, Kultura at Lipunan",
           "units": 3
         },
         {
           "code": "ETHICS",
-          "name": "Ethics",
           "units": 3
         },
         {
           "code": "RIZAL",
-          "name": "Life and Works of Rizal",
           "units": 3
         },
         {
           "code": "ACADWRI",
-          "name": "Academic Writing",
           "units": 3
         },
         {
           "code": "PATHFIT4",
-          "name": "Dance/Sports/Rec & Games II",
           "units": 2
         }
       ]
@@ -225,17 +188,14 @@
       "subjects": [
         {
           "code": "SF PANRE",
-          "name": "Panitikan ng Rehiyon",
           "units": 3
         },
         {
           "code": "SF DISKWP",
-          "name": "Mga Natatanging Diskurso sa Wika at Panitikan",
           "units": 3
         },
         {
           "code": "OBRA",
-          "name": "Obra Maestra",
           "units": 3
         }
       ]
@@ -246,42 +206,34 @@
       "subjects": [
         {
           "code": "PED TCHCUR",
-          "name": "The Teacher & School Curriculum",
           "units": 3
         },
         {
           "code": "PED TCHPROF",
-          "name": "The Teaching Profession",
           "units": 3
         },
         {
           "code": "SF MKNOB",
-          "name": "Maikling Kuwento at Nobelang Filipino",
           "units": 3
         },
         {
           "code": "SF MAKRO",
-          "name": "Pagtuturo at Pagtataya ng Makrong Kasanayang Pangwika",
           "units": 3
         },
         {
           "code": "SF PANFIL",
-          "name": "Panulaang Filipino",
           "units": 3
         },
         {
           "code": "SF DULFIL",
-          "name": "Dulaang Filipino",
           "units": 3
         },
         {
           "code": "SF KULPOP",
-          "name": "Kulturang Popular",
           "units": 3
         },
         {
           "code": "SF PWP1",
-          "name": "Introduksiyon sa Pananaliksik sa Pagtuturo ng Filipino at Panitikan",
           "units": 3
         }
       ]
@@ -292,42 +244,34 @@
       "subjects": [
         {
           "code": "PED TCHCOM",
-          "name": "The Teacher & Community, School Culture & Organizational Leadership",
           "units": 3
         },
         {
           "code": "SF FILKUR",
-          "name": "Ang Filipino sa Kurikulum ng Batayang Edukasyon",
           "units": 3
         },
         {
           "code": "SF PANPAM",
-          "name": "Panunuring Pampanitikan",
           "units": 3
         },
         {
           "code": "SF INTROSALIN",
-          "name": "Introduksyon sa Pagsasalin",
           "units": 3
         },
         {
           "code": "SF PWP2",
-          "name": "Pananaliksik – Wika at Panitikan",
           "units": 3
         },
         {
           "code": "SF Elec1",
-          "name": "Malikhaing Pagsulat",
           "units": 3
         },
         {
           "code": "SF Elec2",
-          "name": "Filipino bilang Ikalawang Wika",
           "units": 3
         },
         {
           "code": "PEACE ED",
-          "name": "Peace Education",
           "units": 3
         }
       ]
@@ -338,12 +282,10 @@
       "subjects": [
         {
           "code": "SF INTROPAM",
-          "name": "Introduksyon sa Pamamahayag",
           "units": 3
         },
         {
           "code": "SF KAGAMITAN",
-          "name": "Paghahanda at Ebalwasyon ng Kagamitang Panturo",
           "units": 3
         }
       ]
@@ -354,17 +296,14 @@
       "subjects": [
         {
           "code": "PED FS1",
-          "name": "Field Study 1: Observation of Teaching & Learning in Actual School Environment",
           "units": 3
         },
         {
           "code": "PED FS2",
-          "name": "Field Study 2: Participation & Teaching Assistantship",
           "units": 3
         },
         {
           "code": "PED INTEG1",
-          "name": "Education Integrative Course 1",
           "units": 3
         }
       ]
@@ -375,12 +314,10 @@
       "subjects": [
         {
           "code": "PED INTERN",
-          "name": "Teaching Internship",
           "units": 6
         },
         {
           "code": "PED INTEG2",
-          "name": "Education Integrative Course 2",
           "units": 3
         }
       ]

@@ -30,8 +30,6 @@ export function createBlankProject({
       clockFormat: "12-hour",
       density: "comfortable",
       visibleFields: {
-        subjectCode: true,
-        subjectName: true,
         time: true,
         room: true,
         professor: true,

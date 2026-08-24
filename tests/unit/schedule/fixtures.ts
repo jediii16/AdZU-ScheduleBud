@@ -14,7 +14,6 @@ export function subject(overrides: Partial<Subject> = {}): Subject {
     {
       id: "subject-a",
       code: "FIC.101",
-      name: "Fictional Studies",
       units: 3,
       section: "A",
       enabled: true,

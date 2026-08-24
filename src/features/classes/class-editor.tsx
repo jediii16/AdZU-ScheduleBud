@@ -212,16 +212,9 @@ export function StoreSubjectList({
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-baseline gap-x-3">
-                        <h3 className="font-heading font-bold text-foreground">
-                          {subject.code || "No code"}
-                        </h3>
-                        {subject.name ? (
-                          <p className="truncate text-sm text-text-secondary">
-                            {subject.name}
-                          </p>
-                        ) : null}
-                      </div>
+                      <h3 className="font-heading font-bold text-foreground">
+                        {subject.code || "No code"}
+                      </h3>
                       <p className="mt-1 text-xs text-text-muted">
                         {subject.enabled
                           ? subject.meetings.map(meetingSummary).join(" · ")
@@ -253,23 +246,15 @@ export function StoreSubjectList({
                           <input
                             className="sb-control"
                             defaultValue={subject.code}
-                            onBlur={(event) =>
-                              updateSubject(subject.id, {
-                                code: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                        <label>
-                          <span className="sb-label">Subject name</span>
-                          <input
-                            className="sb-control"
-                            defaultValue={subject.name}
-                            onBlur={(event) =>
-                              updateSubject(subject.id, {
-                                name: event.target.value,
-                              })
-                            }
+                            required
+                            onBlur={(event) => {
+                              const code = event.currentTarget.value.trim();
+                              if (!code) {
+                                event.currentTarget.value = subject.code;
+                                return;
+                              }
+                              updateSubject(subject.id, { code });
+                            }}
                           />
                         </label>
                         <label>
