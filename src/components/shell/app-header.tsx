@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { HardDrive, TriangleAlert } from "lucide-react";
 
+import { BrandLockup } from "@/components/shared/brand-lockup";
 import { useScheduleBudStore } from "@/state/react";
 
 export function AppHeader() {
@@ -21,12 +22,10 @@ export function AppHeader() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="flex flex-col rounded-sm font-heading font-bold tracking-tight text-foreground"
+          aria-label="ScheduleBud for AdZU students"
+          className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
         >
-          <span className="text-lg leading-5">ScheduleBud</span>
-          <span className="mt-0.5 text-[0.56rem] leading-3 font-semibold tracking-[0.13em] text-text-muted uppercase sm:text-[0.6rem]">
-            for AdZU students
-          </span>
+          <BrandLockup descriptor />
         </Link>
         {status ? (
           <p

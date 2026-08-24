@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="ScheduleBud placeholder mark">
-  <rect x="8" y="8" width="80" height="80" rx="22" fill="#174a78"/>
-  <path d="M28 30h40v38H28z" fill="#fff" opacity=".96"/>
-  <path d="M28 42h40M40 30v38M54 30v38" stroke="#174a78" stroke-width="4"/>
-  <circle cx="70" cy="70" r="13" fill="#2dd4bf"/>
-  <path d="m64 70 4 4 8-9" fill="none" stroke="#0f2942" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
-</svg>

@@ -63,7 +63,15 @@ describe("landing and creation entry", () => {
     expect(
       screen.getByRole("link", { name: /Create my schedule/i }),
     ).toHaveAttribute("href", "/create");
-    render(<CreatePage />);
+    const { container } = render(<CreatePage />);
+    expect(
+      within(container).getByRole("link", {
+        name: "ScheduleBud for AdZU students",
+      }),
+    ).toHaveAttribute("href", "/");
+    expect(
+      container.querySelector('img[src*="schedulebud-logo-on-light.svg"]'),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Import from AdZU Portal/i }),
     ).toHaveAttribute("href", "/create/portal");

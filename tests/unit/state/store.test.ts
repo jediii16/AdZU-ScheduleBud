@@ -197,6 +197,38 @@ describe("design and device slices", () => {
     });
   });
 
+  it("stores Phone Grid detail preferences per variant and layout", async () => {
+    const { store, projects } = createTestStore();
+    store.getState().createProject();
+    const phoneId = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    store.getState().setVisibleField("time", false);
+    const historyBefore = store.getState().history.past.length;
+    store.getState().setLayoutVisibleField(phoneId, "grid", "time", true);
+    expect(
+      selectActiveProject(store.getState())?.deviceVariants[0]
+        ?.layoutVisibleFieldsOverride,
+    ).toEqual({ grid: { time: true } });
+    expect(
+      selectActiveProject(store.getState())?.design.visibleFields.time,
+    ).toBe(false);
+    expect(store.getState().history.past).toHaveLength(historyBefore + 1);
+    await store.getState().flushAutosave();
+    const saved = await projects.read(store.getState().activeProjectId!);
+    expect(
+      saved.status === "found"
+        ? saved.project.deviceVariants[0]?.layoutVisibleFieldsOverride
+        : null,
+    ).toEqual({ grid: { time: true } });
+    store.getState().undo();
+    expect(
+      selectActiveProject(store.getState())?.deviceVariants[0]
+        ?.layoutVisibleFieldsOverride,
+    ).toBeUndefined();
+  });
+
   it("keeps variants independent, clamps positions, and preserves semantic category", () => {
     const { store } = createTestStore();
     store.getState().createProject();

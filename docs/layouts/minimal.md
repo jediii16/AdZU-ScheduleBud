@@ -4,7 +4,7 @@
 
 Minimal is the second production schedule layout and is available only with the existing Clean Slate theme in Phase 6A. It treats the timetable as a lightly typeset wallpaper composition: no class cards, outer schedule panel, shadow, gradient, or decorative illustration is emitted. Whitespace, text hierarchy, restrained weekday rules, and a thin subject-color marker provide structure.
 
-Cards and Minimal are registered layouts, not templates. Grid, Planner, and Photo remain planned and unavailable. The Studio selector changes only `ProjectDesign.layoutId`; schedule data, theme, title, field visibility, subject colors, day visibility, target variants, and their normalized positions remain intact. The change is one autosaved history entry and supports undo/redo.
+Cards, Minimal, and Grid are registered layouts, not templates. Planner and Photo remain planned and unavailable. The Studio selector changes only `ProjectDesign.layoutId`; schedule data, theme, title, field visibility, subject colors, day visibility, target variants, and their normalized positions remain intact. The change is one autosaved history entry and supports undo/redo.
 
 ## Class hierarchy and marker
 

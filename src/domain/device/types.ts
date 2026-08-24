@@ -66,6 +66,17 @@ export const visibleFieldsSchema = z.object({
 });
 export type VisibleFields = z.infer<typeof visibleFieldsSchema>;
 
+export const layoutVisibleFieldsOverrideSchema = z.object({
+  cards: visibleFieldsSchema.partial().optional(),
+  minimal: visibleFieldsSchema.partial().optional(),
+  grid: visibleFieldsSchema.partial().optional(),
+  planner: visibleFieldsSchema.partial().optional(),
+  photo: visibleFieldsSchema.partial().optional(),
+});
+export type LayoutVisibleFieldsOverride = z.infer<
+  typeof layoutVisibleFieldsOverrideSchema
+>;
+
 export const previewPreferencesSchema = z.object({
   mode: z.enum([
     "clean",
@@ -104,6 +115,7 @@ export const deviceVariantSchema = z
     layoutOverride: layoutIdSchema.nullable(),
     densityOverride: densitySchema.nullable(),
     visibleFieldsOverride: visibleFieldsSchema.partial().nullable(),
+    layoutVisibleFieldsOverride: layoutVisibleFieldsOverrideSchema.optional(),
     photoTransforms: z.record(z.string(), photoTransformSchema),
     preview: previewPreferencesSchema,
   })

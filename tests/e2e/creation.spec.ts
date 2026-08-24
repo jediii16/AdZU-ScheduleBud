@@ -67,6 +67,59 @@ async function switchToMinimal(page: Page) {
   ).toHaveAttribute("aria-checked", "true");
 }
 
+async function switchToGrid(page: Page) {
+  await page.getByRole("button", { name: "Design", exact: true }).click();
+  await page.getByRole("radio", { name: "Grid", exact: true }).click();
+  await expect(
+    page.getByRole("radio", { name: "Grid", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+}
+
+async function createGridStudioClasses(
+  page: Page,
+  classes: readonly {
+    code: string;
+    days: readonly string[];
+    start: string;
+    end: string;
+    room?: string;
+    professor?: string;
+    section?: string;
+  }[],
+) {
+  await page.goto("/create/manual");
+  for (const input of classes) {
+    const form = page.locator("form").first();
+    await form.getByLabel("Subject code").fill(input.code);
+    if (input.section) await form.getByLabel("Section").fill(input.section);
+    for (const day of input.days) {
+      await form.getByText(day, { exact: true }).click();
+    }
+    await form.getByLabel("Start time").fill(input.start);
+    await form.getByLabel("End time").fill(input.end);
+    if (input.room) await form.getByLabel(/^Room/).fill(input.room);
+    if (input.professor)
+      await form.getByLabel(/^Professor/).fill(input.professor);
+    await form.getByRole("button", { name: "Add class" }).click();
+  }
+  await page.getByRole("link", { name: /Review schedule/i }).click();
+  await expect(page).toHaveURL(/\/review$/);
+  await expect(
+    page.getByRole("heading", { name: "Make sure your schedule is correct." }),
+  ).toBeVisible();
+  const startDesigning = page.getByRole("button", {
+    name: /Start designing/i,
+  });
+  if (await startDesigning.isVisible()) {
+    await startDesigning.click();
+  } else {
+    await page.getByRole("button", { name: "Continue anyway" }).click();
+    await page.getByRole("button", { name: "I understand — continue" }).click();
+  }
+  await expect(page).toHaveURL(/\/studio$/);
+  await switchToGrid(page);
+}
+
 test("manual schedule creation reaches review", async ({ page }) => {
   await page.goto("/create/manual");
   await page.getByLabel("Subject code").fill("CS 201");
@@ -256,6 +309,98 @@ test("Studio edits title and class inclusion without deleting the class", async 
   await expect(page.getByLabel("Snap to guides")).toBeChecked();
   await page.getByLabel("Snap to guides").uncheck();
   await expect(page.getByLabel("Snap to guides")).not.toBeChecked();
+});
+
+test("long class editing cannot scroll the Studio shell out of the viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1905, height: 950 });
+  await createStudioSchedule(page, "PORTAL 101");
+  await page.getByRole("button", { name: "Classes", exact: true }).click();
+  await page.getByText("Edit class", { exact: true }).click();
+  for (let index = 0; index < 5; index += 1) {
+    await page
+      .getByRole("button", { name: "Duplicate class", exact: true })
+      .click();
+  }
+
+  const inspector = page.getByTestId("studio-inspector");
+  const workspace = page.getByTestId("artboard-workspace");
+  const classRows = inspector.locator("article");
+  await classRows.first().getByText("Edit class", { exact: true }).click();
+  await classRows.nth(3).getByText("Edit class", { exact: true }).click();
+  await expect(inspector).toBeVisible();
+  expect(
+    await inspector.evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    ),
+  ).toBe(true);
+  await inspector.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+
+  const shellBefore = await page.getByTestId("studio-shell").boundingBox();
+  const workspaceBefore = await workspace.boundingBox();
+  expect(shellBefore).not.toBeNull();
+  expect(workspaceBefore).not.toBeNull();
+  expect(shellBefore!.y).toBe(0);
+  expect(shellBefore!.height).toBe(950);
+  expect(
+    await page.getByTestId("studio-shell").evaluate((element) => ({
+      position: getComputedStyle(element).position,
+      height: getComputedStyle(element).height,
+      overflow: getComputedStyle(element).overflow,
+    })),
+  ).toEqual({ position: "fixed", height: "950px", overflow: "hidden" });
+  expect(
+    await page.evaluate(() => ({
+      rootOverflow: getComputedStyle(document.documentElement).overflow,
+      bodyOverflow: getComputedStyle(document.body).overflow,
+      rootScrollHeight: document.documentElement.scrollHeight,
+      bodyScrollHeight: document.body.scrollHeight,
+      viewportHeight: window.innerHeight,
+    })),
+  ).toEqual({
+    rootOverflow: "hidden",
+    bodyOverflow: "hidden",
+    rootScrollHeight: 950,
+    bodyScrollHeight: 950,
+    viewportHeight: 950,
+  });
+  expect(
+    await inspector.evaluate(
+      (element) => getComputedStyle(element).overscrollBehaviorY,
+    ),
+  ).toBe("contain");
+  expect(
+    await workspace.evaluate(
+      (element) => getComputedStyle(element).overscrollBehaviorY,
+    ),
+  ).toBe("contain");
+
+  await classRows.nth(3).getByText("Sat", { exact: true }).click();
+  await expect(
+    classRows.nth(3).getByRole("checkbox", { name: "Sat", exact: true }),
+  ).toBeChecked();
+  const shellAfter = await page.getByTestId("studio-shell").boundingBox();
+  const workspaceAfter = await workspace.boundingBox();
+  expect(shellAfter).not.toBeNull();
+  expect(workspaceAfter).not.toBeNull();
+  expect(shellAfter!.y).toBe(0);
+  expect(shellAfter!.height).toBe(950);
+  expect(workspaceAfter!.height).toBe(workspaceBefore!.height);
+  await classRows.nth(3).getByText("Edit class", { exact: true }).click();
+  await classRows.nth(4).getByText("Edit class", { exact: true }).click();
+  await classRows.nth(4).getByText("Fri", { exact: true }).click();
+  await expect(
+    classRows.nth(4).getByRole("checkbox", { name: "Fri", exact: true }),
+  ).toBeChecked();
+  const shellAfterFifth = await page.getByTestId("studio-shell").boundingBox();
+  expect(shellAfterFifth).not.toBeNull();
+  expect(shellAfterFifth!.y).toBe(0);
+  expect(shellAfterFifth!.height).toBe(950);
+  await page.evaluate(() => window.scrollTo(0, 500));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
 test("mobile Studio keeps the artboard visible and uses bottom tool panels", async ({
@@ -807,4 +952,296 @@ test("mobile Studio switches between Cards and Minimal without horizontal overfl
         document.documentElement.clientWidth,
     ),
   ).toBe(true);
+});
+
+test("Grid shares Studio controls, history, guides, safe areas, and exact export", async ({
+  page,
+}) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page, "GRID 501", [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+  ]);
+  await switchToGrid(page);
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(
+    page.getByRole("radio", { name: "Cards", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("button", { name: "Redo" }).click();
+  await expect(
+    page.getByRole("radio", { name: "Grid", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+
+  await page.getByLabel("Show title").uncheck();
+  await page.getByLabel("Show title").check();
+  await page.getByLabel("Hide days without classes").uncheck();
+  await page.getByLabel("Hide days without classes").check();
+  await expect(page.getByText("Subject code", { exact: true })).toBeVisible();
+  await expect(page.getByText("Always shown", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Available on larger Grid targets", { exact: true }),
+  ).toHaveCount(2);
+  await expect(page.getByLabel("Room")).toBeChecked();
+  await expect(page.getByLabel("Time")).not.toBeChecked();
+  await page.getByLabel("Room").uncheck();
+  await page.getByLabel("Room").check();
+  await page.getByLabel("Time").check();
+  await expect(page.getByLabel("Professor")).toHaveCount(0);
+  await expect(page.getByLabel("Section")).toHaveCount(0);
+
+  const preview = page.getByTestId("artboard-preview");
+  const geometry = await preview.evaluate((element) => ({
+    scale: Number(element.getAttribute("data-preview-scale")),
+    x: Number(element.getAttribute("data-schedule-x")),
+    y: Number(element.getAttribute("data-schedule-y")),
+    width: Number(element.getAttribute("data-schedule-width")),
+    height: Number(element.getAttribute("data-schedule-height")),
+    canvasWidth: Number(element.getAttribute("data-target-width")),
+    canvasHeight: Number(element.getAttribute("data-target-height")),
+  }));
+  const previewBox = await preview.boundingBox();
+  expect(previewBox).not.toBeNull();
+  const start = {
+    x: previewBox!.x + (geometry.x + geometry.width / 2) * geometry.scale,
+    y: previewBox!.y + (geometry.y + geometry.height / 2) * geometry.scale,
+  };
+  const delta = {
+    x:
+      (geometry.canvasWidth / 2 - geometry.width / 2 - geometry.x) *
+      geometry.scale,
+    y:
+      (geometry.canvasHeight / 2 - geometry.height / 2 - geometry.y) *
+      geometry.scale,
+  };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + delta.x, start.y + delta.y, { steps: 8 });
+  await expect(preview).toHaveAttribute("data-guide-vertical", "true");
+  await expect(preview).toHaveAttribute("data-guide-horizontal", "true");
+  await page.mouse.up();
+
+  const phoneDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export|Download again/i }).click();
+  expect(await pngDimensions(await phoneDownload)).toEqual({
+    width: 1080,
+    height: 2400,
+  });
+
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await page.getByRole("button", { name: "Lock screen" }).click();
+  await page.getByLabel("Show safe areas").check();
+  await page.getByLabel("Vertical schedule position").fill("0");
+  await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
+
+  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await expect(preview).toHaveAttribute("data-target-width", "1536");
+  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await expect(preview).toHaveAttribute("data-target-width", "2048");
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await page.getByRole("button", { name: "Design", exact: true }).click();
+  await expect(page.getByLabel("Professor")).toBeVisible();
+  await expect(page.getByLabel("Section")).toBeVisible();
+  const desktopDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export|Download again/i }).click();
+  expect(await pngDimensions(await desktopDownload)).toEqual({
+    width: 1920,
+    height: 1080,
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Design", exact: true }).click();
+  await expect(
+    page.getByRole("radio", { name: "Grid", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
+test("Grid visual baselines cover target families, temporal range, and overlaps", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createGridStudioClasses(page, [
+    {
+      code: "CS.412",
+      days: ["Mon", "Thu"],
+      start: "08:00",
+      end: "09:30",
+      room: "ICT 301",
+      professor: "Prof. Rivera",
+      section: "A",
+    },
+    {
+      code: "COMPINTRO",
+      days: ["Tue", "Fri"],
+      start: "10:15",
+      end: "11:45",
+      room: "ADV LAB",
+      professor: "Professor With A Deliberately Long Display Name",
+    },
+    {
+      code: "PATHFIT1n",
+      days: ["Wed"],
+      start: "14:00",
+      end: "16:00",
+      room: "Gymnasium",
+    },
+  ]);
+  const preview = page.getByTestId("artboard-preview");
+  await expect(preview).toHaveScreenshot("phone-grid-clean-5-days-title.png", {
+    animations: "disabled",
+  });
+  const phoneTarget = await exportedPng(page);
+  expect(pngBufferDimensions(phoneTarget)).toEqual({
+    width: 1080,
+    height: 2400,
+  });
+  expect(phoneTarget).toMatchSnapshot(
+    "phone-grid-clean-5-days-title-target.png",
+  );
+  await page.getByLabel("Show title").uncheck();
+  await expect(preview).toHaveScreenshot(
+    "phone-grid-clean-5-days-no-title.png",
+    { animations: "disabled" },
+  );
+  await page.getByLabel("Show title").check();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(preview).toHaveScreenshot("phone-grid-clean-display-390.png", {
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await expect(preview).toHaveScreenshot(
+    "tablet-portrait-grid-clean-5-days.png",
+    { animations: "disabled" },
+  );
+  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await expect(preview).toHaveScreenshot(
+    "tablet-landscape-grid-clean-5-days.png",
+    { animations: "disabled" },
+  );
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await expect(preview).toHaveScreenshot("desktop-grid-clean-5-days.png", {
+    animations: "disabled",
+  });
+  const desktopTarget = await exportedPng(page);
+  expect(pngBufferDimensions(desktopTarget)).toEqual({
+    width: 1920,
+    height: 1080,
+  });
+  expect(desktopTarget).toMatchSnapshot("desktop-grid-clean-5-days-target.png");
+  await choosePreset(page, "Square", /Square 1080/);
+  await expect(preview).toHaveScreenshot("square-grid-clean-5-days.png", {
+    animations: "disabled",
+  });
+
+  await createGridStudioClasses(page, [
+    {
+      code: "GRID 601",
+      days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+      start: "09:00",
+      end: "10:30",
+    },
+  ]);
+  await expect(preview).toHaveScreenshot("phone-grid-clean-6-days.png", {
+    animations: "disabled",
+  });
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await expect(preview).toHaveScreenshot(
+    "tablet-portrait-grid-clean-6-days.png",
+    { animations: "disabled" },
+  );
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await expect(preview).toHaveScreenshot("desktop-grid-clean-6-days.png", {
+    animations: "disabled",
+  });
+
+  await createGridStudioClasses(page, [
+    {
+      code: "SPARSE 301",
+      days: ["Mon", "Wed", "Fri"],
+      start: "13:00",
+      end: "15:00",
+    },
+  ]);
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await expect(preview).toHaveScreenshot("desktop-grid-clean-3-days.png", {
+    animations: "disabled",
+  });
+
+  await createGridStudioClasses(page, [
+    {
+      code: "EARLY",
+      days: ["Mon", "Wed"],
+      start: "07:30",
+      end: "09:00",
+    },
+    {
+      code: "LATE",
+      days: ["Tue", "Thu", "Fri"],
+      start: "19:15",
+      end: "20:45",
+    },
+  ]);
+  await expect(preview).toHaveScreenshot("phone-grid-clean-long-range.png", {
+    animations: "disabled",
+  });
+
+  await createGridStudioClasses(page, [
+    {
+      code: "CS.412",
+      days: ["Mon"],
+      start: "08:00",
+      end: "10:00",
+      room: "Advanced Computing Laboratory",
+    },
+    {
+      code: "COMPINTRO",
+      days: ["Mon"],
+      start: "08:30",
+      end: "09:45",
+    },
+    {
+      code: "PATHFIT1n",
+      days: ["Mon"],
+      start: "09:00",
+      end: "10:15",
+    },
+  ]);
+  await expect(preview).toHaveScreenshot("phone-grid-clean-overlap.png", {
+    animations: "disabled",
+  });
+  await openTargetPicker(page);
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await expect(preview).toHaveScreenshot("desktop-grid-clean-overlap.png", {
+    animations: "disabled",
+  });
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.setContent(
+    `<main style="margin:0;background:#f7f8fa"><img aria-label="Grid phone wallpaper at display size" style="display:block;width:390px;height:auto" src="data:image/png;base64,${phoneTarget.toString("base64")}"></main>`,
+  );
+  await expect(
+    page.getByRole("img", { name: "Grid phone wallpaper at display size" }),
+  ).toHaveScreenshot("phone-grid-clean-export-display-390.png", {
+    animations: "disabled",
+  });
 });

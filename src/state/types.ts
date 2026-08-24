@@ -178,6 +178,12 @@ export interface DeviceSlice {
       visibleFields?: Partial<VisibleFields> | null;
     },
   ): void;
+  setLayoutVisibleField(
+    variantId: string,
+    layoutId: LayoutId,
+    field: keyof VisibleFields,
+    visible: boolean,
+  ): void;
   setPhotoTransform(
     variantId: string,
     assetId: string,

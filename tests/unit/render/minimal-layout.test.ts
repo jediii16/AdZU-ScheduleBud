@@ -68,10 +68,11 @@ function phoneProject(days: readonly ScheduleDay[]) {
 }
 
 describe("Clean Slate Minimal RenderModel", () => {
-  it("registers Minimal and Cards as the only available layouts", () => {
+  it("keeps Minimal available alongside Cards and Grid", () => {
     expect(availableLayouts.map((layout) => layout.id)).toEqual([
       "cards",
       "minimal",
+      "grid",
     ]);
   });
 

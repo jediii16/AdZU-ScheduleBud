@@ -60,7 +60,7 @@ export function ScheduleArtboard({
     <div
       ref={containerRef}
       data-testid="artboard-workspace"
-      className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4"
+      className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-4"
     >
       <div
         data-testid="artboard-preview"

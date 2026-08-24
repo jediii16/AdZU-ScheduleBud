@@ -40,7 +40,7 @@ function DayPicker({
         {SCHEDULE_DAYS.map((day) => (
           <label
             key={day}
-            className={`flex min-h-10 cursor-pointer items-center rounded-md border px-3 text-sm font-semibold transition-colors ${meeting.days.includes(day) ? "border-brand bg-accent text-brand" : "border-border bg-surface-elevated text-text-secondary hover:border-input"}`}
+            className={`relative flex min-h-10 cursor-pointer items-center rounded-md border px-3 text-sm font-semibold transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand ${meeting.days.includes(day) ? "border-brand bg-accent text-brand" : "border-border bg-surface-elevated text-text-secondary hover:border-input"}`}
           >
             <input
               type="checkbox"

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { BrandLockup } from "@/components/shared/brand-lockup";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   STUDIO_TARGETS,
@@ -31,6 +32,8 @@ import {
 import { inferOrientation, type DeviceCategory } from "@/domain/device/types";
 import {
   buildScheduleRenderModel,
+  resolveLayoutDetailCapabilities,
+  resolveLayoutVisibleFields,
   resolveAlignmentSnap,
   resolveProjectLayout,
 } from "@/domain/render";
@@ -106,6 +109,31 @@ export function StudioExperience() {
     id: string;
     image: HTMLImageElement;
   } | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const previous = {
+      rootHeight: root.style.height,
+      rootOverflow: root.style.overflow,
+      bodyHeight: body.style.height,
+      bodyMinHeight: body.style.minHeight,
+      bodyOverflow: body.style.overflow,
+    };
+    root.style.height = "100%";
+    root.style.overflow = "hidden";
+    body.style.height = "100%";
+    body.style.minHeight = "0";
+    body.style.overflow = "hidden";
+    window.scrollTo(0, 0);
+    return () => {
+      root.style.height = previous.rootHeight;
+      root.style.overflow = previous.rootOverflow;
+      body.style.height = previous.bodyHeight;
+      body.style.minHeight = previous.bodyMinHeight;
+      body.style.overflow = previous.bodyOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     if (!project || initializedProject.current === project.id) return;
@@ -246,6 +274,16 @@ export function StudioExperience() {
     );
 
   const activeLayout = resolveProjectLayout(project, activeVariant);
+  const detailCapabilities = resolveLayoutDetailCapabilities(
+    activeLayout,
+    activeVariant,
+  );
+  const visibleFields = resolveLayoutVisibleFields(
+    activeLayout,
+    project.design.visibleFields,
+    activeVariant,
+    detailCapabilities,
+  );
 
   const setSection = (section: NonNullable<EditorState["activeSection"]>) => {
     store.getState().setActiveEditorSection(section);
@@ -438,27 +476,44 @@ export function StudioExperience() {
     ) : (
       <DesignStudioPanel
         design={project.design}
+        visibleFields={visibleFields}
         activeLayout={activeLayout}
+        detailCapabilities={detailCapabilities}
         onLayout={(layoutId) => store.getState().setLayout(layoutId)}
         onTitleVisible={(visible) =>
           store.getState().setWallpaperTitleVisible(visible)
         }
         onTitleText={(text) => store.getState().setWallpaperTitle(text)}
-        onField={(field, visible) =>
-          store.getState().setVisibleField(field, visible)
-        }
+        onField={(field, visible) => {
+          if (detailCapabilities.preferenceScope === "variant-layout") {
+            store
+              .getState()
+              .setLayoutVisibleField(
+                activeVariant.id,
+                activeLayout,
+                field,
+                visible,
+              );
+            return;
+          }
+          store.getState().setVisibleField(field, visible);
+        }}
         onDayVisibility={(value) => store.getState().setDayVisibility(value)}
       />
     );
 
   return (
-    <main className="flex h-[100dvh] min-w-0 flex-col overflow-hidden bg-background">
+    <main
+      data-testid="studio-shell"
+      className="fixed inset-0 flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden bg-background"
+    >
       <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface-elevated px-3 sm:px-4">
         <Link
           href="/"
-          className="shrink-0 font-heading text-lg font-extrabold tracking-[-0.03em] text-foreground"
+          aria-label="ScheduleBud home"
+          className="shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
-          Schedule<span className="text-brand">Bud</span>
+          <BrandLockup className="gap-2 [&_img]:h-8" />
         </Link>
         <span className="hidden h-5 w-px bg-border sm:block" />
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text-secondary">
@@ -528,7 +583,7 @@ export function StudioExperience() {
           {exportError}
         </div>
       ) : null}
-      <div className="relative flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <nav
           aria-label="Studio tools"
           className="hidden w-[5.25rem] shrink-0 flex-col border-r border-border bg-surface-elevated py-3 lg:flex"
@@ -548,7 +603,7 @@ export function StudioExperience() {
         </nav>
         <section
           aria-label="Wallpaper workspace"
-          className="flex min-w-0 flex-1 flex-col bg-[oklch(0.94_0.008_245)]"
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[oklch(0.94_0.008_245)]"
         >
           <ScheduleArtboard
             result={renderResult}
@@ -631,7 +686,8 @@ export function StudioExperience() {
         </section>
         <aside
           aria-label="Studio inspector"
-          className={`${editor.inspectorOpen ? "absolute" : "hidden"} inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 max-h-[48dvh] overflow-y-auto border-t border-border bg-surface-elevated p-5 shadow-[0_-8px_24px_rgba(23,32,51,0.08)] md:inset-x-auto md:right-3 md:bottom-16 md:w-[22rem] md:rounded-md md:border lg:static lg:block lg:max-h-none lg:w-[20rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:shadow-none`}
+          data-testid="studio-inspector"
+          className={`${editor.inspectorOpen ? "absolute" : "hidden"} inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 min-h-0 max-h-[48dvh] [overflow-anchor:none] overscroll-contain overflow-y-auto border-t border-border bg-surface-elevated p-5 shadow-[0_-8px_24px_rgba(23,32,51,0.08)] md:inset-x-auto md:right-3 md:bottom-16 md:w-[22rem] md:rounded-md md:border lg:static lg:block lg:h-full lg:max-h-full lg:w-[20rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:shadow-none`}
         >
           <div className="mb-4 flex items-center justify-between border-b border-border pb-3 lg:hidden">
             <p className="font-heading font-bold capitalize">

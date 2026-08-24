@@ -5,6 +5,7 @@ import { availableLayouts } from "@/data/layouts/registry";
 import type { LayoutId } from "@/domain/design/types";
 import type { DeviceVariant, VisibleFields } from "@/domain/device/types";
 import type { ProjectDesign } from "@/domain/project";
+import type { LayoutDetailCapabilities } from "@/domain/render";
 import { StoreSubjectList } from "@/features/classes/class-editor";
 
 export function ClassesStudioPanel() {
@@ -33,7 +34,9 @@ const FIELD_LABELS: Record<keyof VisibleFields, string> = {
 
 export function DesignStudioPanel({
   design,
+  visibleFields,
   activeLayout,
+  detailCapabilities,
   onLayout,
   onTitleVisible,
   onTitleText,
@@ -41,7 +44,9 @@ export function DesignStudioPanel({
   onDayVisibility,
 }: {
   design: ProjectDesign;
+  visibleFields: VisibleFields;
   activeLayout: LayoutId;
+  detailCapabilities: LayoutDetailCapabilities;
   onLayout(value: LayoutId): void;
   onTitleVisible(value: boolean): void;
   onTitleText(value: string): void;
@@ -66,7 +71,7 @@ export function DesignStudioPanel({
         <div
           role="radiogroup"
           aria-label="Schedule layout"
-          className="grid grid-cols-2 border border-border bg-muted/40 p-1"
+          className="grid grid-cols-3 border border-border bg-muted/40 p-1"
         >
           {availableLayouts.map((layout) => (
             <button
@@ -122,8 +127,17 @@ export function DesignStudioPanel({
       <fieldset>
         <legend className="sb-label">Visible class details</legend>
         <div className="divide-y divide-border border-y border-border">
-          {(Object.keys(FIELD_LABELS) as (keyof VisibleFields)[]).map(
-            (field) => (
+          {activeLayout === "grid" ? (
+            <div className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm">
+              <span className="font-semibold">Subject code</span>
+              <span className="text-xs font-medium text-text-muted">
+                Always shown
+              </span>
+            </div>
+          ) : null}
+          {detailCapabilities.fieldOrder.map((field) => {
+            const available = detailCapabilities.fields[field] === "available";
+            return available ? (
               <label
                 key={field}
                 className="flex min-h-10 items-center justify-between gap-3 py-2 text-sm"
@@ -131,12 +145,23 @@ export function DesignStudioPanel({
                 {FIELD_LABELS[field]}
                 <input
                   type="checkbox"
-                  checked={design.visibleFields[field]}
+                  checked={visibleFields[field]}
                   onChange={(event) => onField(field, event.target.checked)}
                 />
               </label>
-            ),
-          )}
+            ) : (
+              <div
+                key={field}
+                aria-disabled="true"
+                className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm"
+              >
+                <span className="font-semibold">{FIELD_LABELS[field]}</span>
+                <span className="max-w-32 text-right text-xs leading-4 text-text-muted">
+                  Available on larger Grid targets
+                </span>
+              </div>
+            );
+          })}
         </div>
       </fieldset>
       <div>

@@ -6,6 +6,9 @@ export const CLEAN_SLATE_RENDER_THEME = {
   secondary: "#526075",
   muted: "#7A8798",
   minimalSupport: "#66758A",
+  gridSupport: "#5F6E82",
+  gridGuide: "#D9E2EB",
+  gridDivider: "#E8EDF2",
   border: "#DDE3EA",
   dayAccent: "#145F9B",
   subjectPalette: [

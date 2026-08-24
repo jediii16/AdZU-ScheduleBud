@@ -239,6 +239,18 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
             : overrides.visibleFields,
       }));
     },
+    setLayoutVisibleField(id, layoutId, field, visible) {
+      edit("Change layout detail", id, (variant) => ({
+        ...variant,
+        layoutVisibleFieldsOverride: {
+          ...variant.layoutVisibleFieldsOverride,
+          [layoutId]: {
+            ...variant.layoutVisibleFieldsOverride?.[layoutId],
+            [field]: visible,
+          },
+        },
+      }));
+    },
     setPhotoTransform: (id, assetId, transform) =>
       edit("Change photo crop", id, (variant) => ({
         ...variant,
