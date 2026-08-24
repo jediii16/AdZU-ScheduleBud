@@ -44,9 +44,11 @@ The domain preserves these invariants:
 
 ## Project and state boundaries
 
-The Phase 3 project model will be a versioned `ScheduleProject` with metadata, canonical schedule data, shared design intent, per-device variants, asset references, and timestamps. The persistence API will be multi-project even while the initial UI emphasizes one active project.
+`src/domain/project` defines schema version 1 of `ScheduleProject`. It contains metadata, the canonical `Subject[]` schedule, shared `ProjectDesign`, independent device variants, asset IDs, and ISO timestamps. Project title is local-library metadata; wallpaper title and optional semester, school-year, program, and section labels are independent display controls. A blank project has no invented subjects and an explicit no-device-yet state.
 
-Zustand will be composed from project, schedule, design, device, editor, and history slices. Project/schedule/design/device data is persistent. Editor zoom and pan, hover, tooltips, modal state, drag intermediates, calculated conflicts, resolved positions, render models, and safe-area collision results are derived or temporary and will not be persisted. The in-memory history will be bounded to about 50 meaningful commits; a completed drag is one commit.
+One Zustand vanilla store is composed from project, schedule, design, device, editor, and history slice creators. Project/schedule/design/device data is persistent. Editor zoom, pan, selections, inspector state, and drag state are temporary. Calculated conflicts, occurrences, time ranges, overlap columns, resolved themes, render models, and safe-area collision results are never persisted. Focused selectors expose active/project/subject/design/device views without requiring whole-store subscriptions.
+
+Every meaningful project mutation passes through a Zod-validated commit boundary. History stores at most 50 before/after project snapshots in memory. A transaction keeps drag intermediates out of history and persistence, then records and autosaves one final commit. Undo and redo restore content with a fresh `updatedAt` and trigger autosave. Preview-only device preferences are persisted but intentionally do not create history entries.
 
 ## Renderer boundary
 
@@ -56,7 +58,13 @@ Export layers are background, scenery, photos, schedule, and foreground. `Editor
 
 ## Persistence and binary assets
 
-Phase 3 will use Dexie. Project JSON and binary assets will be stored in separate tables. A project stores asset IDs, not blobs. Asset records will distinguish exportable user photos from non-exportable screen-guide screenshots. Dimension-detection screenshots remain session-only unless the student explicitly preserves them. Autosave status will reflect local writes only.
+Dexie database version 1 has `projects`, `assets`, and `applicationMetadata` tables. Typed repositories are the only state-facing storage boundary. Project reads validate or migrate before returning a discriminated `found | not-found | invalid | unsupported-version` result; corrupt records do not enter the store. The application-metadata table keeps the active project pointer separately, so the database supports multiple projects now.
+
+Project records contain JSON-portable asset IDs only. `StoredAsset` rows own Blob data and distinguish exportable `photo` assets from non-exportable `screen-guide` assets. Temporary screenshot inspection reads dimensions in memory; saving a guide is a separate explicit API. Reference collection and unreferenced-asset detection support safe cleanup, while project deletion removes all project-owned assets and cancels pending writes first.
+
+Autosave uses a 350 ms default debounce and a serialized write queue. Rapid changes replace the pending snapshot for that project, so an older write cannot finish after a newer write. Status is exposed as `idle | saving | saved | error`, with the last saved time and error message. A failure leaves the in-memory project untouched and retains a retryable pending snapshot; a later mutation can recover.
+
+`migrateProject()` currently validates schema 1 and returns typed failures for other versions. The legacy boundary detects schema 13 but returns an explicit unsupported result because the exact old serialized workspace is not specified sufficiently for a safe conversion.
 
 ## Curriculum format
 
@@ -82,6 +90,6 @@ Only Clean Slate is marked available in the initial theme registry. Other named 
 
 ## Device variants
 
-Shared design intent will live once per project, while composition is stored per semantic phone, tablet, laptop, desktop, or square variant. Pixel dimensions have an independent `preset | custom` source, so every semantic category can use custom dimensions without becoming a generic “custom device.” Variant positions use normalized X/Y coordinates. Switching targets will select a variant rather than overwrite another variant. The device registry currently defines categories only; exact model presets are deferred until verified data is supplied.
+Shared design intent lives once per project, while composition is stored per semantic phone, tablet, laptop, desktop, or square variant. Pixel dimensions have an independent `preset | custom | matched-screen` source, so every semantic category can use custom dimensions without becoming a generic “custom device.” Variant positions use clamped normalized X/Y coordinates. Layout, density, and visible-field overrides remain target-specific rather than copying the full design. Switching targets selects a preserved variant rather than overwriting another variant. The device registry currently defines categories only; exact model presets are deferred until verified data is supplied.
 
 Match My Screen derives dimensions and orientation from local image metadata. Exact squares can be recommended as square with high confidence; portrait and landscape screenshots return conservative candidate lists and require confirmation rather than using raw pixel thresholds. The optional screenshot remains an editor overlay, is never used for content-based model identification, and will never be exported.

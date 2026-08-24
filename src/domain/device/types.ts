@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { layoutIdSchema } from "@/domain/design/types";
+
 export const deviceCategorySchema = z.enum([
   "phone",
   "tablet",
@@ -15,19 +17,113 @@ export const normalizedPointSchema = z.object({
 });
 export type NormalizedPoint = z.infer<typeof normalizedPointSchema>;
 
-export const deviceVariantSchema = z.object({
-  category: deviceCategorySchema,
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-  dimensionSource: z.enum(["preset", "custom"]),
-  schedulePosition: normalizedPointSchema,
+export function clampNormalizedPoint(point: {
+  x: number;
+  y: number;
+}): NormalizedPoint {
+  const finiteOrCenter = (value: number) =>
+    Number.isFinite(value) ? value : 0.5;
+  return {
+    x: Math.min(1, Math.max(0, finiteOrCenter(point.x))),
+    y: Math.min(1, Math.max(0, finiteOrCenter(point.y))),
+  };
+}
+
+export const deviceDimensionsSchema = z.object({
+  width: z.number().int().min(320).max(10_000),
+  height: z.number().int().min(320).max(10_000),
 });
+export type DeviceDimensions = z.infer<typeof deviceDimensionsSchema>;
+
+export const orientationSchema = z.enum(["portrait", "landscape", "square"]);
+export type Orientation = z.infer<typeof orientationSchema>;
+export function inferOrientation({
+  width,
+  height,
+}: DeviceDimensions): Orientation {
+  return width === height
+    ? "square"
+    : width > height
+      ? "landscape"
+      : "portrait";
+}
+
+export const densitySchema = z.enum(["compact", "comfortable", "detailed"]);
+export type Density = z.infer<typeof densitySchema>;
+
+export const visibleFieldsSchema = z.object({
+  subjectCode: z.boolean(),
+  subjectName: z.boolean(),
+  time: z.boolean(),
+  room: z.boolean(),
+  professor: z.boolean(),
+  section: z.boolean(),
+});
+export type VisibleFields = z.infer<typeof visibleFieldsSchema>;
+
+export const previewPreferencesSchema = z.object({
+  mode: z.enum([
+    "clean",
+    "lock-screen",
+    "home-screen",
+    "desktop",
+    "uploaded-guide",
+  ]),
+  showSafeAreas: z.boolean(),
+  showWarnings: z.boolean(),
+  enableSnapping: z.boolean(),
+  guideAssetId: z.string().min(1).nullable(),
+});
+export type PreviewPreferences = z.infer<typeof previewPreferencesSchema>;
+
+export const photoTransformSchema = z.object({
+  position: normalizedPointSchema,
+  scale: z.number().finite().min(0.1).max(10),
+  rotation: z.number().finite().min(-360).max(360),
+});
+export type PhotoTransform = z.infer<typeof photoTransformSchema>;
+
+export const deviceVariantSchema = z
+  .object({
+    id: z.string().min(1),
+    category: deviceCategorySchema,
+    dimensions: deviceDimensionsSchema,
+    dimensionSource: z.enum(["preset", "custom", "matched-screen"]),
+    presetId: z.string().min(1).nullable(),
+    orientation: orientationSchema,
+    compositionId: z.string().min(1),
+    schedulePosition: normalizedPointSchema,
+    layoutOverride: layoutIdSchema.nullable(),
+    densityOverride: densitySchema.nullable(),
+    visibleFieldsOverride: visibleFieldsSchema.partial().nullable(),
+    photoTransforms: z.record(z.string(), photoTransformSchema),
+    preview: previewPreferencesSchema,
+  })
+  .superRefine((variant, context) => {
+    if (variant.orientation !== inferOrientation(variant.dimensions)) {
+      context.addIssue({
+        code: "custom",
+        path: ["orientation"],
+        message: "Orientation must match the stored dimensions.",
+      });
+    }
+    if (
+      (variant.dimensionSource === "preset") !==
+      (variant.presetId !== null)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["presetId"],
+        message: "Only preset dimensions may carry a preset ID.",
+      });
+    }
+  });
 export type DeviceVariant = z.infer<typeof deviceVariantSchema>;
 
 export type ScreenMatch = {
   width: number;
   height: number;
-  orientation: "portrait" | "landscape" | "square";
+  orientation: Orientation;
   confidence: "high" | "ambiguous";
   candidates: readonly DeviceCategory[];
   recommendedCategory?: DeviceCategory;
@@ -43,8 +139,7 @@ export function inferScreenMatch(width: number, height: number): ScreenMatch {
   ) {
     throw new RangeError("Screen dimensions must be positive integers.");
   }
-  const orientation =
-    width === height ? "square" : width > height ? "landscape" : "portrait";
+  const orientation = inferOrientation({ width, height });
   if (orientation === "square") {
     return {
       width,

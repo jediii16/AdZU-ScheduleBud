@@ -7,20 +7,48 @@ describe("device category and screen matching", () => {
   it("keeps semantic category independent from custom dimensions", () => {
     expect(
       deviceVariantSchema.parse({
+        id: "phone-custom",
         category: "phone",
-        width: 1440,
-        height: 3200,
+        dimensions: { width: 1440, height: 3200 },
         dimensionSource: "custom",
+        presetId: null,
+        orientation: "portrait",
+        compositionId: "default",
         schedulePosition: { x: 0.4, y: 0.6 },
+        layoutOverride: null,
+        densityOverride: null,
+        visibleFieldsOverride: null,
+        photoTransforms: {},
+        preview: {
+          mode: "clean",
+          showSafeAreas: false,
+          showWarnings: true,
+          enableSnapping: true,
+          guideAssetId: null,
+        },
       }),
     ).toMatchObject({ category: "phone", dimensionSource: "custom" });
     expect(
       deviceVariantSchema.parse({
+        id: "tablet-custom",
         category: "tablet",
-        width: 2048,
-        height: 2732,
+        dimensions: { width: 2048, height: 2732 },
         dimensionSource: "custom",
+        presetId: null,
+        orientation: "portrait",
+        compositionId: "default",
         schedulePosition: { x: 0.5, y: 0.5 },
+        layoutOverride: null,
+        densityOverride: null,
+        visibleFieldsOverride: null,
+        photoTransforms: {},
+        preview: {
+          mode: "clean",
+          showSafeAreas: false,
+          showWarnings: true,
+          enableSnapping: true,
+          guideAssetId: null,
+        },
       }),
     ).toMatchObject({ category: "tablet", dimensionSource: "custom" });
     expect(
@@ -63,5 +91,37 @@ describe("device category and screen matching", () => {
   it("rejects invalid dimensions", () => {
     expect(() => inferScreenMatch(0, 1080)).toThrow(RangeError);
     expect(() => inferScreenMatch(1080.5, 1920)).toThrow(RangeError);
+  });
+
+  it("rejects persisted variants whose orientation or preset provenance is inconsistent", () => {
+    const base = {
+      id: "variant",
+      category: "phone" as const,
+      dimensions: { width: 1206, height: 2622 },
+      dimensionSource: "custom" as const,
+      presetId: null,
+      orientation: "landscape" as const,
+      compositionId: "default",
+      schedulePosition: { x: 0.5, y: 0.5 },
+      layoutOverride: null,
+      densityOverride: null,
+      visibleFieldsOverride: null,
+      photoTransforms: {},
+      preview: {
+        mode: "clean" as const,
+        showSafeAreas: false,
+        showWarnings: true,
+        enableSnapping: true,
+        guideAssetId: null,
+      },
+    };
+    expect(deviceVariantSchema.safeParse(base).success).toBe(false);
+    expect(
+      deviceVariantSchema.safeParse({
+        ...base,
+        orientation: "portrait",
+        presetId: "preset-with-custom-source",
+      }).success,
+    ).toBe(false);
   });
 });

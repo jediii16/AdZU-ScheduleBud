@@ -1,3 +1,3 @@
 # Storage boundary
 
-Phase 3 will introduce Dexie tables for versioned projects and separately stored binary assets. User photos will be exportable assets; screen-guide screenshots will be explicitly non-exportable and session-only unless preserved by the user.
+Dexie version 1 stores validated project JSON, binary assets, and application metadata in separate tables. State uses typed repositories rather than raw tables. Photos are exportable assets; screen guides are preview-only. See `docs/state-and-persistence.md` for the exact contracts.
