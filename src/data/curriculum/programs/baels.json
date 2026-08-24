@@ -1,0 +1,367 @@
+{
+  "id": "baels",
+  "name": "Bachelor of Arts in English Language Studies",
+  "abbreviation": "BA ELS",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian, Ignatian and Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshmen Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "ELS 01",
+          "name": "Introduction to the English Language System",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "HISCUL",
+          "name": "Historia y Cultura de Zamboanga",
+          "units": 3
+        },
+        {
+          "code": "LITMIN",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshmen Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "PUBSPEAK",
+          "name": "Public Speaking",
+          "units": 3
+        },
+        {
+          "code": "LANGTEACH",
+          "name": "Foundations of English Language Teaching and Learning",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": []
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social and Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation and Mission in the Christian, Ignatian and Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Recreation and Games 1",
+          "units": 2
+        },
+        {
+          "code": "ELS 02",
+          "name": "Theories of Language & Language Acquisition",
+          "units": 3
+        },
+        {
+          "code": "ELS 03",
+          "name": "History of the English Language",
+          "units": 3
+        },
+        {
+          "code": "ELS 10",
+          "name": "Language, Society & Culture",
+          "units": 3
+        },
+        {
+          "code": "CREWRI",
+          "name": "Creative Writing",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology and Society",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "ACADWRI",
+          "name": "Academic Writing",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Recreation & Games 2",
+          "units": 2
+        },
+        {
+          "code": "ELS 04",
+          "name": "English Phonology and Morphology",
+          "units": 3
+        },
+        {
+          "code": "ELS 05",
+          "name": "English Syntax",
+          "units": 3
+        },
+        {
+          "code": "ELS 06",
+          "name": "Semantics of English",
+          "units": 3
+        },
+        {
+          "code": "ELS 07",
+          "name": "English Discourse",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": []
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        },
+        {
+          "code": "KOMFIL",
+          "name": "Kontekswalisadong Komunikasyon sa Filipino",
+          "units": 3
+        },
+        {
+          "code": "ELS 09",
+          "name": "Stylistics",
+          "units": 3
+        },
+        {
+          "code": "ELS 11",
+          "name": "Language of Literary Texts",
+          "units": 3
+        },
+        {
+          "code": "ELS 15",
+          "name": "Language of Non-Literary Texts",
+          "units": 3
+        },
+        {
+          "code": "FL 1",
+          "name": "Foreign Language 1",
+          "units": 3
+        },
+        {
+          "code": "INSMA",
+          "name": "Instructional Materials Development & Evaluation",
+          "units": 3
+        },
+        {
+          "code": "TRANS",
+          "name": "Translation Studies",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        },
+        {
+          "code": "ELS 16",
+          "name": "Computer-Mediated Communication",
+          "units": 3
+        },
+        {
+          "code": "ELS 19",
+          "name": "Language and Advertising",
+          "units": 3
+        },
+        {
+          "code": "ELS 20",
+          "name": "Language and Journalism",
+          "units": 3
+        },
+        {
+          "code": "ELS 198",
+          "name": "Language Research 1: Methodology",
+          "units": 3
+        },
+        {
+          "code": "FL 2",
+          "name": "Foreign Language 2",
+          "units": 3
+        },
+        {
+          "code": "GREATBOOKS",
+          "name": "Great Books: World Literary Classics",
+          "units": 3
+        },
+        {
+          "code": "ORGCOM",
+          "name": "Organizational Communication",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "INTERN",
+          "name": "Internship",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "FL 3",
+          "name": "Foreign Language 3",
+          "units": 3
+        },
+        {
+          "code": "ELS 199",
+          "name": "Language Research 2: Thesis",
+          "units": 3
+        },
+        {
+          "code": "ELS 23",
+          "name": "Language of Law",
+          "units": 3
+        },
+        {
+          "code": "LANGPRO",
+          "name": "Language Policies and Programs",
+          "units": 3
+        },
+        {
+          "code": "LANGPOL",
+          "name": "Language and Politics",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "FL 4",
+          "name": "Foreign Language 4",
+          "units": 3
+        },
+        {
+          "code": "LANGNET",
+          "name": "Language of the Internet",
+          "units": 3
+        },
+        {
+          "code": "LANGTEST",
+          "name": "English Language Testing & Assessment",
+          "units": 3
+        },
+        {
+          "code": "BUSCOM",
+          "name": "Business Communication",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}

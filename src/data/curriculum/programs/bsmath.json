@@ -1,0 +1,353 @@
+{
+  "id": "bsmath",
+  "name": "Bachelor of Science in Mathematics",
+  "abbreviation": "BS MATH",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "MAT 101",
+          "name": "Fundamental Concepts of Mathematics",
+          "units": 3
+        },
+        {
+          "code": "MATEL 1",
+          "name": "Analytic Geometry",
+          "units": 3
+        },
+        {
+          "code": "MATEL 2",
+          "name": "Algebra and Trigonometry",
+          "units": 3
+        },
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "MAT 102",
+          "name": "Fundamentals of Computing I",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshman Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian, Ignatian and Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "MAT 103",
+          "name": "Calculus I",
+          "units": 5
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshman Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "MAT 104",
+          "name": "Linear Algebra",
+          "units": 3
+        },
+        {
+          "code": "MAT 105",
+          "name": "Probability",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology & Society",
+          "units": 3
+        },
+        {
+          "code": "MAT 106",
+          "name": "Calculus II",
+          "units": 5
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "MATEL 3",
+          "name": "Operations Research",
+          "units": 3
+        },
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "ACADWRI",
+          "name": "Academic Writing",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games I",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian and Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "MAT 107",
+          "name": "Calculus III",
+          "units": 3
+        },
+        {
+          "code": "GE ELECT-DA",
+          "name": "Data Analytics",
+          "units": 3
+        },
+        {
+          "code": "MAT 108",
+          "name": "Number Theory",
+          "units": 3
+        },
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games II",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "MATEL 4",
+          "name": "Graph Theory",
+          "units": 3
+        },
+        {
+          "code": "MAT 109",
+          "name": "Differential Equations I",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "GE ELECT-LM",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        },
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        },
+        {
+          "code": "MAT 110",
+          "name": "Advanced Calculus I",
+          "units": 3
+        },
+        {
+          "code": "MAT 111",
+          "name": "Advanced Course in Analysis",
+          "units": 3
+        },
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        },
+        {
+          "code": "MAT RES",
+          "name": "Research",
+          "units": 3
+        },
+        {
+          "code": "SSED 11",
+          "name": "General Physics I",
+          "units": 4
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "MAT 112",
+          "name": "Modern Geometry",
+          "units": 3
+        },
+        {
+          "code": "MAT 113",
+          "name": "Numerical Analysis",
+          "units": 3
+        },
+        {
+          "code": "MATEL 5",
+          "name": "Mathematical Investigation & Modelling",
+          "units": 3
+        },
+        {
+          "code": "SSED 17",
+          "name": "General Physics II",
+          "units": 4
+        },
+        {
+          "code": "MAT 114",
+          "name": "Abstract Algebra I",
+          "units": 3
+        },
+        {
+          "code": "MAT Elect",
+          "name": "Data Mining",
+          "units": 3
+        },
+        {
+          "code": "MATEL 6",
+          "name": "Theory of Interest",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": []
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "MATEL 7",
+          "name": "Real Analysis",
+          "units": 3
+        },
+        {
+          "code": "MAT 115",
+          "name": "Statistical Theory",
+          "units": 3
+        },
+        {
+          "code": "PED ASSESS 1",
+          "name": "Assessment of Learning I",
+          "units": 3
+        },
+        {
+          "code": "THESIS-MAT1",
+          "name": "Thesis I",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "MAT 116",
+          "name": "Topology",
+          "units": 3
+        },
+        {
+          "code": "MAT 117",
+          "name": "Complex Analysis",
+          "units": 3
+        },
+        {
+          "code": "PED FACI LCT",
+          "name": "Facilitating Learner-centered Teaching",
+          "units": 3
+        },
+        {
+          "code": "THESIS-MAT II",
+          "name": "Thesis II",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}

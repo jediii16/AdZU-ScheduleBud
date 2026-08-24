@@ -1,0 +1,389 @@
+{
+  "id": "beed",
+  "name": "Bachelor of Elementary Education",
+  "abbreviation": "BEEd",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PED CALPRIN",
+          "name": "Child and Adolescent Learners & Learning Principles",
+          "units": 3
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshman Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PED FSIED",
+          "name": "Foundations of Special & Inclusive Education",
+          "units": 3
+        },
+        {
+          "code": "PED FACILCT",
+          "name": "Facilitating Learner-centered Teaching",
+          "units": 3
+        },
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "KOMFIL",
+          "name": "Kontekstwalisadong Komunikasyon sa Filipino",
+          "units": 3
+        },
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology & Society",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshman Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        },
+        {
+          "code": "LITMIN",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        },
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PED TECHTCH 1",
+          "name": "Technology for Teaching & Learning 1",
+          "units": 3
+        },
+        {
+          "code": "PED ASSESS 1",
+          "name": "Assessment of Learning 1",
+          "units": 3
+        },
+        {
+          "code": "ED MT",
+          "name": "Content & Pedagogy in the Mother Tongue",
+          "units": 3
+        },
+        {
+          "code": "EE EEG",
+          "name": "Teaching English in the Elementary Grades (Language Arts)",
+          "units": 3
+        },
+        {
+          "code": "EE EWF",
+          "name": "Pagtuturo ng Filipino sa Elementarya I - Estruktura at Gamit ng Wikang Filipino",
+          "units": 3
+        },
+        {
+          "code": "EE 21st CS",
+          "name": "Teaching 21st Century Skills",
+          "units": 3
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games I",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PED ASSESS 2",
+          "name": "Assessment of Learning 2",
+          "units": 3
+        },
+        {
+          "code": "PED BENLIT",
+          "name": "Building & Enhancing Literacy Skills Across the Curriculum",
+          "units": 3
+        },
+        {
+          "code": "EE TECHTCH 2",
+          "name": "Technology for Teaching & Learning (in the Elementary Grades) 2",
+          "units": 3
+        },
+        {
+          "code": "EE PANFIL",
+          "name": "Pagtuturo ng Filipino sa Elementarya II - Panitikan ng Pilipinas",
+          "units": 3
+        },
+        {
+          "code": "EE TEEGL",
+          "name": "Teaching English in the Elementary Grades through Literature",
+          "units": 3
+        },
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "ACADWRI",
+          "name": "Academic Writing",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games II",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "EE MEG",
+          "name": "Teaching Music in the Elementary Grades",
+          "units": 3
+        },
+        {
+          "code": "EE AEG",
+          "name": "Teaching Arts in the Elementary Grades",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PED TCHPROF",
+          "name": "The Teaching Profession",
+          "units": 3
+        },
+        {
+          "code": "PED TCHCUR",
+          "name": "The Teacher & School Curriculum",
+          "units": 3
+        },
+        {
+          "code": "EE SCIEG 1",
+          "name": "Teaching Science in the Elementary Grades (Biology & Chemistry) 1",
+          "units": 3
+        },
+        {
+          "code": "EE SSEG 1",
+          "name": "Teaching Social Studies in the Elementary Grades (Phil. Hist & Govt) 1",
+          "units": 3
+        },
+        {
+          "code": "EE MPG",
+          "name": "Teaching Math in Primary Grades",
+          "units": 3
+        },
+        {
+          "code": "EE INRES",
+          "name": "Research in Education",
+          "units": 3
+        },
+        {
+          "code": "EE MPE",
+          "name": "Managing a Positive Learner-Centered Environment",
+          "units": 3
+        },
+        {
+          "code": "EE EPP",
+          "name": "Edukasyong Pantahanan at Pangkabuhayan",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PED TCHCOM",
+          "name": "The Teacher & Community, School Culture & Organizational Leadership",
+          "units": 3
+        },
+        {
+          "code": "EE GMRC",
+          "name": "Good Manners & Right Conduct (Edukasyon sa Pagpapakatao)",
+          "units": 3
+        },
+        {
+          "code": "EE ENTRE",
+          "name": "Edukasyong Pantahanan at Pangkabuhayan with Entrepreneurship",
+          "units": 3
+        },
+        {
+          "code": "EE MIG",
+          "name": "Teaching Math in the Intermediate Grades",
+          "units": 3
+        },
+        {
+          "code": "EE SCIEG 2",
+          "name": "Teaching Science in the Elementary Grades (Physics, Earth & Space Science) 2",
+          "units": 3
+        },
+        {
+          "code": "EE SSEG 2",
+          "name": "Teaching Social Studies in Elementary Grades (Culture & Basic Geography)",
+          "units": 3
+        },
+        {
+          "code": "EE RESEG",
+          "name": "Research in Teaching in the Elementary Grades",
+          "units": 3
+        },
+        {
+          "code": "PEACE ED",
+          "name": "Peace Education",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "EE PEHE",
+          "name": "Teaching PE & Health in the Elementary Grades",
+          "units": 3
+        },
+        {
+          "code": "ED MULTI",
+          "name": "Teaching Multi-grade/Multi-age Classes",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PED FS 1",
+          "name": "Field Study 1: Observation of Teaching & Learning in Actual School Environment",
+          "units": 3
+        },
+        {
+          "code": "PED FS 2",
+          "name": "Field Study 2: Participation & Teaching Assistantship",
+          "units": 3
+        },
+        {
+          "code": "PED INTEG1",
+          "name": "Education Integrative Course 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PED INTERN",
+          "name": "Teaching Internship",
+          "units": 6
+        },
+        {
+          "code": "PED INTEG1",
+          "name": "Education Integrative Course 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}

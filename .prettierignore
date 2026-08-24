@@ -1,0 +1,8 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+.tmp-artifact
+source-data/curriculum/courses.js
+reference/PROJECT_LOGIC.md

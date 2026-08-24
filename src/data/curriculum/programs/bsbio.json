@@ -1,0 +1,419 @@
+{
+  "id": "bsbio",
+  "name": "Bachelor of Science in Biology - Biology Research",
+  "abbreviation": "BS BIO",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "BFZOOLEC",
+          "name": "General Zoology Lec",
+          "units": 3
+        },
+        {
+          "code": "BFZOOLAB",
+          "name": "General Zoology Lab",
+          "units": 2
+        },
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "GE ELECT-GI",
+          "name": "Data Analytics (Geo Informatics)",
+          "units": 3
+        },
+        {
+          "code": "BHPS",
+          "name": "History and Philosophy of Science",
+          "units": 3
+        },
+        {
+          "code": "BRICHEM",
+          "name": "Bridging Course in Chemistry",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshman Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "NSTP1",
+          "name": "NSTP",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "BFBOTLEC",
+          "name": "General Botany Lec",
+          "units": 3
+        },
+        {
+          "code": "BFBOTLAB",
+          "name": "General Botany Lab",
+          "units": 2
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshman Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "NSTP2",
+          "name": "NSTP",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "SPIECO",
+          "name": "Spirituality and Ecology in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "BFSYSLEC",
+          "name": "Systematics Lec",
+          "units": 3
+        },
+        {
+          "code": "BFSYSLAB",
+          "name": "Systematics Lab",
+          "units": 2
+        },
+        {
+          "code": "BTCHORGLec",
+          "name": "Chemical Biology (Organic Molecules) Lec",
+          "units": 3
+        },
+        {
+          "code": "BTCHORGLab",
+          "name": "Chemical Biology (Organic Molecules) Lab",
+          "units": 1
+        },
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology & Society",
+          "units": 3
+        },
+        {
+          "code": "ACADWRI",
+          "name": "Academic Writing",
+          "units": 3
+        },
+        {
+          "code": "BINS",
+          "name": "Instrumentation",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games I",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "BTBIMOLEC",
+          "name": "Chemical Biology (Biomolecules/Biochem) Lec",
+          "units": 3
+        },
+        {
+          "code": "BTBIMOLAB",
+          "name": "Chemical Biology (Biomolecules/Biochem) Lab",
+          "units": 2
+        },
+        {
+          "code": "BFMICLEC",
+          "name": "Microbiology Lec",
+          "units": 3
+        },
+        {
+          "code": "BFMICLAB",
+          "name": "Microbiology Lab",
+          "units": 2
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games II",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "BSMITAX",
+          "name": "Microbial Taxonomy",
+          "units": 3
+        },
+        {
+          "code": "BFECOLEC",
+          "name": "General Ecology Lec",
+          "units": 3
+        },
+        {
+          "code": "BFECOLAB",
+          "name": "General Ecology Lab",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "BFGNXLEC",
+          "name": "Genetics Lec",
+          "units": 3
+        },
+        {
+          "code": "BFGNXLAB",
+          "name": "Genetics Lab",
+          "units": 2
+        },
+        {
+          "code": "BIORES",
+          "name": "Research",
+          "units": 3
+        },
+        {
+          "code": "BTCHAN Lec",
+          "name": "Analytical Methods for Biology Lecture",
+          "units": 3
+        },
+        {
+          "code": "BTCHAN Lab",
+          "name": "Analytical Methods for Biology Laboratory",
+          "units": 2
+        },
+        {
+          "code": "BFDEVLEC",
+          "name": "Developmental Biology (Plant and Animals) Lec",
+          "units": 3
+        },
+        {
+          "code": "BFDEVLAB",
+          "name": "Developmental Biology (Plant and Animals) Lab",
+          "units": 2
+        },
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "BFCMLEC",
+          "name": "Cell & Molecular Biology Lec",
+          "units": 3
+        },
+        {
+          "code": "BFCMLAB",
+          "name": "Cell & Molecular Biology Lab",
+          "units": 2
+        },
+        {
+          "code": "BTPHYSLec",
+          "name": "Biophysics Lec",
+          "units": 3
+        },
+        {
+          "code": "BTPHYSLab",
+          "name": "Biophysics Lab",
+          "units": 1
+        },
+        {
+          "code": "BTSTAT",
+          "name": "Biostatistics",
+          "units": 3
+        },
+        {
+          "code": "BSTICULT",
+          "name": "Plant & Animal Tissue Culture",
+          "units": 3
+        },
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        },
+        {
+          "code": "TCS-Bio1",
+          "name": "Thesis 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "BIOPRACT",
+          "name": "Practicum",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "BSTAXO",
+          "name": "Taxonomy of Higher Vascular Plants",
+          "units": 3
+        },
+        {
+          "code": "BSTECH",
+          "name": "Agricultural, Health and Industrial Biotechnology",
+          "units": 3
+        },
+        {
+          "code": "BSPARA",
+          "name": "Parasitology",
+          "units": 3
+        },
+        {
+          "code": "BFPSIOLEC",
+          "name": "General Physiology Lec",
+          "units": 3
+        },
+        {
+          "code": "BFPSIOLAB",
+          "name": "General Physiology Lab",
+          "units": 2
+        },
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "TCS-BIO2",
+          "name": "Thesis II",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "BFEVOLEC",
+          "name": "Evolutionary Biology Lec",
+          "units": 3
+        },
+        {
+          "code": "BFEVOLAB",
+          "name": "Evolutionary Biology Lab",
+          "units": 2
+        },
+        {
+          "code": "BSETBOT",
+          "name": "Ethnobotany",
+          "units": 3
+        },
+        {
+          "code": "BSRECOM",
+          "name": "Recombination DNA Techniques",
+          "units": 3
+        },
+        {
+          "code": "BSIMMU",
+          "name": "Immunology",
+          "units": 3
+        },
+        {
+          "code": "BSPAMOR",
+          "name": "Plant and Animal Morphology",
+          "units": 3
+        },
+        {
+          "code": "GE ELECT-LM",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}

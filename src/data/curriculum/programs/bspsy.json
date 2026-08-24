@@ -1,0 +1,353 @@
+{
+  "id": "bspsy",
+  "name": "Bachelor of Science in Psychology",
+  "abbreviation": "BS PSY",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "PSYC 01",
+          "name": "General Psychology",
+          "units": 3
+        },
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Tradition",
+          "units": 3
+        },
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshman Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "HISCUL",
+          "name": "Historia y Cultura de Zamboanga",
+          "units": 3
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "PSYC 02",
+          "name": "Developmental Psychology",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshman Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": []
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "PSYC 23",
+          "name": "Sikolohiyang Filipino and Filipino Values",
+          "units": 3
+        },
+        {
+          "code": "PSYC 03",
+          "name": "Statistics in Psychology",
+          "units": 5
+        },
+        {
+          "code": "PSYC 04",
+          "name": "Physiological Psychology",
+          "units": 3
+        },
+        {
+          "code": "KOMFIL",
+          "name": "Kontekswalisadong Komunikasyon sa Filipino",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Tradition",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games I",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PSYC 05",
+          "name": "Theories of Personality",
+          "units": 3
+        },
+        {
+          "code": "PSYC 08n",
+          "name": "Qualitative/Field Methods in Psychology",
+          "units": 5
+        },
+        {
+          "code": "ACADWRI",
+          "name": "Academic Writing",
+          "units": 3
+        },
+        {
+          "code": "PSYC 06",
+          "name": "Group Process",
+          "units": 3
+        },
+        {
+          "code": "PSYC 07",
+          "name": "Cognitive Psychology",
+          "units": 3
+        },
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology & Society",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games II",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "LIVIT",
+          "name": "Living in the IT Era (with Data Analytics)",
+          "units": 3
+        },
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        },
+        {
+          "code": "PSYC SEM1",
+          "name": "Gender and Sexuality Studies",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PSYC 09",
+          "name": "Experimental Psychology",
+          "units": 5
+        },
+        {
+          "code": "PSYC 10",
+          "name": "Abnormal Psychology",
+          "units": 3
+        },
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        },
+        {
+          "code": "PSYC 11",
+          "name": "Introduction to Counseling",
+          "units": 3
+        },
+        {
+          "code": "LITMIN",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        },
+        {
+          "code": "PSYC SCI2",
+          "name": "Physics: Sounds, Light and Electricity",
+          "units": 5
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PSYC 12",
+          "name": "Assessment & Psychological Testing",
+          "units": 5
+        },
+        {
+          "code": "PSYC 14",
+          "name": "Social Psychology",
+          "units": 3
+        },
+        {
+          "code": "PSYC 13",
+          "name": "Industrial/Organizational Psych",
+          "units": 3
+        },
+        {
+          "code": "PSYC 198",
+          "name": "Research 1 (Proposal Writing)",
+          "units": 3
+        },
+        {
+          "code": "PSYC SCI1",
+          "name": "Gen. and Inorganic Chemistry",
+          "units": 5
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "PSYC 16",
+          "name": "Internship",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PSYC SCI3",
+          "name": "College Biology",
+          "units": 5
+        },
+        {
+          "code": "PSYC 199",
+          "name": "Research Writing 2 (Thesis Writing)",
+          "units": 3
+        },
+        {
+          "code": "PSYC 18",
+          "name": "Intro to Human Resource Development",
+          "units": 3
+        },
+        {
+          "code": "PSYC 24",
+          "name": "Psychology of Language",
+          "units": 3
+        },
+        {
+          "code": "INCOR 1",
+          "name": "Integrative Course 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PSYC SCI4",
+          "name": "College Zoology",
+          "units": 5
+        },
+        {
+          "code": "PSYC 20",
+          "name": "Positive Psychology w/MHPSS",
+          "units": 3
+        },
+        {
+          "code": "PSYC 19",
+          "name": "Organizational Behavior",
+          "units": 3
+        },
+        {
+          "code": "PSYC SEM2",
+          "name": "Environmental Psychology",
+          "units": 3
+        },
+        {
+          "code": "INCOR2",
+          "name": "Integrative Course 2",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}

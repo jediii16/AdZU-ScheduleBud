@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Abstract placeholder pattern">
+  <rect width="160" height="160" fill="#f8fafc"/>
+  <path d="M-20 40 40-20M0 100 100 0M60 160 160 60M120 180 180 120" stroke="#dbeafe" stroke-width="12" opacity=".65"/>
+  <circle cx="128" cy="30" r="8" fill="#99f6e4" opacity=".8"/>
+</svg>

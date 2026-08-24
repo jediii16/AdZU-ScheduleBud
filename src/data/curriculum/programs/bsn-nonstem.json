@@ -1,0 +1,333 @@
+{
+  "id": "bsn-nonstem",
+  "name": "Bachelor of Science in Nursing (Non-STEM)",
+  "abbreviation": "BS N-nonstem",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communications",
+          "units": 3
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian - Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshmen Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        },
+        {
+          "code": "NCM 100j",
+          "name": "Theoretical Foundation of Nursing",
+          "units": 3
+        },
+        {
+          "code": "NURANP",
+          "name": "Anatomy and Physiology",
+          "units": 5
+        },
+        {
+          "code": "NURCHE",
+          "name": "Chemistry (for Non-STEM)",
+          "units": 5
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "NURLOCR",
+          "name": "Logic and Critical Thinking",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshmen Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        },
+        {
+          "code": "NCM 101j",
+          "name": "Health Assessment",
+          "units": 3
+        },
+        {
+          "code": "NCM 102j",
+          "name": "Health Education",
+          "units": 3
+        },
+        {
+          "code": "NCM 103j",
+          "name": "Fundamentals of Nursing",
+          "units": 3
+        },
+        {
+          "code": "NURMIC",
+          "name": "Microbiology and Parasitology",
+          "units": 4
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "NURBIO",
+          "name": "Biochemistry",
+          "units": 5
+        },
+        {
+          "code": "NUR PHY",
+          "name": "Physics",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "NURDR",
+          "name": "Drugs and Solutions",
+          "units": 3
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person, Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games 1",
+          "units": 2
+        },
+        {
+          "code": "NCM 104j",
+          "name": "Community Health Nursing 1- Individual & Family as Clients",
+          "units": 3
+        },
+        {
+          "code": "NCM 105j",
+          "name": "Nutrition and Diet Therapy",
+          "units": 3
+        },
+        {
+          "code": "NCM 106j",
+          "name": "Pharmacology",
+          "units": 3
+        },
+        {
+          "code": "NCM 107j",
+          "name": "Care of Mother, Child Adolescent- Well Clients",
+          "units": 6
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games 2",
+          "units": 2
+        },
+        {
+          "code": "NCM 108j",
+          "name": "Health Care Ethics-Bioethics",
+          "units": 3
+        },
+        {
+          "code": "NCM 109j",
+          "name": "Care of Mother, Child at Risk",
+          "units": 6
+        },
+        {
+          "code": "NCM 110j",
+          "name": "Nursing Informatics",
+          "units": 3
+        },
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "ELECT-LM",
+          "name": "Philippine Culture and Literature",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology and Society",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        },
+        {
+          "code": "NCM 111j",
+          "name": "Nursing Research I",
+          "units": 3
+        },
+        {
+          "code": "NCM 112j",
+          "name": "Care of Clients w/ Probs in Oxygenation, Fluid & Electrolytes, Infections, Inflammatory & Immunologic Response, Cellular Aberrations, Acute & Chronic",
+          "units": 9
+        },
+        {
+          "code": "NCM 113j",
+          "name": "Community Health Nursing-Population Groups & Community as Clients",
+          "units": 3
+        },
+        {
+          "code": "NCM 114j",
+          "name": "Care of Older (Group A) The Entrepreneurial Mind ",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "ELECT-EM",
+          "name": "The Entrepreneurial Mind/Care of Older (Group B)",
+          "units": 3
+        },
+        {
+          "code": "NCM 115j",
+          "name": "Nursing Research II",
+          "units": 2
+        },
+        {
+          "code": "NCM 116j",
+          "name": "Care of Clients w/ Problems in & Gastrointestinal Metabolism & Endocrine, Perception and Coordination, Acute & Chronic",
+          "units": 9
+        },
+        {
+          "code": "NCM 117j",
+          "name": "Care of Clients w/ Maladaptive Patterns of Behavior, Acute & Chronic",
+          "units": 4
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "NCM 118j",
+          "name": "Nursing Care of Client w/ Life-Threatening Conditions, Acutely III/ Multi-organ Problems, High Acuity & Emergency Situation, Acute and Chronic ",
+          "units": 6
+        },
+        {
+          "code": "NCM 119j",
+          "name": "Nursing Leadership and Management",
+          "units": 4
+        },
+        {
+          "code": "NCM 120j",
+          "name": "Decent Work Employment and Transcultural Nursing",
+          "units": 3
+        },
+        {
+          "code": "NURCO 1",
+          "name": "Nursing Core Competency 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "NCM 121j",
+          "name": "Disaster Nursing",
+          "units": 3
+        },
+        {
+          "code": "NURCO 2",
+          "name": "Nursing Core Competency 2",
+          "units": 3
+        }
+      ]
+    }
+  ]
+}

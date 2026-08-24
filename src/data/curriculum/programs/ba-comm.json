@@ -1,0 +1,377 @@
+{
+  "id": "ba-comm",
+  "name": "Bachelor of Arts in Communication",
+  "abbreviation": "BA COMM",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshmen Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "COMMED",
+          "name": "Intro to Communication Media",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "HISCUL",
+          "name": "Historia y Cultura de Zamboanga",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshmen Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "LIVIT",
+          "name": "Living in the IT Era (with Data Analytics)",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "PUBSPEAK",
+          "name": "Public Speaking",
+          "units": 3
+        },
+        {
+          "code": "COMLAWS",
+          "name": "Communication Media Laws & Ethics",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": []
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "JOURNP-1",
+          "name": "Journalism Principles & Theories",
+          "units": 3
+        },
+        {
+          "code": "CREWRI",
+          "name": "Creative Writing",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games I",
+          "units": 2
+        },
+        {
+          "code": "DIGPUB",
+          "name": "Digital Publishing",
+          "units": 3
+        },
+        {
+          "code": "PHOTOJOURN",
+          "name": "Photo Journalism",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "COMSOC",
+          "name": "Communication, Culture, and Society",
+          "units": 3
+        },
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology & Society",
+          "units": 3
+        },
+        {
+          "code": "MULSTOR",
+          "name": "Multimedia Storytelling",
+          "units": 3
+        },
+        {
+          "code": "JOURNP-2",
+          "name": "Journalism Practices",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games II",
+          "units": 2
+        },
+        {
+          "code": "SOCMED",
+          "name": "Social Media Principles & Practices",
+          "units": 3
+        },
+        {
+          "code": "ACADWRI",
+          "name": "Advanced Academic Writing",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": []
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "ENTMIND",
+          "name": "The Entrepreneurial Mindset",
+          "units": 3
+        },
+        {
+          "code": "COMTHEO",
+          "name": "Communication Theory",
+          "units": 3
+        },
+        {
+          "code": "BROADP-1",
+          "name": "Broadcasting Principles & Theories",
+          "units": 3
+        },
+        {
+          "code": "INTFILM",
+          "name": "Introduction to Film",
+          "units": 3
+        },
+        {
+          "code": "PEACEJOURN",
+          "name": "Peace Journalism",
+          "units": 3
+        },
+        {
+          "code": "COMASE",
+          "name": "Communication in the ASEAN Setting",
+          "units": 3
+        },
+        {
+          "code": "KOMFIL",
+          "name": "Kontekswalisadong Komunikasyon sa Filipino",
+          "units": 3
+        },
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "THEATER",
+          "name": "Intro to Theater Arts",
+          "units": 3
+        },
+        {
+          "code": "COMRES",
+          "name": "Communication Research",
+          "units": 3
+        },
+        {
+          "code": "FILMPROD",
+          "name": "Film Production",
+          "units": 3
+        },
+        {
+          "code": "BROADP-2",
+          "name": "Broadcasting Practices and Performance",
+          "units": 3
+        },
+        {
+          "code": "ADVERT",
+          "name": "Advertising Principles & Practices",
+          "units": 3
+        },
+        {
+          "code": "PUBINF",
+          "name": "Public Information Principles and Practices",
+          "units": 3
+        },
+        {
+          "code": "PUBREL",
+          "name": "Public Relations Principles and Practices",
+          "units": 3
+        },
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "COMM-INTERN",
+          "name": "Internship",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "COMM 198",
+          "name": "Thesis/Special Project 1",
+          "units": 3
+        },
+        {
+          "code": "DEVCOM",
+          "name": "Development Communication",
+          "units": 3
+        },
+        {
+          "code": "RISKCOM",
+          "name": "Risk, Disaster & Humanitarian Communication",
+          "units": 3
+        },
+        {
+          "code": "COMPLAN",
+          "name": "Communication Planning",
+          "units": 3
+        },
+        {
+          "code": "FILMAPP",
+          "name": "Film Appreciation and Criticism",
+          "units": 3
+        },
+        {
+          "code": "LITMIN",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "COMM 199",
+          "name": "Thesis/Special Project 2",
+          "units": 3
+        },
+        {
+          "code": "ORGCOM",
+          "name": "Organizational Culture and Communication",
+          "units": 3
+        },
+        {
+          "code": "COMMAN",
+          "name": "Communication Management",
+          "units": 3
+        },
+        {
+          "code": "KNOMAN",
+          "name": "Knowledge Management",
+          "units": 3
+        },
+        {
+          "code": "DIGDEV",
+          "name": "Digital Learning Materials Development",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}

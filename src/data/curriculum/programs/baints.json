@@ -1,0 +1,363 @@
+{
+  "id": "baints",
+  "name": "Bachelor of Arts in International Studies",
+  "abbreviation": "BA INTS",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "INTS-INTRO",
+          "name": "Introduction to International Studies",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshmen Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "HISCUL",
+          "name": "Historia y Cultura de Zamboanga",
+          "units": 3
+        },
+        {
+          "code": "PUBSPEAK",
+          "name": "Public Speaking",
+          "units": 3
+        },
+        {
+          "code": "ECONINT",
+          "name": "Introductory Economics",
+          "units": 3
+        },
+        {
+          "code": "INTS-PUB",
+          "name": "International Public Relations",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshmen Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": []
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Tradition",
+          "units": 3
+        },
+        {
+          "code": "ECONMIC",
+          "name": "Microeconomics Theory & Practice",
+          "units": 3
+        },
+        {
+          "code": "GOVCOM",
+          "name": "Comparative Government & Politics",
+          "units": 3
+        },
+        {
+          "code": "HIST.1",
+          "name": "Survey of World History I",
+          "units": 3
+        },
+        {
+          "code": "INTS-CUL",
+          "name": "Culture and Arts in East Asia",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games I",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "ACADWRI",
+          "name": "Advanced Academic Writing",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "SCITECS",
+          "name": "Science, Technology & Society",
+          "units": 3
+        },
+        {
+          "code": "ECONMAC",
+          "name": "Macroeconomics Theory & Practice",
+          "units": 3
+        },
+        {
+          "code": "HIST.2",
+          "name": "Survey of World History II",
+          "units": 3
+        },
+        {
+          "code": "GOVPHIL",
+          "name": "Phil. Constitution and Government",
+          "units": 3
+        },
+        {
+          "code": "SOCSCI-ELECT1",
+          "name": "Intercultural Communication",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games II",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "INTS-SERV",
+          "name": "Culture, Society and Community (w/ Service Learning Program)",
+          "units": 6
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        },
+        {
+          "code": "KOMFIL",
+          "name": "Kontekstwalisadong Komunikasyon sa Filipino",
+          "units": 3
+        },
+        {
+          "code": "PEACE",
+          "name": "Peace Issues in Asia",
+          "units": 3
+        },
+        {
+          "code": "GEOPOL",
+          "name": "Geopolitics in Indo-Pacific Region",
+          "units": 3
+        },
+        {
+          "code": "INTLAW",
+          "name": "International Law",
+          "units": 3
+        },
+        {
+          "code": "INTS-SEM1",
+          "name": "International Studies Seminar 1",
+          "units": 3
+        },
+        {
+          "code": "INTTRADE",
+          "name": "International Trade",
+          "units": 3
+        },
+        {
+          "code": "FL1",
+          "name": "Foreign Language 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        },
+        {
+          "code": "LITMIN",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        },
+        {
+          "code": "HIST-US",
+          "name": "US History, Government and Society",
+          "units": 3
+        },
+        {
+          "code": "INTS-DIP",
+          "name": "Consular & Diplomatic Practices",
+          "units": 3
+        },
+        {
+          "code": "INTS-RES",
+          "name": "Theories & Methods in International Studies",
+          "units": 3
+        },
+        {
+          "code": "INTS-SPECT",
+          "name": "Special Topics in International Studies (w/ International Exposure)",
+          "units": 3
+        },
+        {
+          "code": "SOCSCI-ELECT2",
+          "name": "Data Analytics",
+          "units": 3
+        },
+        {
+          "code": "FL2",
+          "name": "Foreign Language 2",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "INTS-INTERN",
+          "name": "Internship",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "INTS-RP",
+          "name": "Writing in the Social Sciences I (Proposal)",
+          "units": 3
+        },
+        {
+          "code": "INTS-LEAD",
+          "name": "Leadership Theory and Practice",
+          "units": 3
+        },
+        {
+          "code": "INTS-SEM2",
+          "name": "International Studies Seminar 2",
+          "units": 3
+        },
+        {
+          "code": "FL3",
+          "name": "Foreign Language 3",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "INTS-TW",
+          "name": "Writing in the Social Sciences II (Thesis Writing)",
+          "units": 3
+        },
+        {
+          "code": "GREATBOOKS",
+          "name": "World Literary Classics (with emphasis on evolution of political thought)",
+          "units": 3
+        },
+        {
+          "code": "FL4",
+          "name": "Foreign Language 4",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}

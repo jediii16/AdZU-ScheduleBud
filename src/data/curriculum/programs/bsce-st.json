@@ -1,0 +1,419 @@
+{
+  "id": "bsce-st",
+  "name": "Bachelor of Science in Civil Engineering - Structural Engineering",
+  "abbreviation": "BS CE-ST",
+  "curriculumVersion": "current",
+  "terms": [
+    {
+      "yearLevel": 1,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "CE.111",
+          "name": "Civil Engineering Orientation",
+          "units": 2
+        },
+        {
+          "code": "CE.112",
+          "name": "Computer Fundamentals and Programming",
+          "units": 6
+        },
+        {
+          "code": "ENG.111",
+          "name": "Pre-Calculus Mathematics",
+          "units": 4
+        },
+        {
+          "code": "ENG.112",
+          "name": "Calculus 1: Differential Calculus",
+          "units": 3
+        },
+        {
+          "code": "ENG.102",
+          "name": "Chemistry for Engineers",
+          "units": 6
+        },
+        {
+          "code": "MATMOD",
+          "name": "Mathematics in the Modern World",
+          "units": 3
+        },
+        {
+          "code": "FFP1",
+          "name": "Freshman Formation Program 1",
+          "units": 3
+        },
+        {
+          "code": "NSTP1",
+          "name": "National Service Training Program 1",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT1",
+          "name": "Movement Enhancement",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "CE.121",
+          "name": "Engineering Drawing and Plans",
+          "units": 3
+        },
+        {
+          "code": "ENG.121",
+          "name": "Calculus 2: Integral Calculus",
+          "units": 3
+        },
+        {
+          "code": "ENG.101",
+          "name": "Physics 1: Physics for Engineers",
+          "units": 6
+        },
+        {
+          "code": "UNDSELF",
+          "name": "Understanding the Self",
+          "units": 3
+        },
+        {
+          "code": "PURCOM",
+          "name": "Purposive Communication",
+          "units": 3
+        },
+        {
+          "code": "SPIECO",
+          "name": "Spirituality & Ecology in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "FFP2",
+          "name": "Freshman Formation Program 2",
+          "units": 3
+        },
+        {
+          "code": "NSTP2",
+          "name": "National Service Training Program 2",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT2",
+          "name": "Fitness Exercise",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 1,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "CE.131",
+          "name": "Computer-Aided Design for CE",
+          "units": 3
+        },
+        {
+          "code": "ENG.132",
+          "name": "Engineering Management for CE",
+          "units": 2
+        },
+        {
+          "code": "ENG.032",
+          "name": "Engineering Data Analysis",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "CE.211",
+          "name": "Statics of Rigid Bodies",
+          "units": 3
+        },
+        {
+          "code": "CE.212",
+          "name": "Fundamentals of Surveying",
+          "units": 6
+        },
+        {
+          "code": "ENG.211",
+          "name": "Differential Equations",
+          "units": 3
+        },
+        {
+          "code": "ARTAPP",
+          "name": "Art Appreciation",
+          "units": 3
+        },
+        {
+          "code": "SCIETECS",
+          "name": "Science, Technology & Society",
+          "units": 3
+        },
+        {
+          "code": "ACADWRI",
+          "name": "Academic Writing",
+          "units": 3
+        },
+        {
+          "code": "RIZAL",
+          "name": "Life and Works of Rizal",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT3",
+          "name": "Dance/Sports/Rec & Games I",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "CE.221",
+          "name": "Dynamics of Rigid Bodies",
+          "units": 2
+        },
+        {
+          "code": "CE.222",
+          "name": "Geology for Civil Engineers",
+          "units": 2
+        },
+        {
+          "code": "CE.223",
+          "name": "Mechanics of Deformable Bodies",
+          "units": 4
+        },
+        {
+          "code": "CE.224",
+          "name": "Construction Materials and Testing",
+          "units": 5
+        },
+        {
+          "code": "GE-ELECT DA",
+          "name": "Data Analytics",
+          "units": 3
+        },
+        {
+          "code": "PHIHUM",
+          "name": "Philosophy of the Human Person: Social & Political Dimensions",
+          "units": 3
+        },
+        {
+          "code": "VOCMIS",
+          "name": "Vocation & Mission in the Christian, Ignatian & Islamic Traditions",
+          "units": 3
+        },
+        {
+          "code": "PHIHIS",
+          "name": "Readings in Philippine History",
+          "units": 3
+        },
+        {
+          "code": "PATHFIT4",
+          "name": "Dance/Sports/Rec & Games II",
+          "units": 2
+        }
+      ]
+    },
+    {
+      "yearLevel": 2,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "CE.231",
+          "name": "Engineering Economics",
+          "units": 2
+        },
+        {
+          "code": "CE.232",
+          "name": "Numerical Solutions to CE Problems",
+          "units": 5
+        },
+        {
+          "code": "CE.233",
+          "name": "Engineering Utilities 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "CE.311",
+          "name": "Structural Theory",
+          "units": 6
+        },
+        {
+          "code": "CE.312",
+          "name": "Highway and Railroad Engineering",
+          "units": 3
+        },
+        {
+          "code": "CE.313",
+          "name": "Hydrology",
+          "units": 2
+        },
+        {
+          "code": "CE.314",
+          "name": "Engineering Utilities 2",
+          "units": 3
+        },
+        {
+          "code": "CE.315",
+          "name": "Principles of Transportation Engineering",
+          "units": 3
+        },
+        {
+          "code": "CE.316",
+          "name": "CE Law, Contracts and Ethics",
+          "units": 2
+        },
+        {
+          "code": "ENG.311",
+          "name": "Technopreneurship",
+          "units": 3
+        },
+        {
+          "code": "ETHICS",
+          "name": "Ethics",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "CE.321",
+          "name": "Building System Design",
+          "units": 5
+        },
+        {
+          "code": "CE.322",
+          "name": "Principles of Steel Design",
+          "units": 5
+        },
+        {
+          "code": "CE.323",
+          "name": "Principles of Reinforced/Pre-Stressed Concrete",
+          "units": 6
+        },
+        {
+          "code": "CE.324",
+          "name": "Hydraulics",
+          "units": 7
+        },
+        {
+          "code": "GE ELECT-LM",
+          "name": "Literatures of Mindanao",
+          "units": 3
+        },
+        {
+          "code": "CONWOR",
+          "name": "Contemporary World",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 3,
+      "semester": 3,
+      "subjects": [
+        {
+          "code": "CE.331S",
+          "name": "Design of Steel Structures",
+          "units": 3
+        },
+        {
+          "code": "CE.332S",
+          "name": "Bridge Engineering",
+          "units": 3
+        },
+        {
+          "code": "CE.333",
+          "name": "Construction Methods and Project Management",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 1,
+      "subjects": [
+        {
+          "code": "CE.411",
+          "name": "CE Project 1",
+          "units": 4
+        },
+        {
+          "code": "CE.412",
+          "name": "Geotechnical Engineering (Soil Mechanics)",
+          "units": 6
+        },
+        {
+          "code": "CE.413S",
+          "name": "Pre-stressed Concrete Design",
+          "units": 3
+        },
+        {
+          "code": "CE.414",
+          "name": "Quantity Surveying",
+          "units": 4
+        },
+        {
+          "code": "CE.415S",
+          "name": "Reinforced Concrete Design",
+          "units": 3
+        },
+        {
+          "code": "CE.416S",
+          "name": "Foundation and Retaining Wall Design",
+          "units": 3
+        },
+        {
+          "code": "CE.417",
+          "name": "CE Integration Course 1",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 2,
+      "subjects": [
+        {
+          "code": "CE.421",
+          "name": "CE Project 2",
+          "units": 4
+        },
+        {
+          "code": "CE.422",
+          "name": "CE on the Job Training (240 hrs. Minimum)",
+          "units": 5
+        },
+        {
+          "code": "CE.423",
+          "name": "CE Integration Course 2",
+          "units": 3
+        }
+      ]
+    },
+    {
+      "yearLevel": 4,
+      "semester": 3,
+      "subjects": []
+    }
+  ]
+}
