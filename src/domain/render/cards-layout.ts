@@ -1,4 +1,8 @@
 import type { DeviceVariant, VisibleFields } from "@/domain/device/types";
+import {
+  resolveTargetComposition,
+  type TargetCompositionFamily,
+} from "@/domain/device/composition";
 import type { ScheduleProject } from "@/domain/project";
 import {
   expandOccurrences,
@@ -55,6 +59,7 @@ export type CardsRenderResult = {
   scheduleBounds: Rect;
   positionRange: { minX: number; maxX: number; minY: number; maxY: number };
   composition: CardsComposition;
+  compositionFamily: TargetCompositionFamily;
   typography: CardsTypography;
   dayLayout: readonly CardsDayLayout[];
 };
@@ -414,8 +419,13 @@ export function buildCardsRenderModel(
   theme: CleanSlateRenderTheme = CLEAN_SLATE_RENDER_THEME,
 ): CardsRenderResult {
   const { width, height } = variant.dimensions;
+  const compositionFamily = resolveTargetComposition(variant);
   const composition: CardsComposition =
-    variant.category === "phone" ? "phone" : "desktop";
+    compositionFamily === "phonePortrait" ||
+    compositionFamily === "tabletPortrait" ||
+    compositionFamily === "square"
+      ? "phone"
+      : "desktop";
   const typography = typographyFor(
     composition,
     project.design.typography.scale,
@@ -442,11 +452,26 @@ export function buildCardsRenderModel(
   const activeDays = DAYS.filter((day) => (byDay.get(day)?.length ?? 0) > 0);
   const visibleDays =
     project.design.dayVisibility === "full-week" ? DAYS : activeDays;
+  const compactColumns =
+    compositionFamily === "phonePortrait"
+      ? 2
+      : compositionFamily === "square"
+        ? visibleDays.length >= 5
+          ? 3
+          : 2
+        : variant.dimensions.width >= 1500
+          ? 3
+          : 2;
   const availableWidth = width - margin * 2;
   const columnGap = composition === "phone" ? 28 : 18;
   const groupWidth =
     composition === "phone"
-      ? Math.min(920, availableWidth)
+      ? Math.min(
+          compositionFamily === "phonePortrait"
+            ? 920
+            : compactColumns * 480 + (compactColumns - 1) * columnGap,
+          availableWidth,
+        )
       : visibleDays.length === 0
         ? Math.min(600, availableWidth)
         : Math.min(
@@ -454,7 +479,8 @@ export function buildCardsRenderModel(
             visibleDays.length * (visibleDays.length <= 2 ? 360 : 300) +
               Math.max(0, visibleDays.length - 1) * columnGap,
           );
-  const pairedPhoneWidth = (groupWidth - columnGap) / 2;
+  const compactDayWidth =
+    (groupWidth - columnGap * (compactColumns - 1)) / compactColumns;
   const desktopWidth =
     visibleDays.length > 0
       ? (groupWidth - Math.max(0, visibleDays.length - 1) * columnGap) /
@@ -472,16 +498,18 @@ export function buildCardsRenderModel(
   const cardGap = composition === "phone" ? 16 : 12;
   const rowGap = composition === "phone" ? 34 : 0;
   const dayPlans = visibleDays.map((day, index) => {
-    const row = composition === "phone" ? Math.floor(index / 2) : 0;
-    const isSingleton =
-      composition === "phone" &&
-      index === visibleDays.length - 1 &&
-      visibleDays.length % 2 === 1;
+    const row =
+      composition === "phone" ? Math.floor(index / compactColumns) : 0;
+    const rowStart = row * compactColumns;
+    const rowItemCount = Math.min(
+      compactColumns,
+      visibleDays.length - rowStart,
+    );
     const dayWidth =
       composition === "phone"
         ? visibleDays.length === 1
           ? Math.min(620, groupWidth)
-          : pairedPhoneWidth
+          : compactDayWidth
         : desktopWidth;
     const items = (byDay.get(day) ?? []).map((occurrence) =>
       createCardPlan(
@@ -501,11 +529,11 @@ export function buildCardsRenderModel(
     return {
       day,
       row,
-      column: composition === "phone" ? (isSingleton ? 0 : index % 2) : index,
+      column: composition === "phone" ? index % compactColumns : index,
       width: dayWidth,
       height: dayHeight,
       items,
-      isSingleton,
+      rowItemCount,
     };
   });
   const rowCount = dayPlans.reduce((max, day) => Math.max(max, day.row + 1), 0);
@@ -560,9 +588,11 @@ export function buildCardsRenderModel(
   for (const plan of dayPlans) {
     const x =
       composition === "phone"
-        ? plan.isSingleton || visibleDays.length === 1
-          ? (groupWidth - plan.width) / 2
-          : plan.column * (pairedPhoneWidth + columnGap)
+        ? (groupWidth -
+            (plan.rowItemCount * plan.width +
+              (plan.rowItemCount - 1) * columnGap)) /
+            2 +
+          plan.column * (plan.width + columnGap)
         : plan.column * (desktopWidth + columnGap);
     const y = rowTops[plan.row]!;
     dayLayout.push({
@@ -653,6 +683,7 @@ export function buildCardsRenderModel(
       maxY: margin + movableY,
     },
     composition,
+    compositionFamily,
     typography,
     dayLayout,
   };

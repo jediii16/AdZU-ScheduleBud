@@ -26,13 +26,13 @@ export function ScheduleEditorOverlay({
   const crosshairSize = 6 / previewScale;
   return (
     <Layer name="editor-overlay">
-      {dragging && guides.verticalCenter ? (
+      {dragging && guides.verticalPosition !== undefined ? (
         <Line
           name="vertical-center-guide"
           points={[
-            canvasSize.width / 2,
+            guides.verticalPosition,
             0,
-            canvasSize.width / 2,
+            guides.verticalPosition,
             canvasSize.height,
           ]}
           stroke="#145F9B"
@@ -40,14 +40,14 @@ export function ScheduleEditorOverlay({
           listening={false}
         />
       ) : null}
-      {dragging && guides.horizontalCenter ? (
+      {dragging && guides.horizontalPosition !== undefined ? (
         <Line
           name="horizontal-center-guide"
           points={[
             0,
-            canvasSize.height / 2,
+            guides.horizontalPosition,
             canvasSize.width,
-            canvasSize.height / 2,
+            guides.horizontalPosition,
           ]}
           stroke="#145F9B"
           strokeWidth={strokeWidth}

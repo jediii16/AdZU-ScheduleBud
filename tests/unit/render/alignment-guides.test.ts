@@ -17,10 +17,30 @@ describe("smart alignment guides", () => {
       proposedOrigin: { x: 342, y: 1048 },
     });
     expect(result.origin).toEqual({ x: 340, y: 1050 });
-    expect(result.guides).toEqual({
+    expect(result.guides).toMatchObject({
       verticalCenter: true,
       horizontalCenter: true,
     });
+  });
+
+  it("prioritizes canvas center over nearby safe-area anchors", () => {
+    const result = resolveAlignmentSnap({
+      ...base,
+      proposedOrigin: { x: 342, y: 800 },
+      anchors: { x: [345], y: [] },
+    });
+    expect(result.origin.x).toBe(340);
+    expect(result.guides.source).toBe("canvas-center");
+  });
+
+  it("snaps to a safe-area anchor when center is outside threshold", () => {
+    const result = resolveAlignmentSnap({
+      ...base,
+      proposedOrigin: { x: 205, y: 800 },
+      anchors: { x: [200], y: [] },
+    });
+    expect(result.origin.x).toBe(200);
+    expect(result.guides.source).toBe("safe-area");
   });
 
   it("supports vertical-line/X-only and horizontal-line/Y-only snapping", () => {

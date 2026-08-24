@@ -19,9 +19,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   STUDIO_TARGETS,
+  balancedPositionFor,
   studioTargetForVariant,
-  type StudioTargetId,
 } from "@/data/devices/studio-targets";
+import type { DevicePreset } from "@/data/devices/registry";
+import {
+  detectSafeAreaCollision,
+  resolveSafeAreaModel,
+  safeAreaSnapAnchors,
+} from "@/domain/device/safe-areas";
+import type { DeviceCategory } from "@/domain/device/types";
 import { buildCardsRenderModel, resolveAlignmentSnap } from "@/domain/render";
 import { detectConflicts } from "@/domain/schedule/conflicts";
 import { validateMeeting } from "@/domain/schedule/validation";
@@ -35,6 +42,12 @@ import {
   type ExportStatus,
 } from "@/features/export/png-export";
 import { ScheduleArtboard } from "@/renderer/konva/artboard";
+import { createPersistence } from "@/storage/persistence";
+import {
+  removeScreenGuide,
+  saveScreenGuide,
+  type InspectedImage,
+} from "@/storage/assets";
 import { useScheduleBudStore, useScheduleBudStoreApi } from "@/state/react";
 import type { EditorState } from "@/state/types";
 import {
@@ -42,6 +55,9 @@ import {
   DesignStudioPanel,
   DeviceStudioPanel,
 } from "./studio-panels";
+import { DeviceTargetPicker } from "./device-target-picker";
+
+const studioPersistence = createPersistence();
 
 const TOOL_ITEMS = [
   { id: "classes", label: "Classes", icon: BookOpen },
@@ -80,6 +96,12 @@ export function StudioExperience() {
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportGate, setExportGate] = useState<WarningGateState>("idle");
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
+  const [guideOpacity, setGuideOpacity] = useState(0.35);
+  const [loadedGuide, setLoadedGuide] = useState<{
+    id: string;
+    image: HTMLImageElement;
+  } | null>(null);
 
   useEffect(() => {
     if (!project || initializedProject.current === project.id) return;
@@ -92,10 +114,10 @@ export function StudioExperience() {
           variant.id === current.activeDeviceVariantId &&
           studioTargetForVariant(variant) !== undefined,
       );
-      const variantIds = new Map<StudioTargetId, string>();
+      const variantIds = new Map<string, string>();
       for (const target of STUDIO_TARGETS) {
         const existing = current.deviceVariants.find(
-          (variant) => studioTargetForVariant(variant)?.id === target.id,
+          (variant) => variant.presetId === target.presetId,
         );
         const id =
           existing?.id ??
@@ -125,6 +147,27 @@ export function StudioExperience() {
   const target = activeVariant
     ? studioTargetForVariant(activeVariant)
     : undefined;
+  useEffect(() => {
+    const guideId = activeVariant?.preview.guideAssetId;
+    if (!guideId) return;
+    let active = true;
+    let url: string | null = null;
+    void studioPersistence.assets.read(guideId).then((asset) => {
+      if (!active || !asset) return;
+      url = URL.createObjectURL(asset.blob);
+      const image = new Image();
+      image.onload = () => active && setLoadedGuide({ id: guideId, image });
+      image.src = url;
+    });
+    return () => {
+      active = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [activeVariant?.preview.guideAssetId]);
+  const guideImage =
+    loadedGuide && loadedGuide.id === activeVariant?.preview.guideAssetId
+      ? loadedGuide.image
+      : null;
   const renderResult = useMemo(
     () =>
       project && activeVariant && target
@@ -147,6 +190,17 @@ export function StudioExperience() {
     );
     return incomplete + detectConflicts(project.schedule).length;
   }, [project]);
+  const safeAreas = useMemo(
+    () => (activeVariant ? resolveSafeAreaModel(activeVariant) : { zones: [] }),
+    [activeVariant],
+  );
+  const safeCollision = useMemo(
+    () =>
+      renderResult
+        ? detectSafeAreaCollision(renderResult.scheduleBounds, safeAreas)
+        : { status: "clear" as const, zones: [] },
+    [renderResult, safeAreas],
+  );
 
   if (!project || project.schedule.length === 0)
     return (
@@ -204,6 +258,14 @@ export function StudioExperience() {
       previewScale,
       enabled: activeVariant.preview.enableSnapping,
       previous: store.getState().editor.alignmentGuides,
+      ...(activeVariant.preview.showSafeAreas
+        ? {
+            anchors: safeAreaSnapAnchors(
+              safeAreas,
+              renderResult.scheduleBounds,
+            ),
+          }
+        : {}),
     });
     const normalize = (value: number, minimum: number, maximum: number) =>
       maximum === minimum
@@ -232,11 +294,60 @@ export function StudioExperience() {
     });
     store.getState().commitHistoryTransaction();
   };
-  const switchTarget = (id: StudioTargetId) => {
-    const variant = project.deviceVariants.find(
-      (item) => studioTargetForVariant(item)?.id === id,
-    );
+  const switchTarget = (id: string) => {
+    const variant = project.deviceVariants.find((item) => item.id === id);
     if (variant) store.getState().setActiveDeviceVariant(variant.id);
+  };
+  const createTarget = (
+    category: DeviceCategory,
+    dimensions: { width: number; height: number },
+    source: "preset" | "custom" | "matched-screen",
+    presetId: string | null = null,
+  ) => {
+    store.getState().createDeviceVariant({
+      category,
+      dimensions,
+      dimensionSource: source,
+      presetId,
+      schedulePosition: balancedPositionFor(category),
+      compositionId: `cards-${category}`,
+    });
+  };
+  const createPresetTarget = (preset: DevicePreset) =>
+    createTarget(
+      preset.category,
+      { width: preset.width, height: preset.height },
+      "preset",
+      preset.id,
+    );
+  const createMatchedTarget = async (
+    image: InspectedImage,
+    category: DeviceCategory,
+    preserveGuide: boolean,
+  ) => {
+    createTarget(
+      category,
+      { width: image.width, height: image.height },
+      "matched-screen",
+    );
+    const variantId =
+      store.getState().projectsById[project.id]?.activeDeviceVariantId;
+    if (!preserveGuide || !variantId) return;
+    const assetId = crypto.randomUUID();
+    await saveScreenGuide(studioPersistence.assets, {
+      ...image,
+      id: assetId,
+      projectId: project.id,
+      createdAt: new Date().toISOString(),
+    });
+    store.getState().setGuideAsset(variantId, assetId);
+  };
+  const removeGuide = async () => {
+    const id = activeVariant.preview.guideAssetId;
+    if (!id) return;
+    store.getState().setGuideAsset(activeVariant.id, null);
+    await removeScreenGuide(studioPersistence.assets, id);
+    setLoadedGuide(null);
   };
   const runExport = async () => {
     const gate = attemptWarningGate(issueCount > 0, exportGate);
@@ -259,7 +370,7 @@ export function StudioExperience() {
       console.error("ScheduleBud PNG export failed", error);
       setExportStatus("error");
       setExportError(
-        "We couldn't create this PNG. Your project is safe; try again.",
+        "We couldn't create this PNG on this device. Your project is safe; try again or choose a smaller target if memory is limited.",
       );
     });
   };
@@ -268,9 +379,9 @@ export function StudioExperience() {
       <ClassesStudioPanel />
     ) : editor.activeSection === "device" ? (
       <DeviceStudioPanel
-        targetId={target.id}
+        targetLabel={target.label}
         variant={activeVariant}
-        onTarget={switchTarget}
+        onChangeTarget={() => setTargetPickerOpen(true)}
         onPosition={(position) =>
           store.getState().setSchedulePosition(activeVariant.id, position)
         }
@@ -284,6 +395,28 @@ export function StudioExperience() {
         onSnapping={(enabled) =>
           store.getState().setSnappingEnabled(activeVariant.id, enabled)
         }
+        onPreviewMode={(mode) =>
+          store.getState().setPreviewMode(activeVariant.id, mode)
+        }
+        onSafeAreas={(enabled) =>
+          store.getState().setShowSafeAreas(activeVariant.id, enabled)
+        }
+        onWarnings={(enabled) =>
+          store.getState().setShowWarnings(activeVariant.id, enabled)
+        }
+        onOrientation={() =>
+          store
+            .getState()
+            .setDeviceOrientation(
+              activeVariant.id,
+              activeVariant.orientation === "portrait"
+                ? "landscape"
+                : "portrait",
+            )
+        }
+        guideOpacity={guideOpacity}
+        onGuideOpacity={setGuideOpacity}
+        onRemoveGuide={() => void removeGuide()}
       />
     ) : (
       <DesignStudioPanel
@@ -404,6 +537,10 @@ export function StudioExperience() {
             exportStageRef={exportStageRef}
             dragging={editor.dragging}
             guides={editor.alignmentGuides}
+            variant={activeVariant}
+            safeAreas={safeAreas}
+            guideImage={guideImage}
+            guideOpacity={guideOpacity}
             onDragStart={beginMove}
             onDragMove={setPositionFromOrigin}
             onDragEnd={(x, y, previewScale) => {
@@ -411,6 +548,17 @@ export function StudioExperience() {
               finishMove();
             }}
           />
+          {activeVariant.preview.showWarnings &&
+          safeCollision.status !== "clear" ? (
+            <div
+              role="status"
+              className="absolute top-3 left-1/2 z-10 -translate-x-1/2 border border-warning/35 bg-surface-elevated px-3 py-2 text-xs font-semibold text-foreground shadow-sm"
+            >
+              {safeCollision.status === "blocked"
+                ? "Part of your schedule is in a blocked system area."
+                : "Part of your schedule may be covered by screen content."}
+            </div>
+          ) : null}
           <div className="mb-16 flex h-12 shrink-0 items-center justify-between border-t border-border bg-background px-3 text-xs text-text-secondary lg:mb-0">
             <span className="font-mono">
               {target.label} · {renderResult.model.width} ×{" "}
@@ -499,6 +647,17 @@ export function StudioExperience() {
           ))}
         </nav>
       </div>
+      <DeviceTargetPicker
+        open={targetPickerOpen}
+        variants={project.deviceVariants}
+        onClose={() => setTargetPickerOpen(false)}
+        onSwitch={switchTarget}
+        onPreset={createPresetTarget}
+        onCustom={(category, width, height) =>
+          createTarget(category, { width, height }, "custom")
+        }
+        onMatched={createMatchedTarget}
+      />
     </main>
   );
 }

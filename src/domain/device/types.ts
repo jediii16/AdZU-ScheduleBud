@@ -29,10 +29,17 @@ export function clampNormalizedPoint(point: {
   };
 }
 
-export const deviceDimensionsSchema = z.object({
-  width: z.number().int().min(320).max(10_000),
-  height: z.number().int().min(320).max(10_000),
-});
+export const MIN_CANVAS_EDGE = 320;
+export const MAX_CANVAS_EDGE = 5120;
+export const MAX_CANVAS_AREA = 16_000_000;
+export const deviceDimensionsSchema = z
+  .object({
+    width: z.number().int().min(MIN_CANVAS_EDGE).max(MAX_CANVAS_EDGE),
+    height: z.number().int().min(MIN_CANVAS_EDGE).max(MAX_CANVAS_EDGE),
+  })
+  .refine(({ width, height }) => width * height <= MAX_CANVAS_AREA, {
+    message: "Canvas area must not exceed 16 million pixels.",
+  });
 export type DeviceDimensions = z.infer<typeof deviceDimensionsSchema>;
 
 export const orientationSchema = z.enum(["portrait", "landscape", "square"]);
@@ -67,6 +74,9 @@ export const previewPreferencesSchema = z.object({
     "lock-screen",
     "home-screen",
     "desktop",
+    "windows-desktop",
+    "macos-desktop",
+    "tablet-interface",
     "uploaded-guide",
   ]),
   showSafeAreas: z.boolean(),

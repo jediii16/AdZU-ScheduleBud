@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { deviceCategoryRegistry } from "@/data/devices/registry";
-import { deviceVariantSchema, inferScreenMatch } from "@/domain/device/types";
+import {
+  deviceCategoryRegistry,
+  devicePresetRegistry,
+} from "@/data/devices/registry";
+import { resolveTargetComposition } from "@/domain/device/composition";
+import {
+  deviceDimensionsSchema,
+  deviceVariantSchema,
+  inferScreenMatch,
+} from "@/domain/device/types";
 
 describe("device category and screen matching", () => {
   it("keeps semantic category independent from custom dimensions", () => {
@@ -91,6 +99,69 @@ describe("device category and screen matching", () => {
   it("rejects invalid dimensions", () => {
     expect(() => inferScreenMatch(0, 1080)).toThrow(RangeError);
     expect(() => inferScreenMatch(1080.5, 1920)).toThrow(RangeError);
+  });
+
+  it("provides only generic validated presets for every target family", () => {
+    expect(
+      new Set(devicePresetRegistry.map((preset) => preset.category)),
+    ).toEqual(new Set(["phone", "tablet", "laptop", "desktop", "square"]));
+    expect(devicePresetRegistry).toHaveLength(13);
+    expect(
+      devicePresetRegistry.every(
+        (preset) => !/iphone|ipad|samsung/i.test(preset.displayName),
+      ),
+    ).toBe(true);
+  });
+
+  it("enforces edge and sixteen-megapixel canvas safety", () => {
+    expect(
+      deviceDimensionsSchema.safeParse({ width: 320, height: 320 }).success,
+    ).toBe(true);
+    expect(
+      deviceDimensionsSchema.safeParse({ width: 5120, height: 3125 }).success,
+    ).toBe(true);
+    expect(
+      deviceDimensionsSchema.safeParse({ width: 319, height: 1080 }).success,
+    ).toBe(false);
+    expect(
+      deviceDimensionsSchema.safeParse({ width: 5121, height: 1080 }).success,
+    ).toBe(false);
+    expect(
+      deviceDimensionsSchema.safeParse({ width: 5000, height: 5000 }).success,
+    ).toBe(false);
+  });
+
+  it("resolves target composition from target geometry, never browser width", () => {
+    expect(
+      resolveTargetComposition({
+        category: "phone",
+        dimensions: { width: 1080, height: 2400 },
+      }),
+    ).toBe("phonePortrait");
+    expect(
+      resolveTargetComposition({
+        category: "tablet",
+        dimensions: { width: 1536, height: 2048 },
+      }),
+    ).toBe("tabletPortrait");
+    expect(
+      resolveTargetComposition({
+        category: "tablet",
+        dimensions: { width: 2048, height: 1536 },
+      }),
+    ).toBe("tabletLandscape");
+    expect(
+      resolveTargetComposition({
+        category: "laptop",
+        dimensions: { width: 1920, height: 1080 },
+      }),
+    ).toBe("desktopLandscape");
+    expect(
+      resolveTargetComposition({
+        category: "square",
+        dimensions: { width: 1080, height: 1080 },
+      }),
+    ).toBe("square");
   });
 
   it("rejects persisted variants whose orientation or preset provenance is inconsistent", () => {

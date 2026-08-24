@@ -10,6 +10,7 @@ import type {
   PreviewPreferences,
   VisibleFields,
 } from "@/domain/device/types";
+import type { AlignmentGuides } from "@/domain/render";
 import type {
   ProjectDesign,
   ScheduleProject,
@@ -69,7 +70,7 @@ export type EditorState = {
   previewZoom: number;
   previewPan: { x: number; y: number };
   dragging: boolean;
-  alignmentGuides: { verticalCenter: boolean; horizontalCenter: boolean };
+  alignmentGuides: AlignmentGuides;
 };
 
 export interface ProjectSlice {

@@ -6,6 +6,9 @@ import { Stage } from "react-konva";
 
 import type { CardsRenderResult } from "@/domain/render";
 import type { AlignmentGuides } from "@/domain/render";
+import type { DeviceVariant } from "@/domain/device/types";
+import type { SafeAreaModel } from "@/domain/device/safe-areas";
+import { PreviewEnvironmentOverlay } from "./editor-overlay/preview-environment";
 import { ScheduleEditorOverlay } from "./editor-overlay/schedule-overlay";
 import { ScheduleScene } from "./schedule-scene";
 
@@ -18,6 +21,10 @@ export function ScheduleArtboard({
   onDragEnd,
   dragging,
   guides,
+  variant,
+  safeAreas,
+  guideImage,
+  guideOpacity,
 }: {
   result: CardsRenderResult;
   zoom: number;
@@ -27,6 +34,10 @@ export function ScheduleArtboard({
   onDragEnd(x: number, y: number, previewScale: number): void;
   dragging: boolean;
   guides: AlignmentGuides;
+  variant: DeviceVariant;
+  safeAreas: SafeAreaModel;
+  guideImage: HTMLImageElement | null;
+  guideOpacity: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [space, setSpace] = useState({ width: 720, height: 720 });
@@ -69,6 +80,14 @@ export function ScheduleArtboard({
           scaleY={scale}
         >
           <ScheduleScene model={result.model} />
+          <PreviewEnvironmentOverlay
+            variant={variant}
+            safeAreas={safeAreas}
+            showSafeAreas={variant.preview.showSafeAreas}
+            guideImage={guideImage}
+            guideOpacity={guideOpacity}
+            previewScale={scale}
+          />
           <ScheduleEditorOverlay
             bounds={result.scheduleBounds}
             canvasSize={{

@@ -389,6 +389,34 @@ describe("autosave and history", () => {
     ).toEqual({ x: 0.5, y: 0.5 });
   });
 
+  it("preserves multiple custom variants in the same semantic category", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    const first = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+      schedulePosition: { x: 0.2, y: 0.3 },
+    })!;
+    const second = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1170, height: 2532 },
+      schedulePosition: { x: 0.7, y: 0.6 },
+    })!;
+    store.getState().setActiveDeviceVariant(first);
+    expect(
+      selectActiveDeviceVariant(store.getState())?.schedulePosition,
+    ).toEqual({ x: 0.2, y: 0.3 });
+    store.getState().setActiveDeviceVariant(second);
+    expect(
+      selectActiveDeviceVariant(store.getState())?.schedulePosition,
+    ).toEqual({ x: 0.7, y: 0.6 });
+    expect(
+      selectActiveProject(store.getState())?.deviceVariants.filter(
+        (variant) => variant.category === "phone",
+      ),
+    ).toHaveLength(2);
+  });
+
   it("keeps a snapped drag and its guide intermediates in one history transaction", () => {
     const { store } = createTestStore();
     store.getState().createProject();

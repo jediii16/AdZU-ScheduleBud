@@ -58,6 +58,39 @@ describe("Clean Slate Cards RenderModel", () => {
     expect(phone.typography.code).toBeGreaterThan(desktop.typography.code);
   });
 
+  it("adapts Cards to Tablet and Square target families", () => {
+    const project = projectWithDays(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+    const base = project.deviceVariants[0]!;
+    const tablet = {
+      ...base,
+      id: "tablet",
+      category: "tablet" as const,
+      dimensions: { width: 1536, height: 2048 },
+      orientation: "portrait" as const,
+      dimensionSource: "preset" as const,
+      presetId: "tablet-4-3-portrait",
+    };
+    const square = {
+      ...base,
+      id: "square",
+      category: "square" as const,
+      dimensions: { width: 1080, height: 1080 },
+      orientation: "square" as const,
+      dimensionSource: "preset" as const,
+      presetId: "square-1080",
+    };
+    const tabletResult = buildCardsRenderModel(project, tablet);
+    const squareResult = buildCardsRenderModel(project, square);
+    expect(tabletResult.compositionFamily).toBe("tabletPortrait");
+    expect(new Set(tabletResult.dayLayout.map((day) => day.column))).toEqual(
+      new Set([0, 1, 2]),
+    );
+    expect(squareResult.compositionFamily).toBe("square");
+    expect(new Set(squareResult.dayLayout.map((day) => day.column))).toEqual(
+      new Set([0, 1, 2]),
+    );
+  });
+
   it("hides an empty Saturday by default and creates five balanced desktop columns", () => {
     const project = projectWithDays(["Mon", "Tue", "Wed", "Thu", "Fri"]);
     const result = render(project, 1);
@@ -255,5 +288,23 @@ describe("Clean Slate Cards RenderModel", () => {
           (node) => node.id.includes("guide") || node.id.includes("overlay"),
         ),
     ).toBe(false);
+  });
+
+  it("never adds OS previews, safe areas, or screen guides to export layers", () => {
+    const project = visualScheduleProject();
+    const variant = {
+      ...project.deviceVariants[1]!,
+      preview: {
+        ...project.deviceVariants[1]!.preview,
+        mode: "windows-desktop" as const,
+        showSafeAreas: true,
+        guideAssetId: "private-guide",
+      },
+    };
+    const model = buildCardsRenderModel(project, variant).model;
+    const serialized = JSON.stringify(model);
+    expect(serialized).not.toMatch(
+      /private-guide|safe-area|windows|macos|lock-screen/,
+    );
   });
 });

@@ -53,6 +53,8 @@ History keeps 50 meaningful `{before, after}` project commits. A new edit clears
 
 History, autosave coordinators, repository instances, and all editor state are outside serialized `ScheduleProject` JSON.
 
+Phase 5 required no project-version increment: schema 1 already supports all five semantic categories, three dimension sources, multiple variants per category, preview modes, and guide asset references. New targets receive stable variant IDs; existing Phone/Desktop IDs, positions, and preferences are not rewritten.
+
 ## Migration boundary
 
 `migrateProject()` is the single entry for persisted documents. Schema 1 is validated directly. Unknown versions are reported as unsupported, leaving room for ordered future migrations. `detectLegacyWorkspace()` recognizes legacy schema 13, while `migrateLegacyWorkspaceToV2()` explicitly declines conversion until an authoritative serialized legacy shape exists.

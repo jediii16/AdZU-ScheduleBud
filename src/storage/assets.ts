@@ -48,6 +48,11 @@ export type InspectedImage = {
   filename?: string;
 };
 export type ImageBitmapLike = { width: number; height: number; close(): void };
+export const SCREEN_GUIDE_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+] as const;
 
 export async function inspectTemporaryImage(
   blob: Blob,
@@ -55,6 +60,8 @@ export async function inspectTemporaryImage(
     createImageBitmap(source),
   filename?: string,
 ): Promise<InspectedImage> {
+  if (!(SCREEN_GUIDE_MIME_TYPES as readonly string[]).includes(blob.type))
+    throw new TypeError("Choose a PNG, JPEG, or WebP image.");
   const bitmap = await createBitmap(blob);
   try {
     const result: InspectedImage = {
@@ -67,6 +74,25 @@ export async function inspectTemporaryImage(
   } finally {
     bitmap.close();
   }
+}
+
+export async function replaceScreenGuide(
+  repository: AssetRepository,
+  input: Parameters<typeof saveScreenGuide>[1],
+  previousId?: string | null,
+): Promise<StoredAsset> {
+  const saved = await saveScreenGuide(repository, input);
+  if (previousId && previousId !== saved.id)
+    await repository.delete(previousId);
+  return saved;
+}
+
+export async function removeScreenGuide(
+  repository: AssetRepository,
+  id: string,
+): Promise<void> {
+  const asset = await repository.read(id);
+  if (asset?.kind === "screen-guide") await repository.delete(id);
 }
 
 export async function saveScreenGuide(

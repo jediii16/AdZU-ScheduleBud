@@ -38,6 +38,14 @@ async function exportedPng(page: Page): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+async function openTargetPicker(page: Page) {
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await page.getByRole("button", { name: "Change target" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Change target" }),
+  ).toBeVisible();
+}
+
 test("manual schedule creation reaches review", async ({ page }) => {
   await page.goto("/create/manual");
   await page.getByLabel("Subject code").fill("CS 201");
@@ -180,13 +188,16 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   await page.getByRole("button", { name: "Device", exact: true }).click();
   const horizontal = page.getByLabel("Horizontal schedule position");
   await horizontal.fill("80");
-  await page.getByRole("button", { name: "Desktop", exact: true }).click();
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
   await expect(preview).toHaveAttribute("data-target-width", "1920");
   await expect(preview).toHaveAttribute("data-target-height", "1080");
   await horizontal.fill("20");
-  await page.getByRole("button", { name: "Phone", exact: true }).click();
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("button", { name: /phone · 1080 × 2400/i }).click();
   await expect(horizontal).toHaveValue("80");
-  await page.getByRole("button", { name: "Desktop", exact: true }).click();
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
   await expect(horizontal).toHaveValue("20");
 
   const desktopDownload = page.waitForEvent("download");
@@ -271,7 +282,8 @@ test("Clean Slate Cards visual fixtures remain deterministic", async ({
   );
   await page.getByLabel("Show title").check();
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await page.getByRole("button", { name: "Desktop", exact: true }).click();
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
   await expect(preview).toHaveScreenshot(
     "desktop-cards-clean-5-days-title.png",
     {
@@ -313,4 +325,151 @@ test("Phone Cards remain legible at a narrow phone editor width", async ({
         document.documentElement.clientWidth,
     ),
   ).toBe(true);
+});
+
+test("multi-device picker creates Tablet and custom Phone variants and preserves positions", async ({
+  page,
+}) => {
+  await createStudioSchedule(page, "TARGET 1", ["Mon", "Tue", "Wed"]);
+  await openTargetPicker(page);
+  await page.getByRole("tab", { name: "Tablet" }).click();
+  await page.getByRole("button", { name: /Generic 4:3 Portrait/ }).click();
+  await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
+    "data-target-width",
+    "1536",
+  );
+  await page.getByLabel("Horizontal schedule position").fill("25");
+
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("tab", { name: "Phone", exact: true }).click();
+  await page.getByLabel("Custom width").fill("1170");
+  await page.getByLabel("Custom height").fill("2532");
+  await page.getByRole("button", { name: "Create custom phone" }).click();
+  await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
+    "data-target-width",
+    "1170",
+  );
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("button", { name: /tablet · 1536 × 2048/i }).click();
+  await expect(page.getByLabel("Horizontal schedule position")).toHaveValue(
+    "25",
+  );
+});
+
+test("Match My Screen uses dimensions locally and persists a guide only when requested", async ({
+  page,
+}) => {
+  await createStudioSchedule(page, "MATCH 1", ["Mon", "Tue"]);
+  await openTargetPicker(page);
+  await page.getByRole("tab", { name: "Match My Screen" }).click();
+  await page
+    .getByLabel("Screen screenshot")
+    .setInputFiles(
+      resolve(
+        "tests/e2e/creation.spec.ts-snapshots/phone-cards-clean-5-days-title-target-chromium-win32.png",
+      ),
+    );
+  await expect(
+    page.getByText("1080 × 2400", { exact: true }).last(),
+  ).toBeVisible();
+  await page.getByLabel("Use as preview guide").check();
+  await page.getByRole("button", { name: "Use screenshot dimensions" }).click();
+  await expect(page.getByRole("button", { name: "My screen" })).toBeVisible();
+  await expect(page.getByLabel("Guide opacity")).toBeVisible();
+  await page.getByRole("button", { name: "Remove screen guide" }).click();
+  await expect(page.getByRole("button", { name: "My screen" })).toHaveCount(0);
+});
+
+test("generic lock-screen safe areas report overlap and Tablet exports exact dimensions", async ({
+  page,
+}) => {
+  await createStudioSchedule(page, "SAFE 1", ["Mon", "Tue", "Wed"]);
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await page.getByRole("button", { name: "Lock screen" }).click();
+  await page.getByLabel("Show safe areas").check();
+  await page.getByLabel("Vertical schedule position").fill("0");
+  await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("tab", { name: "Tablet" }).click();
+  await page.getByRole("button", { name: /Generic 4:3 Landscape/ }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export|Download again/i }).click();
+  expect(await pngDimensions(await download)).toEqual({
+    width: 2048,
+    height: 1536,
+  });
+});
+
+test("mobile target picker remains a usable sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await createStudioSchedule(page, "PICKER 1");
+  await openTargetPicker(page);
+  await expect(
+    page.getByRole("dialog", { name: "Change target" }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Square" }).click();
+  await expect(page.getByRole("button", { name: /Square 1080/ })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
+test("device preview environments remain visually restrained", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page, "DEVICE 1", [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+  ]);
+  const preview = page.getByTestId("artboard-preview");
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await page.getByRole("button", { name: "Lock screen" }).click();
+  await expect(preview).toHaveScreenshot("phone-lock-screen-preview.png", {
+    animations: "disabled",
+  });
+  await page.getByLabel("Show safe areas").check();
+  await expect(preview).toHaveScreenshot("phone-safe-area-preview.png", {
+    animations: "disabled",
+  });
+
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("tab", { name: "Tablet" }).click();
+  await page.getByRole("button", { name: /Generic 4:3 Portrait/ }).click();
+  await expect(preview).toHaveScreenshot("tablet-cards-preview.png", {
+    animations: "disabled",
+  });
+
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await page.getByRole("button", { name: "Windows" }).click();
+  await expect(preview).toHaveScreenshot("desktop-windows-preview.png", {
+    animations: "disabled",
+  });
+  await page.getByRole("button", { name: "macOS" }).click();
+  await expect(preview).toHaveScreenshot("desktop-macos-preview.png", {
+    animations: "disabled",
+  });
+
+  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("tab", { name: "Match My Screen" }).click();
+  await page
+    .getByLabel("Screen screenshot")
+    .setInputFiles(
+      resolve(
+        "tests/e2e/creation.spec.ts-snapshots/phone-cards-clean-5-days-title-target-chromium-win32.png",
+      ),
+    );
+  await page.getByLabel("Use as preview guide").check();
+  await page.getByRole("button", { name: "Use screenshot dimensions" }).click();
+  await expect(preview).toHaveScreenshot("my-screen-guide-preview.png", {
+    animations: "disabled",
+  });
 });

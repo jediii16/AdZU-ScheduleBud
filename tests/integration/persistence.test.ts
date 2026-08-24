@@ -8,6 +8,8 @@ import {
   findUnreferencedAssets,
   inspectTemporaryImage,
   saveScreenGuide,
+  replaceScreenGuide,
+  removeScreenGuide,
 } from "@/storage/assets";
 import {
   DexieApplicationMetadataRepository,
@@ -172,5 +174,52 @@ describe("asset lifecycle helpers", () => {
       kind: "screen-guide",
       projectId: "one",
     });
+  });
+
+  it("replaces and removes only screen-guide assets", async () => {
+    const first = await saveScreenGuide(assets, {
+      blob: new NodeBlob(["first"], { type: "image/png" }),
+      mimeType: "image/png",
+      width: 1080,
+      height: 2400,
+      id: "guide-first",
+      projectId: "one",
+      createdAt: NOW,
+    });
+    await replaceScreenGuide(
+      assets,
+      {
+        blob: new NodeBlob(["second"], { type: "image/jpeg" }),
+        mimeType: "image/jpeg",
+        width: 1920,
+        height: 1080,
+        id: "guide-second",
+        projectId: "one",
+        createdAt: NOW,
+      },
+      first.id,
+    );
+    expect(await assets.read("guide-first")).toBeUndefined();
+    expect(await assets.read("guide-second")).toMatchObject({
+      kind: "screen-guide",
+    });
+    await removeScreenGuide(assets, "guide-second");
+    expect(await assets.read("guide-second")).toBeUndefined();
+  });
+
+  it("accepts supported guide image types and rejects unrelated files before decoding", async () => {
+    for (const mimeType of ["image/png", "image/jpeg", "image/webp"]) {
+      const inspected = await inspectTemporaryImage(
+        new NodeBlob([mimeType], { type: mimeType }),
+        async () => ({ width: 800, height: 600, close() {} }),
+      );
+      expect(inspected.mimeType).toBe(mimeType);
+    }
+    await expect(
+      inspectTemporaryImage(
+        new NodeBlob(["no"], { type: "text/plain" }),
+        async () => ({ width: 1, height: 1, close() {} }),
+      ),
+    ).rejects.toThrow("PNG, JPEG, or WebP");
   });
 });

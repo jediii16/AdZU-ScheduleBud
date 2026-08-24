@@ -1,10 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  STUDIO_TARGETS,
-  type StudioTargetId,
-} from "@/data/devices/studio-targets";
 import type { DeviceVariant, VisibleFields } from "@/domain/device/types";
 import type { ProjectDesign } from "@/domain/project";
 import { StoreSubjectList } from "@/features/classes/class-editor";
@@ -146,24 +142,57 @@ export function DesignStudioPanel({
 }
 
 export function DeviceStudioPanel({
-  targetId,
+  targetLabel,
   variant,
-  onTarget,
+  onChangeTarget,
   onPosition,
   onPositionStart,
   onPositionEnd,
   onReset,
   onSnapping,
+  onPreviewMode,
+  onSafeAreas,
+  onWarnings,
+  onOrientation,
+  guideOpacity,
+  onGuideOpacity,
+  onRemoveGuide,
 }: {
-  targetId: StudioTargetId;
+  targetLabel: string;
   variant: DeviceVariant;
-  onTarget(id: StudioTargetId): void;
+  onChangeTarget(): void;
   onPosition(position: { x: number; y: number }): void;
   onPositionStart(): void;
   onPositionEnd(): void;
   onReset(): void;
   onSnapping(enabled: boolean): void;
+  onPreviewMode(mode: DeviceVariant["preview"]["mode"]): void;
+  onSafeAreas(enabled: boolean): void;
+  onWarnings(enabled: boolean): void;
+  onOrientation(): void;
+  guideOpacity: number;
+  onGuideOpacity(value: number): void;
+  onRemoveGuide(): void;
 }) {
+  const previewOptions =
+    variant.category === "phone"
+      ? ([
+          ["clean", "Wallpaper"],
+          ["lock-screen", "Lock screen"],
+          ["home-screen", "Home screen"],
+        ] as const)
+      : variant.category === "tablet"
+        ? ([
+            ["clean", "Wallpaper"],
+            ["tablet-interface", "Lock / home"],
+          ] as const)
+        : variant.category === "square"
+          ? ([["clean", "Wallpaper"]] as const)
+          : ([
+              ["clean", "Wallpaper"],
+              ["windows-desktop", "Windows"],
+              ["macos-desktop", "macOS"],
+            ] as const);
   return (
     <section aria-labelledby="studio-device-heading" className="space-y-6">
       <div className="border-b border-border pb-4">
@@ -176,22 +205,97 @@ export function DeviceStudioPanel({
       </div>
       <fieldset>
         <legend className="sb-label">Target</legend>
-        <div className="grid grid-cols-2 gap-2">
-          {STUDIO_TARGETS.map((target) => (
-            <Button
-              key={target.id}
-              type="button"
-              variant={targetId === target.id ? "default" : "outline"}
-              onClick={() => onTarget(target.id)}
-            >
-              {target.label}
-            </Button>
-          ))}
-        </div>
-        <p className="mt-3 font-mono text-xs text-text-muted">
+        <p className="font-semibold">{targetLabel}</p>
+        <p className="mt-1 font-mono text-xs text-text-muted">
           {variant.dimensions.width} × {variant.dimensions.height} ·{" "}
           {variant.orientation}
         </p>
+        <div className="mt-3 flex gap-2">
+          <Button type="button" variant="outline" onClick={onChangeTarget}>
+            Change target
+          </Button>
+          <Button type="button" variant="ghost" onClick={onOrientation}>
+            Switch orientation
+          </Button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend className="sb-label">Preview</legend>
+        <div className="flex flex-wrap gap-2">
+          {previewOptions.map(([mode, label]) => (
+            <Button
+              key={mode}
+              size="sm"
+              variant={variant.preview.mode === mode ? "default" : "outline"}
+              onClick={() => onPreviewMode(mode)}
+            >
+              {label}
+            </Button>
+          ))}
+          {variant.preview.guideAssetId ? (
+            <Button
+              size="sm"
+              variant={
+                variant.preview.mode === "uploaded-guide"
+                  ? "default"
+                  : "outline"
+              }
+              onClick={() => onPreviewMode("uploaded-guide")}
+            >
+              My screen
+            </Button>
+          ) : null}
+        </div>
+        {variant.preview.mode === "uploaded-guide" ? (
+          <label className="mt-3 block text-xs font-semibold text-text-secondary">
+            Guide opacity
+            <input
+              aria-label="Guide opacity"
+              className="mt-1 w-full accent-[var(--brand)]"
+              type="range"
+              min="15"
+              max="65"
+              value={Math.round(guideOpacity * 100)}
+              onChange={(event) =>
+                onGuideOpacity(Number(event.target.value) / 100)
+              }
+            />
+          </label>
+        ) : null}
+      </fieldset>
+      <fieldset>
+        <legend className="sb-label">Guides</legend>
+        <div className="divide-y divide-border border-y border-border">
+          {(
+            [
+              ["Show safe areas", variant.preview.showSafeAreas, onSafeAreas],
+              ["Warn about overlap", variant.preview.showWarnings, onWarnings],
+              ["Snap to guides", variant.preview.enableSnapping, onSnapping],
+            ] as const
+          ).map(([label, checked, change]) => (
+            <label
+              key={label}
+              className="flex min-h-10 items-center justify-between gap-3 py-2 text-sm font-semibold"
+            >
+              {label}
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(event) => change(event.target.checked)}
+              />
+            </label>
+          ))}
+        </div>
+        {variant.preview.guideAssetId ? (
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="ghost"
+            onClick={onRemoveGuide}
+          >
+            Remove screen guide
+          </Button>
+        ) : null}
       </fieldset>
       <fieldset className="space-y-4">
         <legend className="sb-label">Schedule position</legend>
@@ -226,14 +330,6 @@ export function DeviceStudioPanel({
           Reset to balanced
         </Button>
       </fieldset>
-      <label className="flex min-h-10 items-center justify-between gap-3 border-y border-border py-2 text-sm font-semibold">
-        Snap to guides
-        <input
-          type="checkbox"
-          checked={variant.preview.enableSnapping}
-          onChange={(event) => onSnapping(event.target.checked)}
-        />
-      </label>
     </section>
   );
 }

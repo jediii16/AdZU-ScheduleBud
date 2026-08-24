@@ -177,10 +177,39 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
           preview: {
             ...variant.preview,
             guideAssetId,
-            mode: guideAssetId ? "uploaded-guide" : variant.preview.mode,
+            showSafeAreas: guideAssetId ? false : variant.preview.showSafeAreas,
+            mode: guideAssetId
+              ? "uploaded-guide"
+              : variant.preview.mode === "uploaded-guide"
+                ? "clean"
+                : variant.preview.mode,
           },
         }),
         false,
+      );
+      context.commit(
+        "Update screen guide references",
+        (project) => ({
+          ...project,
+          assetReferences: {
+            ...project.assetReferences,
+            screenGuideAssetIds: guideAssetId
+              ? [
+                  ...new Set([
+                    ...project.assetReferences.screenGuideAssetIds,
+                    guideAssetId,
+                  ]),
+                ]
+              : project.assetReferences.screenGuideAssetIds.filter((assetId) =>
+                  project.deviceVariants.some(
+                    (variant) =>
+                      variant.id !== id &&
+                      variant.preview.guideAssetId === assetId,
+                  ),
+                ),
+          },
+        }),
+        { history: false, autosave: true },
       );
     },
     setSchedulePosition: (id, position) =>
