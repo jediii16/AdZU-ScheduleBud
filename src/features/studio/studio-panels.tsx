@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { availableLayouts } from "@/data/layouts/registry";
 import type { LayoutId } from "@/domain/design/types";
+import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
 import {
   supportsOrientationSwitch,
   type DeviceVariant,
@@ -45,11 +46,20 @@ const INSPECTOR_FIELD_ORDER: readonly (keyof VisibleFields)[] = [
   "section",
 ];
 
+type InspectorPhoto = {
+  id: string;
+  filename: string;
+  caption: string;
+};
+
 function PhotoInspectorSection({
-  photo,
+  photos,
+  composition,
+  activePhotoId,
   adjusting,
   zoom,
   onFile,
+  onComposition,
   onAdjust,
   onRemove,
   onZoomStart,
@@ -57,27 +67,35 @@ function PhotoInspectorSection({
   onZoomEnd,
   onReset,
   onDone,
+  onMove,
+  onCaption,
 }: {
-  photo?: { id: string; filename: string } | undefined;
+  photos: readonly InspectorPhoto[];
+  composition: AvailablePhotoComposition;
+  activePhotoId: string | null;
   adjusting: boolean;
   zoom: number;
-  onFile(file: File): Promise<void>;
-  onAdjust(): void;
-  onRemove(): void;
+  onFile(file: File, intent: "replace-primary" | "append"): Promise<void>;
+  onComposition(value: AvailablePhotoComposition): void;
+  onAdjust(assetId: string): void;
+  onRemove(assetId: string): void;
   onZoomStart(): void;
   onZoom(value: number): void;
   onZoomEnd(): void;
   onReset(): void;
   onDone(): void;
+  onMove(assetId: string, direction: "up" | "down"): void;
+  onCaption(assetId: string, caption: string): void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileIntent = useRef<"replace-primary" | "append">("replace-primary");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const receiveFile = async (file: File) => {
     setBusy(true);
     setError(null);
     try {
-      await onFile(file);
+      await onFile(file, fileIntent.current);
     } catch (reason) {
       console.error("ScheduleBud photo selection failed", reason);
       setError("We couldn't read this photo. Choose a PNG, JPG, or WebP file.");
@@ -86,6 +104,13 @@ function PhotoInspectorSection({
       if (inputRef.current) inputRef.current.value = "";
     }
   };
+  const chooseFile = (intent: "replace-primary" | "append") => {
+    fileIntent.current = intent;
+    inputRef.current?.click();
+  };
+  const selectedPhoto =
+    photos.find((photo) => photo.id === activePhotoId) ?? photos[0];
+  const atLimit = photos.length >= 4;
   return (
     <section
       className="sb-inspector-major-section"
@@ -100,20 +125,20 @@ function PhotoInspectorSection({
           className="sr-only"
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          aria-label="Choose Hero photo"
+          aria-label="Choose Photo"
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) void receiveFile(file);
           }}
         />
-        {!photo ? (
+        {photos.length === 0 ? (
           <>
             <Button
               type="button"
               size="sm"
               variant="outline"
               disabled={busy}
-              onClick={() => inputRef.current?.click()}
+              onClick={() => chooseFile("replace-primary")}
             >
               {busy ? "Adding…" : "Add photo"}
             </Button>
@@ -123,13 +148,13 @@ function PhotoInspectorSection({
               Stays on this device
             </p>
           </>
-        ) : adjusting ? (
+        ) : adjusting && selectedPhoto ? (
           <div className="space-y-3">
             <p
               className="truncate text-sm font-semibold"
-              title={photo.filename}
+              title={selectedPhoto.filename}
             >
-              {photo.filename}
+              {selectedPhoto.filename}
             </p>
             <p className="text-xs text-text-muted">
               Drag the photo to reposition
@@ -164,40 +189,156 @@ function PhotoInspectorSection({
             </div>
           </div>
         ) : (
-          <div>
-            <p
-              className="truncate text-sm font-semibold"
-              title={photo.filename}
-            >
-              {photo.filename}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onAdjust}
+          <div className="space-y-3">
+            <div>
+              <span className="sb-inspector-field-label">Composition</span>
+              <div
+                role="radiogroup"
+                aria-label="Photo composition"
+                className="grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
               >
-                Adjust
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={busy}
-                onClick={() => inputRef.current?.click()}
-              >
-                Replace
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={onRemove}
-              >
-                Remove
-              </Button>
+                {(["hero", "split", "polaroid"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={composition === value}
+                    className={`min-h-9 min-w-0 rounded-sm px-1 text-xs font-semibold capitalize transition-colors ${composition === value ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground"}`}
+                    onClick={() => onComposition(value)}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
             </div>
+            {composition === "polaroid" ? (
+              <div className="space-y-3">
+                <p className="sb-inspector-field-label">Photos</p>
+                <p
+                  className="text-xs text-text-muted"
+                  role={photos.length === 4 ? undefined : "status"}
+                >
+                  {photos.length === 4
+                    ? "4 photos ready"
+                    : `Polaroid requires 4 photos · ${4 - photos.length} more to add`}
+                </p>
+                <ol className="space-y-3">
+                  {photos.map((photo, index) => (
+                    <li
+                      key={photo.id}
+                      className="border-b border-border pb-3 last:border-0 last:pb-0"
+                    >
+                      <p
+                        className="truncate text-sm font-semibold"
+                        title={photo.filename}
+                      >
+                        {index + 1}. {photo.filename}
+                      </p>
+                      <label className="mt-2 block">
+                        <span className="text-xs font-medium text-text-secondary">
+                          Caption (optional)
+                        </span>
+                        <input
+                          key={`${photo.id}-${photo.caption}`}
+                          className="sb-control mt-1"
+                          defaultValue={photo.caption}
+                          maxLength={40}
+                          onBlur={(event) =>
+                            onCaption(photo.id, event.target.value)
+                          }
+                        />
+                      </label>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onAdjust(photo.id)}
+                        >
+                          Adjust
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Move photo ${index + 1} up`}
+                          disabled={index === 0}
+                          onClick={() => onMove(photo.id, "up")}
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Move photo ${index + 1} down`}
+                          disabled={index === photos.length - 1}
+                          onClick={() => onMove(photo.id, "down")}
+                        >
+                          ↓
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onRemove(photo.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || atLimit}
+                  onClick={() => chooseFile("append")}
+                >
+                  {busy ? "Adding…" : "+ Add photo"}
+                </Button>
+                {atLimit ? (
+                  <p className="text-xs text-text-muted">Maximum 4 photos</p>
+                ) : null}
+              </div>
+            ) : (
+              <div>
+                <p
+                  className="truncate text-sm font-semibold"
+                  title={photos[0]!.filename}
+                >
+                  {photos[0]!.filename}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAdjust(photos[0]!.id)}
+                  >
+                    Adjust
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => chooseFile("replace-primary")}
+                  >
+                    Replace
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onRemove(photos[0]!.id)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {error ? (
@@ -220,10 +361,13 @@ export function DesignStudioPanel({
   onTitleText,
   onField,
   onDayVisibility,
-  photo,
+  photos = [],
+  activePhotoId = null,
+  photoComposition = "hero",
   photoAdjusting = false,
   photoZoom = 1,
   onPhotoFile = async () => {},
+  onPhotoComposition = () => {},
   onPhotoAdjust = () => {},
   onPhotoRemove = () => {},
   onPhotoZoomStart = () => {},
@@ -231,6 +375,8 @@ export function DesignStudioPanel({
   onPhotoZoomEnd = () => {},
   onPhotoReset = () => {},
   onPhotoDone = () => {},
+  onPhotoMove = () => {},
+  onPhotoCaption = () => {},
 }: {
   design: ProjectDesign;
   visibleFields: VisibleFields;
@@ -241,17 +387,22 @@ export function DesignStudioPanel({
   onTitleText(value: string): void;
   onField(field: keyof VisibleFields, value: boolean): void;
   onDayVisibility(value: ProjectDesign["dayVisibility"]): void;
-  photo?: { id: string; filename: string } | undefined;
+  photos?: readonly InspectorPhoto[];
+  activePhotoId?: string | null;
+  photoComposition?: AvailablePhotoComposition;
   photoAdjusting?: boolean;
   photoZoom?: number;
-  onPhotoFile?(file: File): Promise<void>;
-  onPhotoAdjust?(): void;
-  onPhotoRemove?(): void;
+  onPhotoFile?(file: File, intent: "replace-primary" | "append"): Promise<void>;
+  onPhotoComposition?(value: AvailablePhotoComposition): void;
+  onPhotoAdjust?(assetId: string): void;
+  onPhotoRemove?(assetId: string): void;
   onPhotoZoomStart?(): void;
   onPhotoZoom?(value: number): void;
   onPhotoZoomEnd?(): void;
   onPhotoReset?(): void;
   onPhotoDone?(): void;
+  onPhotoMove?(assetId: string, direction: "up" | "down"): void;
+  onPhotoCaption?(assetId: string, caption: string): void;
 }) {
   return (
     <section aria-labelledby="studio-design-heading">
@@ -289,10 +440,13 @@ export function DesignStudioPanel({
       </section>
       {activeLayout === "photo" ? (
         <PhotoInspectorSection
-          photo={photo}
+          photos={photos}
+          composition={photoComposition}
+          activePhotoId={activePhotoId}
           adjusting={photoAdjusting}
           zoom={photoZoom}
           onFile={onPhotoFile}
+          onComposition={onPhotoComposition}
           onAdjust={onPhotoAdjust}
           onRemove={onPhotoRemove}
           onZoomStart={onPhotoZoomStart}
@@ -300,6 +454,8 @@ export function DesignStudioPanel({
           onZoomEnd={onPhotoZoomEnd}
           onReset={onPhotoReset}
           onDone={onPhotoDone}
+          onMove={onPhotoMove}
+          onCaption={onPhotoCaption}
         />
       ) : null}
       <section className="sb-inspector-major-section">

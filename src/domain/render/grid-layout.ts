@@ -455,6 +455,7 @@ function shownFieldsForBlock(
 ): { tier: GridInformationTier; shown: ShownFields } {
   const available = Math.max(0, height - padding * 2);
   let used = codeHeight;
+  const detailLineHeightFactor = family === "square" ? 1.1 : 1.2;
   const shown: ShownFields = {
     time: false,
     room: false,
@@ -495,31 +496,44 @@ function shownFieldsForBlock(
       shown,
     };
   }
-  if (fields.time && canAdd(typography.time * 1.2, typography.time * 4.2)) {
+  if (
+    fields.time &&
+    canAdd(typography.time * detailLineHeightFactor, typography.time * 4.2)
+  ) {
     shown.time = true;
-    used += typography.time * 1.2;
+    used += typography.time * detailLineHeightFactor;
   }
   if (
     fields.room &&
     occurrence.room.trim() &&
-    canAdd(typography.support * 1.2, typography.support * 4.5)
+    canAdd(
+      typography.support * detailLineHeightFactor,
+      typography.support * 4.5,
+    )
   ) {
     shown.room = true;
-    used += typography.support * 1.2;
+    used += typography.support * detailLineHeightFactor;
   }
   if (
     fields.section &&
     subject.section.trim() &&
     width - padding * 2 >= typography.support * 10.5 &&
-    (shown.room || canAdd(typography.support * 1.2, typography.support * 5))
+    (shown.room ||
+      canAdd(
+        typography.support * detailLineHeightFactor,
+        typography.support * 5,
+      ))
   ) {
     shown.section = true;
-    if (!shown.room) used += typography.support * 1.2;
+    if (!shown.room) used += typography.support * detailLineHeightFactor;
   }
   if (
     fields.professor &&
     occurrence.professor.trim() &&
-    canAdd(typography.professor * 1.2, typography.professor * 12)
+    canAdd(
+      typography.professor * detailLineHeightFactor,
+      typography.professor * 12,
+    )
   ) {
     shown.professor = true;
   }
@@ -716,7 +730,11 @@ function drawBlock(
     fontWeight: 400 | 500 | 600 | 700,
     fit = true,
   ) => {
-    const height = Math.min(fontSize * 1.2, Math.max(0, textBottom - cursor));
+    const lineHeightFactor = family === "square" ? 1.1 : 1.2;
+    const height = Math.min(
+      fontSize * lineHeightFactor,
+      Math.max(0, textBottom - cursor),
+    );
     if (!text || height <= 0) return;
     const fitted = fit
       ? fitText({
@@ -872,30 +890,35 @@ export function buildGridRenderModel(
   const titleBlockHeight = titleVisible
     ? metrics.titleHeight + metrics.titleGap
     : 0;
+  const terminalAxisClearance =
+    family === "square" ? Math.ceil(typography.timeAxis * 0.65) : 0;
   const maximumTimelineHeight = bandCounts.length
     ? Math.max(
         1,
         (height -
           metrics.margin * 2 -
           titleBlockHeight -
+          terminalAxisClearance -
           metrics.bandGap * Math.max(0, bandCounts.length - 1) -
           metrics.dayHeaderHeight * bandCounts.length) /
           bandCounts.length,
       )
     : 1;
+  const preferredTimelineHeight =
+    (spanMinutes / 60) * metrics.preferredPixelsPerHour;
   const timelineHeight = Math.max(
     1,
-    Math.min(
-      (spanMinutes / 60) * metrics.preferredPixelsPerHour,
-      maximumTimelineHeight,
-    ),
+    family === "square" && bandCounts.length > 1
+      ? maximumTimelineHeight
+      : Math.min(preferredTimelineHeight, maximumTimelineHeight),
   );
   const bandHeight = metrics.dayHeaderHeight + timelineHeight;
   const groupHeight = Math.max(
     1,
     titleBlockHeight +
       bandCounts.length * bandHeight +
-      Math.max(0, bandCounts.length - 1) * metrics.bandGap,
+      Math.max(0, bandCounts.length - 1) * metrics.bandGap +
+      terminalAxisClearance,
   );
   const movableX = Math.max(0, width - metrics.margin * 2 - groupWidth);
   const movableY = Math.max(0, height - metrics.margin * 2 - groupHeight);

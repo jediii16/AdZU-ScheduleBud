@@ -1,6 +1,6 @@
 import type Konva from "konva";
 import type { LayoutId } from "@/domain/design/types";
-import type { RenderModel } from "@/domain/render";
+import type { AvailablePhotoComposition, RenderModel } from "@/domain/render";
 import { ensureRenderModelFonts } from "@/renderer/konva/font-loading";
 
 export type ExportStatus =
@@ -8,11 +8,15 @@ export type ExportStatus =
 
 export function photoExportBlockReason(
   layoutId: LayoutId,
-  photoAssetId: string | null,
+  photoAssetCount: number,
+  composition: AvailablePhotoComposition = "hero",
 ): string | null {
-  return layoutId === "photo" && !photoAssetId
-    ? "Add a photo in Design before exporting this Hero wallpaper."
-    : null;
+  if (layoutId !== "photo") return null;
+  if (photoAssetCount === 0)
+    return "Add a photo in Design before exporting this Photo wallpaper.";
+  if (composition === "polaroid" && photoAssetCount !== 4)
+    return "Polaroid requires exactly 4 photos before export.";
+  return null;
 }
 
 export class PngExportCoordinator {

@@ -68,6 +68,26 @@ type CardPlan = {
   professor: string;
 };
 
+type CardsGeometry = {
+  pad: number;
+  codeHeight: number;
+  sectionGap: number;
+  timeHeight: number;
+  supportHeight: number;
+  professorHeight: number;
+  codeMinimum: number;
+  supportMinimum: number;
+  cornerRadius: number;
+  titleBlockHeight: number;
+  titleTextHeight: number;
+  titleMinimum: number;
+  dayHeaderHeight: number;
+  dayTextHeight: number;
+  dayLineOffset: number;
+  cardGap: number;
+  rowGap: number;
+};
+
 function timeLabel(time: string, format: "12-hour" | "24-hour"): string {
   if (format === "24-hour") return time;
   const [hours, minutes] = time.split(":").map(Number);
@@ -163,25 +183,45 @@ function textNode(
 function typographyFor(
   composition: CardsComposition,
   scale: number,
+  family: TargetCompositionFamily,
+  titleVisible: boolean,
 ): CardsTypography {
   const base: CardsTypography =
-    composition === "phone"
-      ? {
-          title: 80,
-          day: 40,
-          code: 38,
-          time: 28,
-          support: 26,
-          professor: 26,
-        }
-      : {
-          title: 50,
-          day: 27,
-          code: 21,
-          time: 16,
-          support: 14,
-          professor: 14,
-        };
+    family === "square"
+      ? titleVisible
+        ? {
+            title: 50,
+            day: 30,
+            code: 28,
+            time: 20,
+            support: 18,
+            professor: 17,
+          }
+        : {
+            title: 52,
+            day: 32,
+            code: 30,
+            time: 22,
+            support: 20,
+            professor: 18,
+          }
+      : composition === "phone"
+        ? {
+            title: 80,
+            day: 40,
+            code: 38,
+            time: 28,
+            support: 26,
+            professor: 26,
+          }
+        : {
+            title: 50,
+            day: 27,
+            code: 21,
+            time: 16,
+            support: 14,
+            professor: 14,
+          };
   return Object.fromEntries(
     Object.entries(base).map(([key, value]) => [
       key,
@@ -190,12 +230,100 @@ function typographyFor(
   ) as CardsTypography;
 }
 
+function geometryFor(
+  composition: CardsComposition,
+  family: TargetCompositionFamily,
+  titleVisible: boolean,
+): CardsGeometry {
+  if (family === "square") {
+    return titleVisible
+      ? {
+          pad: 10,
+          codeHeight: 32,
+          sectionGap: 6,
+          timeHeight: 21,
+          supportHeight: 19,
+          professorHeight: 17,
+          codeMinimum: 23,
+          supportMinimum: 15,
+          cornerRadius: 11,
+          titleBlockHeight: 90,
+          titleTextHeight: 66,
+          titleMinimum: 42,
+          dayHeaderHeight: 64,
+          dayTextHeight: 42,
+          dayLineOffset: 49,
+          cardGap: 8,
+          rowGap: 18,
+        }
+      : {
+          pad: 12,
+          codeHeight: 34,
+          sectionGap: 7,
+          timeHeight: 23,
+          supportHeight: 21,
+          professorHeight: 19,
+          codeMinimum: 25,
+          supportMinimum: 16,
+          cornerRadius: 11,
+          titleBlockHeight: 0,
+          titleTextHeight: 0,
+          titleMinimum: 42,
+          dayHeaderHeight: 68,
+          dayTextHeight: 45,
+          dayLineOffset: 52,
+          cardGap: 10,
+          rowGap: 20,
+        };
+  }
+  if (composition === "phone") {
+    return {
+      pad: 22,
+      codeHeight: 46,
+      sectionGap: 13,
+      timeHeight: 35,
+      supportHeight: 33,
+      professorHeight: 32,
+      codeMinimum: 33,
+      supportMinimum: 23,
+      cornerRadius: 15,
+      titleBlockHeight: titleVisible ? 154 : 0,
+      titleTextHeight: 112,
+      titleMinimum: 68,
+      dayHeaderHeight: 88,
+      dayTextHeight: 55,
+      dayLineOffset: 65,
+      cardGap: 16,
+      rowGap: 34,
+    };
+  }
+  return {
+    pad: 16,
+    codeHeight: 27,
+    sectionGap: 9,
+    timeHeight: 22,
+    supportHeight: 20,
+    professorHeight: 20,
+    codeMinimum: 17,
+    supportMinimum: 12,
+    cornerRadius: 11,
+    titleBlockHeight: titleVisible ? 96 : 0,
+    titleTextHeight: 70,
+    titleMinimum: 38,
+    dayHeaderHeight: 51,
+    dayTextHeight: 34,
+    dayLineOffset: 38,
+    cardGap: 12,
+    rowGap: 0,
+  };
+}
+
 function createCardPlan(
   project: ScheduleProject,
   occurrence: ScheduleOccurrence,
   subject: Subject,
   fields: VisibleFields,
-  composition: CardsComposition,
+  geometry: CardsGeometry,
 ): CardPlan {
   const code = subject.code.trim();
   const time = fields.time
@@ -210,30 +338,12 @@ function createCardPlan(
     .filter(Boolean)
     .join(" · ");
   const professor = fields.professor ? occurrence.professor.trim() : "";
-  const vertical =
-    composition === "phone"
-      ? {
-          pad: 22,
-          code: 46,
-          sectionGap: 13,
-          time: 35,
-          support: 33,
-          professor: 32,
-        }
-      : {
-          pad: 16,
-          code: 27,
-          sectionGap: 9,
-          time: 22,
-          support: 20,
-          professor: 20,
-        };
-  let cardHeight = vertical.pad * 2;
-  if (code) cardHeight += vertical.code;
-  if (time || support || professor) cardHeight += vertical.sectionGap;
-  if (time) cardHeight += vertical.time;
-  if (support) cardHeight += vertical.support;
-  if (professor) cardHeight += vertical.professor;
+  let cardHeight = geometry.pad * 2;
+  if (code) cardHeight += geometry.codeHeight;
+  if (time || support || professor) cardHeight += geometry.sectionGap;
+  if (time) cardHeight += geometry.timeHeight;
+  if (support) cardHeight += geometry.supportHeight;
+  if (professor) cardHeight += geometry.professorHeight;
   return {
     occurrence,
     subject,
@@ -251,14 +361,14 @@ function drawCard(
   y: number,
   width: number,
   fields: VisibleFields,
-  composition: CardsComposition,
+  geometry: CardsGeometry,
   typography: CardsTypography,
   theme: CleanSlateRenderTheme,
   color: string,
   day: ScheduleDay,
 ) {
   const { occurrence, subject } = plan;
-  const pad = composition === "phone" ? 22 : 16;
+  const pad = geometry.pad;
   const textWidth = width - pad * 2;
   const code = subject.code.trim();
   const id = `${day}-${occurrence.id}`;
@@ -269,7 +379,7 @@ function drawCard(
     fill: color,
     stroke: theme.border,
     strokeWidth: 1,
-    cornerRadius: composition === "phone" ? 15 : 11,
+    cornerRadius: geometry.cornerRadius,
   });
   let cursor = y + pad;
   if (code) {
@@ -277,7 +387,7 @@ function drawCard(
       text: code,
       width: textWidth,
       preferredFontSize: typography.code,
-      minimumFontSize: composition === "phone" ? 33 : 17,
+      minimumFontSize: geometry.codeMinimum,
       maximumLines: 1,
     });
     nodes.push(
@@ -289,13 +399,13 @@ function drawCard(
         textWidth,
         fit.fontSize,
         theme.foreground,
-        { fontWeight: 800, height: composition === "phone" ? 46 : 27 },
+        { fontWeight: 800, height: geometry.codeHeight },
       ),
     );
-    cursor += composition === "phone" ? 46 : 27;
+    cursor += geometry.codeHeight;
   }
   if (plan.time || plan.support || plan.professor)
-    cursor += composition === "phone" ? 13 : 9;
+    cursor += geometry.sectionGap;
   if (plan.time) {
     nodes.push(
       textNode(
@@ -306,17 +416,17 @@ function drawCard(
         textWidth,
         typography.time,
         theme.foreground,
-        { height: composition === "phone" ? 35 : 22, fontWeight: 700 },
+        { height: geometry.timeHeight, fontWeight: 700 },
       ),
     );
-    cursor += composition === "phone" ? 35 : 22;
+    cursor += geometry.timeHeight;
   }
   if (plan.support) {
     const fit = fitText({
       text: plan.support,
       width: textWidth,
       preferredFontSize: typography.support,
-      minimumFontSize: composition === "phone" ? 23 : 12,
+      minimumFontSize: geometry.supportMinimum,
       maximumLines: 1,
     });
     nodes.push(
@@ -328,17 +438,17 @@ function drawCard(
         textWidth,
         fit.fontSize,
         theme.muted,
-        { height: composition === "phone" ? 33 : 20, fontWeight: 600 },
+        { height: geometry.supportHeight, fontWeight: 600 },
       ),
     );
-    cursor += composition === "phone" ? 33 : 20;
+    cursor += geometry.supportHeight;
   }
   if (plan.professor) {
     const fit = fitText({
       text: plan.professor,
       width: textWidth,
       preferredFontSize: typography.professor,
-      minimumFontSize: composition === "phone" ? 23 : 12,
+      minimumFontSize: geometry.supportMinimum,
       maximumLines: 1,
     });
     nodes.push(
@@ -350,7 +460,7 @@ function drawCard(
         textWidth,
         fit.fontSize,
         theme.muted,
-        { height: composition === "phone" ? 32 : 20 },
+        { height: geometry.professorHeight },
       ),
     );
   }
@@ -369,10 +479,16 @@ export function buildCardsRenderModel(
     compositionFamily === "square"
       ? "phone"
       : "desktop";
+  const titleVisible =
+    project.design.wallpaperTitle.visible &&
+    project.design.wallpaperTitle.text.trim().length > 0;
   const typography = typographyFor(
     composition,
     project.design.typography.scale,
+    compositionFamily,
+    titleVisible,
   );
+  const geometry = geometryFor(composition, compositionFamily, titleVisible);
   const margin = composition === "phone" ? 56 : 64;
   const fields = mergedFields(project, variant);
   const subjects = new Map(
@@ -429,17 +545,10 @@ export function buildCardsRenderModel(
       ? (groupWidth - Math.max(0, visibleDays.length - 1) * columnGap) /
         visibleDays.length
       : groupWidth;
-  const titleVisible =
-    project.design.wallpaperTitle.visible &&
-    project.design.wallpaperTitle.text.trim().length > 0;
-  const titleBlockHeight = titleVisible
-    ? composition === "phone"
-      ? 154
-      : 96
-    : 0;
-  const dayHeaderHeight = composition === "phone" ? 88 : 51;
-  const cardGap = composition === "phone" ? 16 : 12;
-  const rowGap = composition === "phone" ? 34 : 0;
+  const titleBlockHeight = geometry.titleBlockHeight;
+  const dayHeaderHeight = geometry.dayHeaderHeight;
+  const cardGap = geometry.cardGap;
+  const rowGap = geometry.rowGap;
   const dayPlans = visibleDays.map((day, index) => {
     const row =
       composition === "phone" ? Math.floor(index / compactColumns) : 0;
@@ -460,7 +569,7 @@ export function buildCardsRenderModel(
         occurrence,
         subjects.get(occurrence.subjectId)!,
         fields,
-        composition,
+        geometry,
       ),
     );
     const dayHeight =
@@ -503,7 +612,7 @@ export function buildCardsRenderModel(
       text: project.design.wallpaperTitle.text,
       width: groupWidth,
       preferredFontSize: typography.title,
-      minimumFontSize: composition === "phone" ? 68 : 38,
+      minimumFontSize: geometry.titleMinimum,
       maximumLines: 1,
       averageGlyphWidth: 0.58,
     });
@@ -519,7 +628,7 @@ export function buildCardsRenderModel(
         {
           fontId: project.design.typography.headingFontId,
           fontWeight: 800,
-          height: composition === "phone" ? 112 : 70,
+          height: geometry.titleTextHeight,
           verticalAlign: "middle",
         },
       ),
@@ -558,15 +667,15 @@ export function buildCardsRenderModel(
         {
           fontId: project.design.typography.headingFontId,
           fontWeight: 800,
-          height: composition === "phone" ? 55 : 34,
+          height: geometry.dayTextHeight,
         },
       ),
       {
         id: `day-line-${plan.day}`,
         kind: "line",
         points: [
-          { x, y: y + (composition === "phone" ? 65 : 38) },
-          { x: x + plan.width, y: y + (composition === "phone" ? 65 : 38) },
+          { x, y: y + geometry.dayLineOffset },
+          { x: x + plan.width, y: y + geometry.dayLineOffset },
         ],
         stroke: theme.border,
         strokeWidth: 2,
@@ -581,7 +690,7 @@ export function buildCardsRenderModel(
         cardY,
         plan.width,
         fields,
-        composition,
+        geometry,
         typography,
         theme,
         colorForSubject(

@@ -16,6 +16,7 @@ type BaseRenderNode = {
   id: string;
   opacity?: number;
   visible?: boolean;
+  rotation?: number;
 };
 
 export type RectRenderNode = BaseRenderNode & {
@@ -25,6 +26,10 @@ export type RectRenderNode = BaseRenderNode & {
   stroke?: string;
   strokeWidth?: number;
   cornerRadius?: number;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffset?: Point;
+  shadowOpacity?: number;
 };
 
 export type TextRenderNode = BaseRenderNode & {
@@ -95,6 +100,11 @@ export type ScheduleRenderResult = {
   positionRange: { minX: number; maxX: number; minY: number; maxY: number };
   photoFrame?: Rect;
   photoAssetId?: string | null;
+  photoFrames?: readonly {
+    assetId: string;
+    frame: Rect;
+    rotation: number;
+  }[];
 };
 
 export type EditorOverlayModel = {

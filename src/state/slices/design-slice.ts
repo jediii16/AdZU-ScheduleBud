@@ -1,6 +1,51 @@
 import type { DesignSlice, StoreContext } from "../types";
 import { layoutById } from "@/data/layouts/registry";
 import { themeById } from "@/data/themes/registry";
+import { resolveAvailablePhotoComposition } from "@/domain/render/photo-crop";
+
+function withPhotoCollection(
+  project: Parameters<StoreContext["commit"]>[1] extends (
+    value: infer P,
+  ) => unknown
+    ? P
+    : never,
+  photoAssetIds: string[],
+) {
+  const retained = new Set(photoAssetIds);
+  return {
+    ...project,
+    design: {
+      ...project.design,
+      photoCaptions: Object.fromEntries(
+        Object.entries(project.design.photoCaptions).filter(([assetId]) =>
+          retained.has(assetId),
+        ),
+      ),
+      templateModified:
+        project.design.baseTemplateId !== null ||
+        project.design.templateModified,
+    },
+    assetReferences: {
+      ...project.assetReferences,
+      photoAssetIds,
+    },
+    deviceVariants: project.deviceVariants.map((variant) => ({
+      ...variant,
+      photoTransforms: Object.fromEntries(
+        Object.entries(variant.photoTransforms).map(
+          ([composition, transforms]) => [
+            composition,
+            Object.fromEntries(
+              Object.entries(transforms).filter(([assetId]) =>
+                retained.has(assetId),
+              ),
+            ),
+          ],
+        ),
+      ) as typeof variant.photoTransforms,
+    })),
+  };
+}
 
 export function createDesignSlice(context: StoreContext): DesignSlice {
   const edit = <
@@ -38,44 +83,96 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
           ...project.design,
           layoutId: value,
           photoComposition:
-            value === "photo" ? "hero" : project.design.photoComposition,
+            value === "photo"
+              ? resolveAvailablePhotoComposition(
+                  project.design.photoComposition,
+                )
+              : project.design.photoComposition,
           templateModified:
             project.design.baseTemplateId !== null ||
             project.design.templateModified,
         },
       }));
     },
-    setHeroPhoto(assetId) {
-      context.commit(
-        assetId ? "Set Hero photo" : "Remove Hero photo",
-        (project) => {
-          const previousIds = new Set(project.assetReferences.photoAssetIds);
-          return {
-            ...project,
-            design: {
-              ...project.design,
-              photoComposition: assetId
-                ? "hero"
-                : project.design.photoComposition,
-              templateModified:
-                project.design.baseTemplateId !== null ||
-                project.design.templateModified,
-            },
-            assetReferences: {
-              ...project.assetReferences,
-              photoAssetIds: assetId ? [assetId] : [],
-            },
-            deviceVariants: project.deviceVariants.map((variant) => ({
-              ...variant,
-              photoTransforms: Object.fromEntries(
-                Object.entries(variant.photoTransforms).filter(
-                  ([storedAssetId]) => !previousIds.has(storedAssetId),
-                ),
-              ),
-            })),
-          };
-        },
+    setPhotoComposition(value) {
+      edit("Change Photo composition", "photoComposition", value);
+    },
+    setPrimaryPhoto(assetId) {
+      context.commit(assetId ? "Set Photo" : "Remove Photo", (project) => {
+        const current = project.assetReferences.photoAssetIds;
+        const next = assetId
+          ? [assetId, ...current.slice(1).filter((id) => id !== assetId)]
+          : current.slice(1);
+        const updated = withPhotoCollection(project, next);
+        return {
+          ...updated,
+          design: {
+            ...updated.design,
+            photoComposition: assetId
+              ? resolveAvailablePhotoComposition(
+                  project.design.photoComposition,
+                )
+              : project.design.photoComposition,
+          },
+        };
+      });
+    },
+    addPhoto(assetId) {
+      const project =
+        context.get().projectsById[context.get().activeProjectId ?? ""];
+      if (
+        !project ||
+        project.assetReferences.photoAssetIds.length >= 4 ||
+        project.assetReferences.photoAssetIds.includes(assetId)
+      )
+        return false;
+      return Boolean(
+        context.commit("Add Photo", (current) =>
+          withPhotoCollection(current, [
+            ...current.assetReferences.photoAssetIds,
+            assetId,
+          ]),
+        ),
       );
+    },
+    removePhoto(assetId) {
+      context.commit("Remove Photo", (project) =>
+        withPhotoCollection(
+          project,
+          project.assetReferences.photoAssetIds.filter((id) => id !== assetId),
+        ),
+      );
+    },
+    movePhoto(assetId, direction) {
+      context.commit("Reorder Photos", (project) => {
+        const ids = [...project.assetReferences.photoAssetIds];
+        const index = ids.indexOf(assetId);
+        const nextIndex = direction === "up" ? index - 1 : index + 1;
+        if (index < 0 || nextIndex < 0 || nextIndex >= ids.length)
+          return project;
+        [ids[index], ids[nextIndex]] = [ids[nextIndex]!, ids[index]!];
+        return withPhotoCollection(project, ids);
+      });
+    },
+    setPhotoCaption(assetId, caption) {
+      const normalized = caption.slice(0, 40).trim();
+      context.commit("Change Photo caption", (project) => {
+        if (!project.assetReferences.photoAssetIds.includes(assetId))
+          return project;
+        const photoCaptions = { ...project.design.photoCaptions };
+        if (normalized) photoCaptions[assetId] = normalized;
+        else delete photoCaptions[assetId];
+        return {
+          ...project,
+          design: {
+            ...project.design,
+            photoCaptions,
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+        };
+      });
     },
     applyTemplateMetadata(templateId, design) {
       if (themeById.get(design.themeId)?.status !== "available") return;

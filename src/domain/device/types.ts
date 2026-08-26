@@ -106,6 +106,24 @@ export const photoTransformSchema = z.object({
 });
 export type PhotoTransform = z.infer<typeof photoTransformSchema>;
 
+const photoTransformsByCompositionSchema = z.object({
+  hero: z.record(z.string(), photoTransformSchema),
+  split: z.record(z.string(), photoTransformSchema),
+  polaroid: z.record(z.string(), photoTransformSchema),
+});
+export type PhotoTransformsByComposition = z.infer<
+  typeof photoTransformsByCompositionSchema
+>;
+
+const photoTransformsSchema = z.preprocess((input) => {
+  if (input && typeof input === "object" && "hero" in input && "split" in input)
+    return {
+      ...input,
+      polaroid: "polaroid" in input ? input.polaroid : {},
+    };
+  return { hero: input ?? {}, split: {}, polaroid: {} };
+}, photoTransformsByCompositionSchema);
+
 export const deviceVariantSchema = z
   .object({
     id: z.string().min(1),
@@ -120,7 +138,7 @@ export const deviceVariantSchema = z
     densityOverride: densitySchema.nullable(),
     visibleFieldsOverride: visibleFieldsSchema.partial().nullable(),
     layoutVisibleFieldsOverride: layoutVisibleFieldsOverrideSchema.optional(),
-    photoTransforms: z.record(z.string(), photoTransformSchema),
+    photoTransforms: photoTransformsSchema,
     preview: previewPreferencesSchema,
   })
   .superRefine((variant, context) => {

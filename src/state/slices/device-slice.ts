@@ -54,7 +54,7 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         layoutOverride: null,
         densityOverride: null,
         visibleFieldsOverride: null,
-        photoTransforms: {},
+        photoTransforms: { hero: {}, split: {}, polaroid: {} },
         preview: {
           mode: "clean",
           showSafeAreas: false,
@@ -254,19 +254,28 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         },
       }));
     },
-    setPhotoTransform: (id, assetId, transform) =>
+    setPhotoTransform: (id, composition, assetId, transform) =>
       edit("Change photo crop", id, (variant) => ({
         ...variant,
         photoTransforms: {
           ...variant.photoTransforms,
-          [assetId]: clampPhotoTransform(transform),
+          [composition]: {
+            ...variant.photoTransforms[composition],
+            [assetId]: clampPhotoTransform(transform),
+          },
         },
       })),
-    clearPhotoTransform: (id, assetId) =>
+    clearPhotoTransform: (id, composition, assetId) =>
       edit("Reset photo crop", id, (variant) => {
-        const photoTransforms = { ...variant.photoTransforms };
-        delete photoTransforms[assetId];
-        return { ...variant, photoTransforms };
+        const transforms = { ...variant.photoTransforms[composition] };
+        delete transforms[assetId];
+        return {
+          ...variant,
+          photoTransforms: {
+            ...variant.photoTransforms,
+            [composition]: transforms,
+          },
+        };
       }),
   };
 }

@@ -3,6 +3,7 @@ export const FONT_IDS = [
   "heading-sans",
   "ui-mono",
   "pixel-heading",
+  "caption-hand",
 ] as const;
 export type FontId = (typeof FONT_IDS)[number];
 
@@ -47,5 +48,13 @@ export const fontRegistry: Record<FontId, FontDefinition> = {
     role: "accent",
     readableForScheduleDetails: false,
     status: "planned-local",
+  },
+  "caption-hand": {
+    id: "caption-hand",
+    label: "Caveat",
+    cssVariable: "--font-caption-hand",
+    role: "accent",
+    readableForScheduleDetails: false,
+    status: "available",
   },
 };

@@ -53,6 +53,7 @@ export const projectDesignSchema = z.object({
   themeVariantId: z.string().min(1).nullable(),
   layoutId: layoutIdSchema,
   photoComposition: photoCompositionSchema.nullable(),
+  photoCaptions: z.record(z.string().min(1), z.string().max(40)).default({}),
   weekMode: z.enum(["full", "compact"]),
   dayVisibility: dayVisibilitySchema.default("scheduled-only"),
   clockFormat: z.enum(["12-hour", "24-hour"]),
@@ -80,7 +81,12 @@ export const projectDesignSchema = z.object({
 export type ProjectDesign = z.infer<typeof projectDesignSchema>;
 
 export const assetReferencesSchema = z.object({
-  photoAssetIds: z.array(z.string().min(1)),
+  photoAssetIds: z
+    .array(z.string().min(1))
+    .max(4)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Photo assets must be unique.",
+    }),
   screenGuideAssetIds: z.array(z.string().min(1)),
 });
 

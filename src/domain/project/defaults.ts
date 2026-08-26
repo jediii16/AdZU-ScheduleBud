@@ -25,6 +25,7 @@ export function createBlankProject({
       themeVariantId: null,
       layoutId: "cards",
       photoComposition: null,
+      photoCaptions: {},
       weekMode: "full",
       dayVisibility: "scheduled-only",
       clockFormat: "12-hour",

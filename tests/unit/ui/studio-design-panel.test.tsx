@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { DesignStudioPanel } from "@/features/studio/studio-panels";
@@ -49,7 +49,7 @@ describe("layout design inspector", () => {
       "true",
     );
     expect(screen.getByRole("button", { name: "Add photo" })).toBeVisible();
-    expect(screen.getByLabelText("Choose Hero photo")).toHaveAttribute(
+    expect(screen.getByLabelText("Choose Photo")).toHaveAttribute(
       "accept",
       "image/png,image/jpeg,image/webp",
     );
@@ -66,7 +66,8 @@ describe("layout design inspector", () => {
         visibleFields={project.design.visibleFields}
         activeLayout="photo"
         detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
-        photo={{ id: "internal-asset-id", filename }}
+        photos={[{ id: "internal-asset-id", filename, caption: "" }]}
+        activePhotoId="internal-asset-id"
         photoAdjusting
         onLayout={vi.fn()}
         onTitleVisible={vi.fn()}
@@ -78,5 +79,107 @@ describe("layout design inspector", () => {
     expect(screen.getByText(filename)).toHaveAttribute("title", filename);
     expect(screen.getByText("Drag the photo to reposition")).toBeVisible();
     expect(screen.queryByText("internal-asset-id")).toBeNull();
+  });
+
+  it("offers Hero, Split, and Polaroid in the compact Photo composition control", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onComposition = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photos={[
+          { id: "asset-id", filename: "semester-photo.jpg", caption: "" },
+        ]}
+        activePhotoId="asset-id"
+        photoComposition="hero"
+        onPhotoComposition={onComposition}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    const hero = screen.getByRole("radio", { name: "hero" });
+    const split = screen.getByRole("radio", { name: "split" });
+    const polaroid = screen.getByRole("radio", { name: "polaroid" });
+    expect(hero).toHaveAttribute("aria-checked", "true");
+    expect(split).toHaveAttribute("aria-checked", "false");
+    expect(polaroid).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(split);
+    expect(onComposition).toHaveBeenCalledWith("split");
+  });
+
+  it("manages a compact ordered four-photo Polaroid collection", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onMove = vi.fn();
+    const onCaption = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photos={[
+          { id: "one", filename: "one.jpg", caption: "first week" },
+          { id: "two", filename: "two.jpg", caption: "" },
+          { id: "three", filename: "three.jpg", caption: "" },
+          { id: "four", filename: "four.jpg", caption: "" },
+        ]}
+        activePhotoId="one"
+        photoComposition="polaroid"
+        onPhotoMove={onMove}
+        onPhotoCaption={onCaption}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Maximum 4 photos")).toBeVisible();
+    expect(screen.getByText("4 photos ready")).toBeVisible();
+    expect(screen.getByRole("button", { name: "+ Add photo" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Move photo 2 up" }));
+    expect(onMove).toHaveBeenCalledWith("two", "up");
+    const caption = screen.getAllByLabelText("Caption (optional)")[0]!;
+    fireEvent.change(caption, { target: { value: "semester memories" } });
+    fireEvent.blur(caption);
+    expect(onCaption).toHaveBeenCalledWith("one", "semester memories");
+  });
+
+  it("explains the four-photo Polaroid requirement during setup", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photos={[
+          { id: "one", filename: "one.jpg", caption: "" },
+          { id: "two", filename: "two.jpg", caption: "" },
+        ]}
+        activePhotoId="one"
+        photoComposition="polaroid"
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Polaroid requires 4 photos · 2 more to add"),
+    ).toHaveAttribute("role", "status");
+    expect(screen.getByRole("button", { name: "+ Add photo" })).toBeEnabled();
   });
 });

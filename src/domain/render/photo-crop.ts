@@ -1,4 +1,5 @@
-import type { PhotoTransform } from "@/domain/device/types";
+import type { DeviceVariant, PhotoTransform } from "@/domain/device/types";
+import type { PhotoComposition } from "@/domain/design/types";
 import type { Rect } from "./types";
 
 export const PHOTO_ZOOM_MIN = 1;
@@ -8,6 +9,30 @@ export const DEFAULT_PHOTO_TRANSFORM: PhotoTransform = {
   scale: PHOTO_ZOOM_MIN,
   rotation: 0,
 };
+
+export type AvailablePhotoComposition = Extract<
+  PhotoComposition,
+  "hero" | "split" | "polaroid"
+>;
+
+export const AVAILABLE_PHOTO_COMPOSITIONS: readonly AvailablePhotoComposition[] =
+  ["hero", "split", "polaroid"];
+
+export function resolveAvailablePhotoComposition(
+  value: PhotoComposition | null,
+): AvailablePhotoComposition {
+  return value === "split" || value === "polaroid" ? value : "hero";
+}
+
+export function photoTransformFor(
+  variant: DeviceVariant,
+  composition: AvailablePhotoComposition,
+  assetId: string,
+): PhotoTransform {
+  return (
+    variant.photoTransforms[composition][assetId] ?? DEFAULT_PHOTO_TRANSFORM
+  );
+}
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0.5));

@@ -22,6 +22,12 @@ function rewriteAssetIds(
     },
     design: {
       ...project.design,
+      photoCaptions: Object.fromEntries(
+        Object.entries(project.design.photoCaptions).map(([id, caption]) => [
+          replace(id),
+          caption,
+        ]),
+      ),
       background:
         project.design.background.kind === "asset"
           ? {
@@ -38,12 +44,23 @@ function rewriteAssetIds(
           ? replace(variant.preview.guideAssetId)
           : null,
       },
-      photoTransforms: Object.fromEntries(
-        Object.entries(variant.photoTransforms).map(([id, transform]) => [
-          replace(id),
-          transform,
-        ]),
-      ),
+      photoTransforms: {
+        hero: Object.fromEntries(
+          Object.entries(variant.photoTransforms.hero).map(
+            ([id, transform]) => [replace(id), transform],
+          ),
+        ),
+        split: Object.fromEntries(
+          Object.entries(variant.photoTransforms.split).map(
+            ([id, transform]) => [replace(id), transform],
+          ),
+        ),
+        polaroid: Object.fromEntries(
+          Object.entries(variant.photoTransforms.polaroid).map(
+            ([id, transform]) => [replace(id), transform],
+          ),
+        ),
+      },
     })),
   });
 }

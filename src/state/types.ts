@@ -1,4 +1,5 @@
 import type { LayoutId } from "@/domain/design/types";
+import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
 import type {
   Density,
   DeviceCategory,
@@ -125,7 +126,12 @@ export interface DesignSlice {
   setTheme(themeId: string): void;
   setThemeVariant(themeVariantId: string | null): void;
   setLayout(layoutId: LayoutId): void;
-  setHeroPhoto(assetId: string | null): void;
+  setPrimaryPhoto(assetId: string | null): void;
+  addPhoto(assetId: string): boolean;
+  removePhoto(assetId: string): void;
+  movePhoto(assetId: string, direction: "up" | "down"): void;
+  setPhotoCaption(assetId: string, caption: string): void;
+  setPhotoComposition(composition: AvailablePhotoComposition): void;
   applyTemplateMetadata(
     templateId: string,
     design: Omit<ProjectDesign, "baseTemplateId" | "templateModified">,
@@ -187,10 +193,15 @@ export interface DeviceSlice {
   ): void;
   setPhotoTransform(
     variantId: string,
+    composition: AvailablePhotoComposition,
     assetId: string,
     transform: PhotoTransform,
   ): void;
-  clearPhotoTransform(variantId: string, assetId: string): void;
+  clearPhotoTransform(
+    variantId: string,
+    composition: AvailablePhotoComposition,
+    assetId: string,
+  ): void;
 }
 
 export interface EditorSlice {

@@ -15,6 +15,7 @@ import { ScheduleScene, type RenderAssetImages } from "./schedule-scene";
 
 type PhotoEditorInteraction = {
   frame: { x: number; y: number; width: number; height: number };
+  rotation?: number;
   hasPhoto: boolean;
   adjusting: boolean;
   onPanStart(): void;
@@ -115,11 +116,22 @@ export function ScheduleArtboard({
           };
           if (photoEditor?.adjusting && photoEditor.hasPhoto) {
             const frame = photoEditor.frame;
+            const radians = (-(photoEditor.rotation ?? 0) * Math.PI) / 180;
+            const local = {
+              x:
+                frame.x +
+                (point.x - frame.x) * Math.cos(radians) -
+                (point.y - frame.y) * Math.sin(radians),
+              y:
+                frame.y +
+                (point.x - frame.x) * Math.sin(radians) +
+                (point.y - frame.y) * Math.cos(radians),
+            };
             if (
-              point.x >= frame.x &&
-              point.x <= frame.x + frame.width &&
-              point.y >= frame.y &&
-              point.y <= frame.y + frame.height
+              local.x >= frame.x &&
+              local.x <= frame.x + frame.width &&
+              local.y >= frame.y &&
+              local.y <= frame.y + frame.height
             ) {
               event.currentTarget.setPointerCapture(event.pointerId);
               photoDragStart.current = {
@@ -180,6 +192,7 @@ export function ScheduleArtboard({
           {photoEditor ? (
             <PhotoEditorOverlay
               frame={photoEditor.frame}
+              rotation={photoEditor.rotation ?? 0}
               hasPhoto={photoEditor.hasPhoto}
               adjusting={photoEditor.adjusting}
               previewScale={scale}

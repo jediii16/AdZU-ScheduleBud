@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono, Nunito_Sans } from "next/font/google";
+import { Caveat, Geist, Geist_Mono, Nunito_Sans } from "next/font/google";
 
 export const bodySans = Geist({
   subsets: ["latin"],
@@ -18,4 +18,10 @@ export const uiMono = Geist_Mono({
   display: "swap",
 });
 
-export const fontClassNames = `${bodySans.variable} ${headingSans.variable} ${uiMono.variable}`;
+export const captionHand = Caveat({
+  subsets: ["latin"],
+  variable: "--font-caption-hand",
+  display: "swap",
+});
+
+export const fontClassNames = `${bodySans.variable} ${headingSans.variable} ${uiMono.variable} ${captionHand.variable}`;

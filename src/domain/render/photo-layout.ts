@@ -10,7 +10,7 @@ import {
 } from "@/domain/schedule/occurrences";
 import type { ScheduleDay, Subject } from "@/domain/schedule/types";
 import { resolveLayoutVisibleFields } from "./layout-capabilities";
-import { DEFAULT_PHOTO_TRANSFORM, clampPhotoTransform } from "./photo-crop";
+import { clampPhotoTransform, photoTransformFor } from "./photo-crop";
 import { fitText, type FittedText } from "./text-fit";
 import {
   CLEAN_SLATE_RENDER_THEME,
@@ -24,8 +24,15 @@ import type {
   TextRenderNode,
 } from "./types";
 
-const DAYS: readonly ScheduleDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const DAY_NAMES: Record<ScheduleDay, string> = {
+export const PHOTO_DAYS: readonly ScheduleDay[] = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+];
+export const PHOTO_DAY_NAMES: Record<ScheduleDay, string> = {
   Mon: "Monday",
   Tue: "Tuesday",
   Wed: "Wednesday",
@@ -59,7 +66,7 @@ export type PhotoHeroRenderResult = ScheduleRenderResult & {
   photoAssetId: string | null;
 };
 
-type Typography = {
+export type PhotoTypography = {
   title: number;
   day: number;
   code: number;
@@ -67,7 +74,7 @@ type Typography = {
   professor: number;
 };
 
-type Metrics = {
+export type PhotoMetrics = {
   margin: number;
   columnGap: number;
   rowGap: number;
@@ -86,7 +93,7 @@ type Metrics = {
 };
 
 type CodeFit = FittedText & { truncated: false };
-type ClassPlan = {
+export type PhotoClassPlan = {
   occurrence: ScheduleOccurrence;
   code: CodeFit;
   detailLines: FittedText[];
@@ -95,21 +102,21 @@ type ClassPlan = {
 };
 
 type VerticalFit = {
-  metrics: Metrics;
-  typography: Typography;
+  metrics: PhotoMetrics;
+  typography: PhotoTypography;
   plans: Array<{
     day: ScheduleDay;
     row: number;
     column: number;
     rowCount: number;
-    classes: ClassPlan[];
+    classes: PhotoClassPlan[];
     contentHeight: number;
   }>;
   rowHeights: number[];
   photoHeight: number;
 };
 
-function textNode(
+export function photoTextNode(
   id: string,
   text: string,
   x: number,
@@ -132,7 +139,11 @@ function textNode(
   };
 }
 
-function translateNode(node: RenderNode, x: number, y: number): RenderNode {
+export function translatePhotoNode(
+  node: RenderNode,
+  x: number,
+  y: number,
+): RenderNode {
   if (node.kind === "rect" || node.kind === "image")
     return {
       ...node,
@@ -153,11 +164,11 @@ function translateNode(node: RenderNode, x: number, y: number): RenderNode {
   };
 }
 
-function typographyFor(
+export function photoTypographyFor(
   family: TargetCompositionFamily,
   scale: number,
-): Typography {
-  const base: Record<TargetCompositionFamily, Typography> = {
+): PhotoTypography {
+  const base: Record<TargetCompositionFamily, PhotoTypography> = {
     phonePortrait: { title: 54, day: 31, code: 31, detail: 23, professor: 21 },
     tabletPortrait: { title: 66, day: 36, code: 35, detail: 27, professor: 24 },
     tabletLandscape: {
@@ -181,11 +192,11 @@ function typographyFor(
       key,
       Math.round(value * scale),
     ]),
-  ) as Typography;
+  ) as PhotoTypography;
 }
 
-function metricsFor(family: TargetCompositionFamily): Metrics {
-  const all: Record<TargetCompositionFamily, Metrics> = {
+export function photoMetricsFor(family: TargetCompositionFamily): PhotoMetrics {
+  const all: Record<TargetCompositionFamily, PhotoMetrics> = {
     phonePortrait: {
       margin: 54,
       columnGap: 40,
@@ -275,7 +286,10 @@ function metricsFor(family: TargetCompositionFamily): Metrics {
   return all[family];
 }
 
-function compactVerticalMetrics(metrics: Metrics, factor: number): Metrics {
+export function compactPhotoVerticalMetrics(
+  metrics: PhotoMetrics,
+  factor: number,
+): PhotoMetrics {
   const scaled = (value: number) => Math.max(1, Math.round(value * factor));
   return {
     ...metrics,
@@ -292,13 +306,16 @@ function compactVerticalMetrics(metrics: Metrics, factor: number): Metrics {
   };
 }
 
-function scaleTypography(typography: Typography, factor: number): Typography {
+export function scalePhotoTypography(
+  typography: PhotoTypography,
+  factor: number,
+): PhotoTypography {
   return Object.fromEntries(
     Object.entries(typography).map(([key, value]) => [
       key,
       Math.max(12, Math.round(value * factor)),
     ]),
-  ) as Typography;
+  ) as PhotoTypography;
 }
 
 function minimumPhotoHeight(
@@ -404,15 +421,15 @@ function fitCode(text: string, width: number, preferred: number): CodeFit {
   };
 }
 
-function makeClassPlan(
+export function makePhotoClassPlan(
   project: ScheduleProject,
   occurrence: ScheduleOccurrence,
   subject: Subject,
   fields: VisibleFields,
   width: number,
-  typography: Typography,
-  metrics: Metrics,
-): ClassPlan {
+  typography: PhotoTypography,
+  metrics: PhotoMetrics,
+): PhotoClassPlan {
   const code = fitCode(subject.code, width, typography.code);
   const time = fields.time
     ? timeRange(
@@ -464,20 +481,20 @@ function makeClassPlan(
   };
 }
 
-function drawClass(
+export function drawPhotoClass(
   nodes: RenderNode[],
-  item: ClassPlan,
+  item: PhotoClassPlan,
   day: ScheduleDay,
   x: number,
   y: number,
   width: number,
-  typography: Typography,
-  metrics: Metrics,
+  typography: PhotoTypography,
+  metrics: PhotoMetrics,
   theme: CleanSlateRenderTheme,
 ) {
   const id = `${day}-${item.occurrence.id}`;
   nodes.push(
-    textNode(
+    photoTextNode(
       `photo-code-${id}`,
       item.code.text,
       x,
@@ -497,7 +514,7 @@ function drawClass(
   if (item.detailLines.length || item.professor) cursor += metrics.metadataGap;
   item.detailLines.forEach((detail, index) => {
     nodes.push(
-      textNode(
+      photoTextNode(
         `photo-detail-${id}-${index}`,
         detail.text,
         x,
@@ -512,7 +529,7 @@ function drawClass(
   });
   if (item.professor)
     nodes.push(
-      textNode(
+      photoTextNode(
         `photo-professor-${id}`,
         item.professor.text,
         x,
@@ -532,8 +549,11 @@ export function buildPhotoHeroRenderModel(
 ): PhotoHeroRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
-  const baseTypography = typographyFor(family, project.design.typography.scale);
-  const baseMetrics = metricsFor(family);
+  const baseTypography = photoTypographyFor(
+    family,
+    project.design.typography.scale,
+  );
+  const baseMetrics = photoMetricsFor(family);
   const fields = resolveLayoutVisibleFields(
     "photo",
     project.design.visibleFields,
@@ -552,14 +572,16 @@ export function buildPhotoHeroRenderModel(
     project.schedule.map((subject) => [subject.id, subject]),
   );
   const byDay = new Map(
-    DAYS.map((day) => [
+    PHOTO_DAYS.map((day) => [
       day,
       occurrences.filter((item) => item.actualDays[0] === day),
     ]),
   );
-  const activeDays = DAYS.filter((day) => (byDay.get(day)?.length ?? 0) > 0);
+  const activeDays = PHOTO_DAYS.filter(
+    (day) => (byDay.get(day)?.length ?? 0) > 0,
+  );
   const visibleDays =
-    project.design.dayVisibility === "full-week" ? DAYS : activeDays;
+    project.design.dayVisibility === "full-week" ? PHOTO_DAYS : activeDays;
   const availableWidth = width - baseMetrics.margin * 2;
   const groupWidth = Math.min(
     availableWidth,
@@ -600,14 +622,14 @@ export function buildPhotoHeroRenderModel(
   ];
   let verticalFit: VerticalFit | null = null;
   for (const candidate of fitCandidates) {
-    const metrics = compactVerticalMetrics(baseMetrics, candidate.spacing);
-    const typography = scaleTypography(baseTypography, candidate.type);
+    const metrics = compactPhotoVerticalMetrics(baseMetrics, candidate.spacing);
+    const typography = scalePhotoTypography(baseTypography, candidate.type);
     const plans = visibleDays.map((day, index) => {
       const row = Math.floor(index / columns);
       const rowStart = row * columns;
       const rowCount = Math.min(columns, visibleDays.length - rowStart);
       const classes = (byDay.get(day) ?? []).map((occurrence) =>
-        makeClassPlan(
+        makePhotoClassPlan(
           project,
           occurrence,
           subjects.get(occurrence.subjectId)!,
@@ -698,7 +720,7 @@ export function buildPhotoHeroRenderModel(
   const photoNodes: RenderNode[] = [];
   if (photoAssetId) {
     const transform = clampPhotoTransform(
-      variant.photoTransforms[photoAssetId] ?? DEFAULT_PHOTO_TRANSFORM,
+      photoTransformFor(variant, "hero", photoAssetId),
     );
     photoNodes.push({
       id: "photo-hero-image",
@@ -722,7 +744,7 @@ export function buildPhotoHeroRenderModel(
       maximumLines: 1,
     });
     nodes.push(
-      textNode(
+      photoTextNode(
         "photo-title",
         fit.text,
         0,
@@ -751,14 +773,14 @@ export function buildPhotoHeroRenderModel(
       plan.column * (dayWidth + metrics.columnGap);
     const y = rowTops[plan.row]!;
     const dayFit = fitText({
-      text: DAY_NAMES[plan.day],
+      text: PHOTO_DAY_NAMES[plan.day],
       width: dayWidth,
       preferredFontSize: typography.day,
       minimumFontSize: Math.max(13, typography.day - 6),
       maximumLines: 1,
     });
     nodes.push(
-      textNode(
+      photoTextNode(
         `photo-day-${plan.day}`,
         dayFit.text,
         x,
@@ -787,7 +809,7 @@ export function buildPhotoHeroRenderModel(
     });
     let classY = ruleY + metrics.dayRuleGap;
     for (const item of plan.classes) {
-      drawClass(
+      drawPhotoClass(
         nodes,
         item,
         plan.day,
@@ -851,11 +873,13 @@ export function buildPhotoHeroRenderModel(
     { id: "scenery", nodes: [] },
     {
       id: "photos",
-      nodes: photoNodes.map((node) => translateNode(node, originX, originY)),
+      nodes: photoNodes.map((node) =>
+        translatePhotoNode(node, originX, originY),
+      ),
     },
     {
       id: "schedule",
-      nodes: nodes.map((node) => translateNode(node, originX, originY)),
+      nodes: nodes.map((node) => translatePhotoNode(node, originX, originY)),
     },
     { id: "foreground", nodes: [] },
   ];

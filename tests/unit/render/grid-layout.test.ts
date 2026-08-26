@@ -661,6 +661,52 @@ describe("Clean Slate Grid RenderModel", () => {
     },
   );
 
+  it("keeps dense five-day Square Grid bands and terminal labels inside 1080×1080", () => {
+    const project = gridProject([
+      { day: "Mon", code: "CS.412", start: "08:00", end: "09:20" },
+      { day: "Mon", code: "CIT.017", start: "11:00", end: "12:20" },
+      { day: "Mon", code: "CIT.016", start: "12:30", end: "13:50" },
+      { day: "Tue", code: "CIT.015", start: "08:00", end: "09:20" },
+      { day: "Tue", code: "CS.413", start: "11:00", end: "12:20" },
+      { day: "Wed", code: "COGNATE3", start: "08:00", end: "10:50" },
+      { day: "Thu", code: "CS.412", start: "08:00", end: "09:20" },
+      { day: "Thu", code: "CIT.017", start: "11:00", end: "12:20" },
+      { day: "Thu", code: "CIT.016", start: "12:30", end: "13:50" },
+      { day: "Fri", code: "CIT.015", start: "08:00", end: "09:20" },
+      { day: "Fri", code: "CS.413", start: "11:00", end: "12:20" },
+    ]);
+    project.design.wallpaperTitle.visible = false;
+    const square = variant(project, {
+      category: "square",
+      dimensions: { width: 1080, height: 1080 },
+      orientation: "square",
+    });
+    const result = buildGridRenderModel(project, square);
+
+    expect(result.bandLayout.map((band) => band.days.length)).toEqual([3, 2]);
+    for (const block of result.blockLayout)
+      expect(block.shownFields).toEqual({
+        time: true,
+        room: true,
+        section: true,
+        professor: true,
+      });
+    expect(
+      result.scheduleBounds.y + result.scheduleBounds.height,
+    ).toBeLessThanOrEqual(1080);
+    for (const block of result.blockLayout)
+      expect(block.bounds.y + block.bounds.height).toBeLessThanOrEqual(1080);
+    for (const node of result.model.layers[3].nodes) {
+      const bottom =
+        node.kind === "rect" || node.kind === "image"
+          ? node.geometry.y + node.geometry.height
+          : node.kind === "text"
+            ? node.position.y + (node.height ?? node.fontSize * 1.25)
+            : Math.max(...node.points.map((point) => point.y));
+      expect(bottom).toBeLessThanOrEqual(1080);
+    }
+  });
+
   it("keeps every preview-only overlay out of the Grid export model", () => {
     const project = daysProject(["Mon"]);
     const target = {

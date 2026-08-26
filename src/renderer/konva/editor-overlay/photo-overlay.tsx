@@ -9,11 +9,13 @@ export function PhotoEditorOverlay({
   hasPhoto,
   adjusting,
   previewScale,
+  rotation,
 }: {
   frame: ModelRect;
   hasPhoto: boolean;
   adjusting: boolean;
   previewScale: number;
+  rotation?: number;
 }) {
   const strokeWidth = (adjusting ? 2 : 1) / previewScale;
   const radius = Math.min(24, frame.width * 0.025);
@@ -25,6 +27,7 @@ export function PhotoEditorOverlay({
           <Rect
             name="photo-empty-placeholder"
             {...frame}
+            rotation={rotation ?? 0}
             fill="#EEF1F5"
             stroke="#C9D1DC"
             strokeWidth={strokeWidth}
@@ -51,6 +54,7 @@ export function PhotoEditorOverlay({
           <Rect
             name="photo-adjust-frame"
             {...frame}
+            rotation={rotation ?? 0}
             stroke="#145F9B"
             strokeWidth={strokeWidth}
             cornerRadius={radius}

@@ -35,7 +35,7 @@ describe("device category and screen matching", () => {
         layoutOverride: null,
         densityOverride: null,
         visibleFieldsOverride: null,
-        photoTransforms: {},
+        photoTransforms: { hero: {}, split: {}, polaroid: {} },
         preview: {
           mode: "clean",
           showSafeAreas: false,
@@ -58,7 +58,7 @@ describe("device category and screen matching", () => {
         layoutOverride: null,
         densityOverride: null,
         visibleFieldsOverride: null,
-        photoTransforms: {},
+        photoTransforms: { hero: {}, split: {}, polaroid: {} },
         preview: {
           mode: "clean",
           showSafeAreas: false,
@@ -186,7 +186,7 @@ describe("device category and screen matching", () => {
       layoutOverride: null,
       densityOverride: null,
       visibleFieldsOverride: null,
-      photoTransforms: {},
+      photoTransforms: { hero: {}, split: {}, polaroid: {} },
       preview: {
         mode: "clean" as const,
         showSafeAreas: false,

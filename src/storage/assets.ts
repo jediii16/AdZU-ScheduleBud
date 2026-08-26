@@ -12,8 +12,8 @@ export function collectReferencedAssetIds(
     ids.add(project.design.background.assetId);
   for (const variant of project.deviceVariants) {
     if (variant.preview.guideAssetId) ids.add(variant.preview.guideAssetId);
-    for (const assetId of Object.keys(variant.photoTransforms))
-      ids.add(assetId);
+    for (const transforms of Object.values(variant.photoTransforms))
+      for (const assetId of Object.keys(transforms)) ids.add(assetId);
   }
   return ids;
 }

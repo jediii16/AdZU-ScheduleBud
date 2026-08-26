@@ -88,6 +88,50 @@ describe("Clean Slate Cards RenderModel", () => {
     );
   });
 
+  it.each([false, true])(
+    "keeps dense five-day Square Cards inside 1080×1080 with title visible=%s",
+    (titleVisible) => {
+      const project = projectWithDays(["Mon", "Tue", "Wed", "Thu", "Fri"], {
+        Mon: 3,
+        Tue: 2,
+        Wed: 1,
+        Thu: 3,
+        Fri: 2,
+      });
+      project.design.wallpaperTitle.visible = titleVisible;
+      const base = project.deviceVariants[0]!;
+      const square = {
+        ...base,
+        id: "dense-square",
+        category: "square" as const,
+        dimensions: { width: 1080, height: 1080 },
+        orientation: "square" as const,
+        dimensionSource: "preset" as const,
+        presetId: "square-1080",
+      };
+      const result = buildCardsRenderModel(project, square);
+
+      expect(result.dayLayout.map((day) => day.occurrenceCount)).toEqual([
+        3, 2, 1, 3, 2,
+      ]);
+      expect(result.scheduleBounds.y).toBeGreaterThanOrEqual(0);
+      expect(
+        result.scheduleBounds.y + result.scheduleBounds.height,
+      ).toBeLessThanOrEqual(1080);
+      for (const day of result.dayLayout)
+        expect(day.y + day.height).toBeLessThanOrEqual(1080);
+      for (const node of result.model.layers[3].nodes) {
+        const bottom =
+          node.kind === "rect" || node.kind === "image"
+            ? node.geometry.y + node.geometry.height
+            : node.kind === "text"
+              ? node.position.y + (node.height ?? node.fontSize * 1.25)
+              : Math.max(...node.points.map((point) => point.y));
+        expect(bottom).toBeLessThanOrEqual(1080);
+      }
+    },
+  );
+
   it("hides an empty Saturday by default and creates five balanced desktop columns", () => {
     const project = projectWithDays(["Mon", "Tue", "Wed", "Thu", "Fri"]);
     const result = render(project, 1);

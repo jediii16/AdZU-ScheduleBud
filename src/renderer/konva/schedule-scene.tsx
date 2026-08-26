@@ -20,7 +20,11 @@ function SceneNode({
   assets?: RenderAssetImages | undefined;
 }) {
   if (node.visible === false) return null;
-  const common = { opacity: node.opacity ?? 1, listening: false };
+  const common = {
+    opacity: node.opacity ?? 1,
+    rotation: node.rotation ?? 0,
+    listening: false,
+  };
   switch (node.kind) {
     case "rect":
       return (
@@ -35,6 +39,19 @@ function SceneNode({
           {...(node.cornerRadius === undefined
             ? {}
             : { cornerRadius: node.cornerRadius })}
+          {...(node.shadowColor ? { shadowColor: node.shadowColor } : {})}
+          {...(node.shadowBlur === undefined
+            ? {}
+            : { shadowBlur: node.shadowBlur })}
+          {...(node.shadowOffset
+            ? {
+                shadowOffsetX: node.shadowOffset.x,
+                shadowOffsetY: node.shadowOffset.y,
+              }
+            : {})}
+          {...(node.shadowOpacity === undefined
+            ? {}
+            : { shadowOpacity: node.shadowOpacity })}
         />
       );
     case "text":

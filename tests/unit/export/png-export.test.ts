@@ -7,10 +7,15 @@ import {
 } from "@/features/export/png-export";
 
 describe("PNG export coordination", () => {
-  it("requires a referenced asset only for Photo Hero export", () => {
-    expect(photoExportBlockReason("photo", null)).toMatch(/Add a photo/);
-    expect(photoExportBlockReason("photo", "photo-1")).toBeNull();
-    expect(photoExportBlockReason("planner", null)).toBeNull();
+  it("requires one Photo generally and exactly four for Polaroid", () => {
+    expect(photoExportBlockReason("photo", 0)).toMatch(/Add a photo/);
+    expect(photoExportBlockReason("photo", 1, "hero")).toBeNull();
+    expect(photoExportBlockReason("photo", 1, "split")).toBeNull();
+    expect(photoExportBlockReason("photo", 3, "polaroid")).toMatch(
+      /exactly 4 photos/,
+    );
+    expect(photoExportBlockReason("photo", 4, "polaroid")).toBeNull();
+    expect(photoExportBlockReason("planner", 0)).toBeNull();
   });
   it("uses predictable sanitized filenames", () => {
     expect(sanitizePngFilename("My Semester / Phone")).toBe(

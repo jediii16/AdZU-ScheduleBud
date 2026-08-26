@@ -38,6 +38,8 @@ import {
   DEFAULT_PHOTO_TRANSFORM,
   buildScheduleRenderModel,
   panPhotoTransform,
+  photoTransformFor,
+  resolveAvailablePhotoComposition,
   resolveLayoutDetailCapabilities,
   resolveLayoutVisibleFields,
   resolveAlignmentSnap,
@@ -65,6 +67,8 @@ import {
   type InspectedImage,
 } from "@/storage/assets";
 import type { StoredAsset } from "@/storage/types";
+
+const EMPTY_PHOTO_ASSET_IDS: readonly string[] = [];
 import { useScheduleBudStore, useScheduleBudStoreApi } from "@/state/react";
 import type { EditorState } from "@/state/types";
 import {
@@ -117,15 +121,14 @@ export function StudioExperience() {
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [guideOpacity, setGuideOpacity] = useState(0.35);
   const [photoAdjusting, setPhotoAdjusting] = useState(false);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedGuide, setLoadedGuide] = useState<{
     id: string;
     image: HTMLImageElement;
   } | null>(null);
-  const [loadedPhoto, setLoadedPhoto] = useState<{
-    id: string;
-    image: HTMLImageElement;
-    asset: StoredAsset;
-  } | null>(null);
+  const [loadedPhotos, setLoadedPhotos] = useState<
+    ReadonlyMap<string, { image: HTMLImageElement; asset: StoredAsset }>
+  >(() => new Map());
   const photoPanStart = useRef<PhotoTransform | null>(null);
 
   useEffect(() => {
@@ -197,7 +200,9 @@ export function StudioExperience() {
   const target = activeVariant
     ? studioTargetForVariant(activeVariant)
     : undefined;
-  const photoAssetId = project?.assetReferences.photoAssetIds[0] ?? null;
+  const photoAssetIds =
+    project?.assetReferences.photoAssetIds ?? EMPTY_PHOTO_ASSET_IDS;
+  const photoAssetId = photoAssetIds[0] ?? null;
   useEffect(() => {
     const guideId = activeVariant?.preview.guideAssetId;
     if (!guideId) return;
@@ -220,29 +225,46 @@ export function StudioExperience() {
       ? loadedGuide.image
       : null;
   useEffect(() => {
-    if (!photoAssetId) return;
+    if (photoAssetIds.length === 0) return;
     let active = true;
-    let url: string | null = null;
-    void studioPersistence.assets.read(photoAssetId).then((asset) => {
-      if (!active || !asset || asset.kind !== "photo") return;
-      url = URL.createObjectURL(asset.blob);
-      const image = new Image();
-      image.onload = () => {
-        if (active) setLoadedPhoto({ id: photoAssetId, image, asset });
-      };
-      image.src = url;
-    });
+    const urls: string[] = [];
+    void Promise.all(
+      photoAssetIds.map(async (assetId) => {
+        const asset = await studioPersistence.assets.read(assetId);
+        if (!asset || asset.kind !== "photo") return null;
+        const url = URL.createObjectURL(asset.blob);
+        urls.push(url);
+        const image = new Image();
+        await new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error("Photo decoding failed."));
+          image.src = url;
+        });
+        return [assetId, { image, asset }] as const;
+      }),
+    )
+      .then((entries) => {
+        if (active)
+          setLoadedPhotos(new Map(entries.filter((entry) => entry !== null)));
+      })
+      .catch((reason: unknown) => {
+        console.error("ScheduleBud photo decoding failed", reason);
+        if (active) setLoadedPhotos(new Map());
+      });
     return () => {
       active = false;
-      if (url) URL.revokeObjectURL(url);
+      urls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [photoAssetId]);
+  }, [photoAssetIds]);
   const photoImages = useMemo(
     () =>
-      loadedPhoto
-        ? new Map([[loadedPhoto.id, loadedPhoto.image]])
-        : new Map<string, HTMLImageElement>(),
-    [loadedPhoto],
+      new Map(
+        photoAssetIds.flatMap((assetId) => {
+          const loaded = loadedPhotos.get(assetId);
+          return loaded ? ([[assetId, loaded.image]] as const) : [];
+        }),
+      ),
+    [loadedPhotos, photoAssetIds],
   );
   const renderResult = useMemo(
     () =>
@@ -328,12 +350,39 @@ export function StudioExperience() {
     activeVariant,
     detailCapabilities,
   );
-  const activePhotoTransform =
-    photoAssetId && activeVariant.photoTransforms[photoAssetId]
-      ? activeVariant.photoTransforms[photoAssetId]!
-      : DEFAULT_PHOTO_TRANSFORM;
-  const photoExportIssue = photoExportBlockReason(activeLayout, photoAssetId);
-  const missingHeroPhoto = photoExportIssue !== null;
+  const activePhotoComposition = resolveAvailablePhotoComposition(
+    project.design.photoComposition,
+  );
+  const activePhotoId =
+    activePhotoComposition === "polaroid" &&
+    selectedPhotoId &&
+    photoAssetIds.includes(selectedPhotoId)
+      ? selectedPhotoId
+      : photoAssetId;
+  const activePhotoFrame =
+    activePhotoComposition === "polaroid"
+      ? renderResult.photoFrames?.find(
+          (frame) => frame.assetId === activePhotoId,
+        )
+      : renderResult.photoFrame
+        ? {
+            assetId: photoAssetId ?? "",
+            frame: renderResult.photoFrame,
+            rotation: 0,
+          }
+        : undefined;
+  const loadedActivePhoto = activePhotoId
+    ? loadedPhotos.get(activePhotoId)
+    : undefined;
+  const activePhotoTransform = activePhotoId
+    ? photoTransformFor(activeVariant, activePhotoComposition, activePhotoId)
+    : DEFAULT_PHOTO_TRANSFORM;
+  const photoExportIssue = photoExportBlockReason(
+    activeLayout,
+    photoAssetIds.length,
+    activePhotoComposition,
+  );
+  const photoExportBlocked = photoExportIssue !== null;
 
   const setSection = (section: NonNullable<EditorState["activeSection"]>) => {
     store.getState().setActiveEditorSection(section);
@@ -455,7 +504,10 @@ export function StudioExperience() {
     await removeScreenGuide(studioPersistence.assets, id);
     setLoadedGuide(null);
   };
-  const chooseHeroPhoto = async (file: File) => {
+  const choosePhoto = async (
+    file: File,
+    intent: "replace-primary" | "append",
+  ) => {
     const inspected = await inspectTemporaryImage(file, undefined, file.name);
     const saved = await savePhoto(studioPersistence.assets, {
       ...inspected,
@@ -463,40 +515,66 @@ export function StudioExperience() {
       projectId: project.id,
       createdAt: new Date().toISOString(),
     });
-    store.getState().setHeroPhoto(saved.id);
+    if (intent === "append") {
+      if (!store.getState().addPhoto(saved.id)) {
+        await studioPersistence.assets.delete(saved.id);
+        throw new Error("Maximum 4 photos");
+      }
+      setSelectedPhotoId(saved.id);
+    } else {
+      store.getState().setPrimaryPhoto(saved.id);
+      setSelectedPhotoId(saved.id);
+    }
     setPhotoAdjusting(false);
     setExportError(null);
   };
-  const removeHeroPhoto = () => {
-    store.getState().setHeroPhoto(null);
+  const removePhoto = (assetId: string) => {
+    const remaining = photoAssetIds.filter((id) => id !== assetId);
+    store.getState().removePhoto(assetId);
+    setSelectedPhotoId(remaining[0] ?? null);
     setPhotoAdjusting(false);
   };
   const beginPhotoCrop = () => {
-    if (!photoAssetId || !loadedPhoto) return;
+    if (!activePhotoId || !loadedActivePhoto) return;
     photoPanStart.current = activePhotoTransform;
     if (!store.getState().history.transaction)
       store.getState().beginHistoryTransaction("Adjust photo crop");
   };
   const movePhotoCrop = (delta: { x: number; y: number }) => {
     if (
-      !photoAssetId ||
-      !loadedPhoto ||
-      !renderResult.photoFrame ||
+      !activePhotoId ||
+      !loadedActivePhoto ||
+      !activePhotoFrame ||
       !photoPanStart.current
     )
       return;
-    store
-      .getState()
-      .setPhotoTransform(
-        activeVariant.id,
-        photoAssetId,
-        panPhotoTransform(
-          photoPanStart.current,
-          { width: loadedPhoto.asset.width, height: loadedPhoto.asset.height },
-          renderResult.photoFrame,
-          delta,
-        ),
-      );
+    store.getState().setPhotoTransform(
+      activeVariant.id,
+      activePhotoComposition,
+      activePhotoId,
+      panPhotoTransform(
+        photoPanStart.current,
+        {
+          width: loadedActivePhoto.asset.width,
+          height: loadedActivePhoto.asset.height,
+        },
+        activePhotoFrame.frame,
+        activePhotoFrame.rotation
+          ? {
+              x:
+                delta.x *
+                  Math.cos((-activePhotoFrame.rotation * Math.PI) / 180) -
+                delta.y *
+                  Math.sin((-activePhotoFrame.rotation * Math.PI) / 180),
+              y:
+                delta.x *
+                  Math.sin((-activePhotoFrame.rotation * Math.PI) / 180) +
+                delta.y *
+                  Math.cos((-activePhotoFrame.rotation * Math.PI) / 180),
+            }
+          : delta,
+      ),
+    );
   };
   const finishPhotoCrop = () => {
     photoPanStart.current = null;
@@ -508,13 +586,13 @@ export function StudioExperience() {
   };
   const finishPhotoZoom = () => store.getState().commitHistoryTransaction();
   const runExport = async () => {
-    if (missingHeroPhoto) {
+    if (photoExportBlocked) {
       setExportError(photoExportIssue);
       return;
     }
     if (
       activeLayout === "photo" &&
-      (!loadedPhoto || loadedPhoto.id !== photoAssetId)
+      photoAssetIds.some((assetId) => !loadedPhotos.has(assetId))
     ) {
       setExportError(
         "Your photo is still preparing. Try exporting again in a moment.",
@@ -626,38 +704,57 @@ export function StudioExperience() {
           store.getState().setVisibleField(field, visible);
         }}
         onDayVisibility={(value) => store.getState().setDayVisibility(value)}
-        photo={
-          photoAssetId
-            ? {
-                id: photoAssetId,
-                filename:
-                  loadedPhoto?.id === photoAssetId
-                    ? (loadedPhoto.asset.filename ?? "Hero photo")
-                    : "Loading photo…",
-              }
-            : undefined
-        }
+        photos={photoAssetIds.map((assetId) => ({
+          id: assetId,
+          filename:
+            loadedPhotos.get(assetId)?.asset.filename ?? "Loading photo…",
+          caption: project.design.photoCaptions[assetId] ?? "",
+        }))}
+        activePhotoId={activePhotoId}
         photoAdjusting={photoAdjusting}
+        photoComposition={activePhotoComposition}
         photoZoom={activePhotoTransform.scale}
-        onPhotoFile={chooseHeroPhoto}
-        onPhotoAdjust={() => setPhotoAdjusting(true)}
-        onPhotoRemove={removeHeroPhoto}
+        onPhotoFile={choosePhoto}
+        onPhotoComposition={(composition) => {
+          setPhotoAdjusting(false);
+          setSelectedPhotoId(photoAssetId);
+          store.getState().setPhotoComposition(composition);
+        }}
+        onPhotoAdjust={(assetId) => {
+          setSelectedPhotoId(assetId);
+          setPhotoAdjusting(true);
+        }}
+        onPhotoRemove={removePhoto}
         onPhotoZoomStart={beginPhotoZoom}
         onPhotoZoom={(scale) => {
-          if (!photoAssetId) return;
-          store.getState().setPhotoTransform(activeVariant.id, photoAssetId, {
-            ...activePhotoTransform,
-            scale,
-          });
+          if (!activePhotoId) return;
+          store
+            .getState()
+            .setPhotoTransform(
+              activeVariant.id,
+              activePhotoComposition,
+              activePhotoId,
+              { ...activePhotoTransform, scale },
+            );
         }}
         onPhotoZoomEnd={finishPhotoZoom}
         onPhotoReset={() => {
-          if (photoAssetId)
+          if (activePhotoId)
             store
               .getState()
-              .clearPhotoTransform(activeVariant.id, photoAssetId);
+              .clearPhotoTransform(
+                activeVariant.id,
+                activePhotoComposition,
+                activePhotoId,
+              );
         }}
         onPhotoDone={() => setPhotoAdjusting(false)}
+        onPhotoMove={(assetId, direction) =>
+          store.getState().movePhoto(assetId, direction)
+        }
+        onPhotoCaption={(assetId, caption) =>
+          store.getState().setPhotoCaption(assetId, caption)
+        }
       />
     );
 
@@ -707,7 +804,7 @@ export function StudioExperience() {
         <Button
           onClick={guardedExport}
           disabled={
-            missingHeroPhoto ||
+            photoExportBlocked ||
             exportStatus === "preparing" ||
             exportStatus === "exporting"
           }
@@ -721,7 +818,7 @@ export function StudioExperience() {
           <span className="sm:hidden">Export</span>
         </Button>
       </header>
-      {missingHeroPhoto ? (
+      {photoExportBlocked ? (
         <div
           role="status"
           className="z-20 shrink-0 border-b border-border bg-surface px-4 py-2 text-xs text-text-secondary"
@@ -787,11 +884,12 @@ export function StudioExperience() {
             guideOpacity={guideOpacity}
             assetImages={photoImages}
             photoEditor={
-              activeLayout === "photo" && renderResult.photoFrame
+              activeLayout === "photo" && activePhotoFrame
                 ? {
-                    frame: renderResult.photoFrame,
+                    frame: activePhotoFrame.frame,
+                    rotation: activePhotoFrame.rotation,
                     hasPhoto:
-                      Boolean(photoAssetId) && loadedPhoto?.id === photoAssetId,
+                      Boolean(activePhotoId) && Boolean(loadedActivePhoto),
                     adjusting: photoAdjusting,
                     onPanStart: beginPhotoCrop,
                     onPanMove: movePhotoCrop,

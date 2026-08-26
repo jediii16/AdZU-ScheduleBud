@@ -4,6 +4,8 @@ export * from "./minimal-layout";
 export * from "./grid-layout";
 export * from "./planner-layout";
 export * from "./photo-layout";
+export * from "./photo-split-layout";
+export * from "./photo-polaroid-layout";
 export * from "./photo-crop";
 export * from "./layout-resolver";
 export * from "./text-fit";
