@@ -33,7 +33,9 @@ const DAY_NAMES: Record<ScheduleDay, string> = {
 };
 
 export const MINIMAL_DESKTOP_MAX_DAY_WIDTH = 350;
+export const MINIMAL_DESKTOP_FIVE_DAY_WIDTH = 1600;
 export const MINIMAL_TABLET_LANDSCAPE_MAX_DAY_WIDTH = 520;
+export const MINIMAL_PHONE_OPTICAL_CONTENT_WIDTH = 235;
 
 export type MinimalTypography = {
   title: number;
@@ -74,7 +76,6 @@ type MinimalMetrics = {
   columnGap: number;
   rowGap: number;
   classGap: number;
-  textInset: number;
   titleBlockHeight: number;
   titleTextHeight: number;
   dayHeaderHeight: number;
@@ -219,9 +220,8 @@ function metricsFor(
     phonePortrait: {
       margin: 64,
       columnGap: 42,
-      rowGap: 64,
+      rowGap: 57,
       classGap: 34,
-      textInset: 24,
       titleTextHeight: 92,
       dayHeaderHeight: 82,
       primaryHeight: 42,
@@ -235,7 +235,6 @@ function metricsFor(
       columnGap: 52,
       rowGap: 70,
       classGap: 38,
-      textInset: 25,
       titleTextHeight: 103,
       dayHeaderHeight: 92,
       primaryHeight: 47,
@@ -249,7 +248,6 @@ function metricsFor(
       columnGap: 34,
       rowGap: 54,
       classGap: 27,
-      textInset: 19,
       titleTextHeight: 82,
       dayHeaderHeight: 72,
       primaryHeight: 38,
@@ -263,7 +261,6 @@ function metricsFor(
       columnGap: 32,
       rowGap: 44,
       classGap: 23,
-      textInset: 17,
       titleTextHeight: 64,
       dayHeaderHeight: 62,
       primaryHeight: 31,
@@ -277,7 +274,6 @@ function metricsFor(
       columnGap: 34,
       rowGap: 48,
       classGap: 25,
-      textInset: 19,
       titleTextHeight: 65,
       dayHeaderHeight: 62,
       primaryHeight: 29,
@@ -352,7 +348,7 @@ function makeClassPlan(
   typography: MinimalTypography,
   metrics: MinimalMetrics,
 ): MinimalClassPlan {
-  const textWidth = Math.max(1, width - metrics.textInset);
+  const textWidth = Math.max(1, width);
   const code = subject.code.trim();
   const primary = fitText({
     text: code,
@@ -414,8 +410,8 @@ function drawClass(
   theme: CleanSlateRenderTheme,
 ) {
   const id = `${day}-${plan.occurrence.id}`;
-  const textX = x + metrics.textInset;
-  const textWidth = width - metrics.textInset;
+  const textX = x;
+  const textWidth = width;
   let cursor = y;
   nodes.push(
     textNode(
@@ -538,7 +534,10 @@ export function buildMinimalRenderModel(
           ? 420
           : 520;
   const fullColumnWidth =
-    (availableWidth - metrics.columnGap * Math.max(0, columns - 1)) /
+    ((family === "desktopLandscape" && visibleDays.length === 5
+      ? Math.min(availableWidth, MINIMAL_DESKTOP_FIVE_DAY_WIDTH)
+      : availableWidth) -
+      metrics.columnGap * Math.max(0, columns - 1)) /
     Math.max(1, columns);
   const dayWidth = Math.min(maxDayWidth, fullColumnWidth);
   const regularRowWidth =
@@ -562,13 +561,18 @@ export function buildMinimalRenderModel(
     const rowStart = row * columns;
     const rowCount = Math.min(columns, visibleDays.length - rowStart);
     const sectionWidth = visibleDays.length === 1 ? groupWidth : dayWidth;
+    const contentInset =
+      family === "phonePortrait"
+        ? Math.max(0, (sectionWidth - MINIMAL_PHONE_OPTICAL_CONTENT_WIDTH) / 2)
+        : 0;
+    const contentWidth = sectionWidth - contentInset;
     const classes = (byDay.get(day) ?? []).map((occurrence) =>
       makeClassPlan(
         project,
         occurrence,
         subjects.get(occurrence.subjectId)!,
         fields,
-        sectionWidth,
+        contentWidth,
         typography,
         metrics,
       ),
@@ -583,6 +587,8 @@ export function buildMinimalRenderModel(
       column: index % columns,
       rowCount,
       width: sectionWidth,
+      contentInset,
+      contentWidth,
       height,
       classes,
     };
@@ -614,9 +620,13 @@ export function buildMinimalRenderModel(
   const originY = metrics.margin + movableY * variant.schedulePosition.y;
   const nodes: RenderNode[] = [];
   if (titleVisible) {
+    const titleInset =
+      family === "phonePortrait"
+        ? Math.max(0, (dayWidth - MINIMAL_PHONE_OPTICAL_CONTENT_WIDTH) / 2)
+        : 0;
     const fit = fitText({
       text: project.design.wallpaperTitle.text,
-      width: groupWidth,
+      width: groupWidth - titleInset,
       preferredFontSize: typography.title,
       minimumFontSize: Math.max(28, typography.title - 10),
       maximumLines: 1,
@@ -626,9 +636,9 @@ export function buildMinimalRenderModel(
       textNode(
         "wallpaper-title",
         fit.text,
+        titleInset,
         0,
-        0,
-        groupWidth,
+        groupWidth - titleInset,
         fit.fontSize,
         theme.foreground,
         {
@@ -649,6 +659,7 @@ export function buildMinimalRenderModel(
     const x =
       (groupWidth - rowWidth) / 2 +
       plan.column * (plan.width + metrics.columnGap);
+    const contentX = x + plan.contentInset;
     const y = rowTops[plan.row]!;
     dayLayout.push({
       day: plan.day,
@@ -667,16 +678,22 @@ export function buildMinimalRenderModel(
     const estimatedDayLabelWidth =
       DAY_NAMES[plan.day].length * typography.day * 0.58 + 10;
     const labelWidth = Math.min(
-      plan.width * 0.62,
+      plan.contentWidth * 0.62,
       Math.max(typography.day * 4.4, estimatedDayLabelWidth),
+    );
+    const inlineRuleStart = contentX + labelWidth + 10;
+    const inlineRuleLength = Math.max(
+      0,
+      (plan.contentWidth - labelWidth - 10) *
+        (family === "desktopLandscape" ? 0.6 : 1),
     );
     nodes.push(
       textNode(
         `day-${plan.day}`,
         DAY_NAMES[plan.day],
-        x,
+        contentX,
         y,
-        inlineHeading ? labelWidth : plan.width,
+        inlineHeading ? labelWidth : plan.contentWidth,
         typography.day,
         theme.foreground,
         {
@@ -693,12 +710,18 @@ export function buildMinimalRenderModel(
         kind: "line",
         points: inlineHeading
           ? [
-              { x: x + labelWidth + 10, y: y + typography.day * 0.65 },
-              { x: x + plan.width, y: y + typography.day * 0.65 },
+              { x: inlineRuleStart, y: y + typography.day * 0.65 },
+              {
+                x: inlineRuleStart + inlineRuleLength,
+                y: y + typography.day * 0.65,
+              },
             ]
           : [
-              { x, y: y + typography.day * 1.5 },
-              { x: x + plan.width * 0.3, y: y + typography.day * 1.5 },
+              { x: contentX, y: y + typography.day * 1.5 },
+              {
+                x: contentX + plan.width * 0.3,
+                y: y + typography.day * 1.5,
+              },
             ],
         stroke: theme.minimalRule,
         strokeWidth: Math.max(2, Math.round(typography.day / 18)),
@@ -711,9 +734,9 @@ export function buildMinimalRenderModel(
         nodes,
         item,
         plan.day,
-        x,
+        contentX,
         classY,
-        plan.width,
+        plan.contentWidth,
         typography,
         metrics,
         theme,
@@ -722,9 +745,9 @@ export function buildMinimalRenderModel(
         occurrenceId: item.occurrence.id,
         day: plan.day,
         bounds: {
-          x: originX + x,
+          x: originX + contentX,
           y: originY + classY,
-          width: plan.width,
+          width: plan.contentWidth,
           height: item.height,
         },
       });

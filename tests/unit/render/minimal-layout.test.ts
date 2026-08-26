@@ -8,7 +8,9 @@ import {
 } from "@/domain/device/safe-areas";
 import type { DeviceVariant } from "@/domain/device/types";
 import {
+  MINIMAL_DESKTOP_FIVE_DAY_WIDTH,
   MINIMAL_DESKTOP_MAX_DAY_WIDTH,
+  MINIMAL_PHONE_OPTICAL_CONTENT_WIDTH,
   MINIMAL_TABLET_LANDSCAPE_MAX_DAY_WIDTH,
   CLEAN_SLATE_RENDER_THEME,
   buildMinimalRenderModel,
@@ -132,7 +134,79 @@ describe("Clean Slate Minimal RenderModel", () => {
     const tuesday = result.dayLayout.find((day) => day.day === "Tue")!;
     const wednesday = result.dayLayout.find((day) => day.day === "Wed")!;
     expect(monday.height).toBeGreaterThan(tuesday.height);
-    expect(wednesday.y).toBeGreaterThan(monday.y + monday.height);
+    expect(wednesday.y - (monday.y + monday.height)).toBe(57);
+  });
+
+  it("keeps a centered Phone bound while optically centering column content", () => {
+    const result = phoneProject(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+    const monday = result.dayLayout.find((day) => day.day === "Mon")!;
+    const heading = result.model.layers[3].nodes.find(
+      (node) => node.kind === "text" && node.id === "day-Mon",
+    );
+    expect(
+      result.scheduleBounds.x + result.scheduleBounds.width / 2,
+    ).toBeCloseTo(540);
+    expect(heading?.kind === "text" ? heading.position.x - monday.x : 0).toBe(
+      (monday.width - MINIMAL_PHONE_OPTICAL_CONTENT_WIDTH) / 2,
+    );
+    const rule = result.model.layers[3].nodes.find(
+      (node) => node.kind === "line" && node.id === "day-line-Mon",
+    );
+    expect(
+      rule?.kind === "line" ? rule.points[1]!.x - rule.points[0]!.x : 0,
+    ).toBeCloseTo(monday.width * 0.3);
+  });
+
+  it.each([
+    {
+      category: "phone" as const,
+      dimensions: { width: 1080, height: 2400 },
+      orientation: "portrait" as const,
+    },
+    {
+      category: "tablet" as const,
+      dimensions: { width: 1600, height: 2560 },
+      orientation: "portrait" as const,
+    },
+    {
+      category: "tablet" as const,
+      dimensions: { width: 2560, height: 1600 },
+      orientation: "landscape" as const,
+    },
+    {
+      category: "desktop" as const,
+      dimensions: { width: 1920, height: 1080 },
+      orientation: "landscape" as const,
+    },
+    {
+      category: "square" as const,
+      dimensions: { width: 1080, height: 1080 },
+      orientation: "square" as const,
+    },
+  ])("aligns $category Minimal class text with its weekday axis", (target) => {
+    const project = projectWithDays(["Mon"]);
+    const result = buildMinimalRenderModel(project, variant(project, target));
+    const nodes = result.model.layers.flatMap((layer) => layer.nodes);
+    const heading = nodes.find(
+      (node) => node.kind === "text" && node.id === "day-Mon",
+    );
+    const code = nodes.find(
+      (node) => node.kind === "text" && node.id.startsWith("code-Mon-"),
+    );
+    const time = nodes.find(
+      (node) => node.kind === "text" && node.id.startsWith("time-Mon-"),
+    );
+    expect(heading?.kind).toBe("text");
+    expect(code?.kind).toBe("text");
+    expect(time?.kind).toBe("text");
+    if (
+      heading?.kind !== "text" ||
+      code?.kind !== "text" ||
+      time?.kind !== "text"
+    )
+      return;
+    expect(code.position.x).toBe(heading.position.x);
+    expect(time.position.x).toBe(heading.position.x);
   });
 
   it("caps and centers sparse Desktop columns", () => {
@@ -149,6 +223,24 @@ describe("Clean Slate Minimal RenderModel", () => {
     expect(
       result.scheduleBounds.x + result.scheduleBounds.width / 2,
     ).toBeCloseTo(960);
+  });
+
+  it("centers a tighter five-day Desktop composition with shorter rules", () => {
+    const project = projectWithDays(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+    const result = buildMinimalRenderModel(project, project.deviceVariants[1]!);
+    expect(result.scheduleBounds.width).toBe(MINIMAL_DESKTOP_FIVE_DAY_WIDTH);
+    expect(
+      result.scheduleBounds.x + result.scheduleBounds.width / 2,
+    ).toBeCloseTo(960);
+    const monday = result.dayLayout.find((day) => day.day === "Mon")!;
+    const rule = result.model.layers[3].nodes.find(
+      (node) => node.kind === "line" && node.id === "day-line-Mon",
+    );
+    expect(rule?.kind).toBe("line");
+    if (rule?.kind !== "line") return;
+    const visibleLength = rule.points[1]!.x - rule.points[0]!.x;
+    const availableLength = monday.x + monday.width - rule.points[0]!.x;
+    expect(visibleLength / availableLength).toBeCloseTo(0.6);
   });
 
   it("reserves enough inline heading width for Wednesday in a six-day Desktop row", () => {
