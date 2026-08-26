@@ -61,6 +61,10 @@ export function resolvePhotoCoverCrop(
   input: PhotoTransform,
 ): Rect {
   if (
+    !Number.isFinite(source.width) ||
+    !Number.isFinite(source.height) ||
+    !Number.isFinite(frame.width) ||
+    !Number.isFinite(frame.height) ||
     source.width <= 0 ||
     source.height <= 0 ||
     frame.width <= 0 ||
@@ -70,15 +74,39 @@ export function resolvePhotoCoverCrop(
   const transform = clampPhotoTransform(input);
   const sourceAspect = source.width / source.height;
   const frameAspect = frame.width / frame.height;
-  const baseWidth =
-    sourceAspect > frameAspect ? source.height * frameAspect : source.width;
-  const baseHeight =
-    sourceAspect > frameAspect ? source.height : source.width / frameAspect;
-  const width = Math.min(source.width, baseWidth / transform.scale);
-  const height = Math.min(source.height, baseHeight / transform.scale);
+  let width: number;
+  let height: number;
+  if (sourceAspect >= frameAspect) {
+    height = source.height / transform.scale;
+    width = height * frameAspect;
+  } else {
+    width = source.width / transform.scale;
+    height = width / frameAspect;
+  }
+  width = Math.min(source.width, Math.max(Number.EPSILON, width));
+  height = Math.min(source.height, Math.max(Number.EPSILON, height));
+  const overflowX = Math.max(0, source.width - width);
+  const overflowY = Math.max(0, source.height - height);
+  const rawX = Math.min(
+    overflowX,
+    Math.max(0, overflowX * transform.position.x),
+  );
+  const rawY = Math.min(
+    overflowY,
+    Math.max(0, overflowY * transform.position.y),
+  );
+  const boundScale = Math.min(
+    1,
+    (source.width - rawX) / width,
+    (source.height - rawY) / height,
+  );
+  width *= boundScale;
+  height *= boundScale;
+  const x = Math.min(source.width - width, Math.max(0, rawX));
+  const y = Math.min(source.height - height, Math.max(0, rawY));
   return {
-    x: (source.width - width) * transform.position.x,
-    y: (source.height - height) * transform.position.y,
+    x,
+    y,
     width,
     height,
   };

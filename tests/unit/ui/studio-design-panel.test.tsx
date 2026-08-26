@@ -223,4 +223,38 @@ describe("layout design inspector", () => {
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "+ Add photo" })).toBeEnabled();
   });
+
+  it("reuses ordered photo management for Split without caption fields", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onMove = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photos={[
+          { id: "one", filename: "one.jpg", caption: "keep me" },
+          { id: "two", filename: "two.jpg", caption: "" },
+        ]}
+        activePhotoId="two"
+        photoComposition="split"
+        onPhotoMove={onMove}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("2 of 4 photos")).toBeVisible();
+    expect(screen.getByText("1. one.jpg")).toBeVisible();
+    expect(screen.getByText("2. two.jpg")).toBeVisible();
+    expect(screen.getAllByRole("button", { name: "Adjust" })).toHaveLength(2);
+    expect(screen.queryByLabelText("Caption (optional)")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Move photo 2 up" }));
+    expect(onMove).toHaveBeenCalledWith("two", "up");
+  });
 });

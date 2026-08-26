@@ -128,7 +128,13 @@ function SceneNode({
             : {})}
           {...(node.cornerRadius === undefined
             ? {}
-            : { cornerRadius: node.cornerRadius })}
+            : {
+                cornerRadius: Array.isArray(node.cornerRadius)
+                  ? [...node.cornerRadius]
+                  : typeof node.cornerRadius === "number"
+                    ? node.cornerRadius
+                    : [...node.cornerRadius],
+              })}
         />
       );
     }

@@ -179,7 +179,9 @@ function PhotoInspectorSection({
               <p className="mb-3 text-xs leading-5 text-text-muted">
                 {composition === "polaroid"
                   ? "Previewing 4 empty frames · Add 1–4 photos"
-                  : "Previewing an empty photo frame"}
+                  : composition === "split"
+                    ? "Add 1–4 photos to build the Split mosaic"
+                    : "Previewing an empty photo frame"}
               </p>
               <Button
                 type="button"
@@ -243,11 +245,12 @@ function PhotoInspectorSection({
             </div>
           ) : (
             <div className="space-y-3">
-              {composition === "polaroid" ? (
+              {composition === "polaroid" || composition === "split" ? (
                 <div className="space-y-3">
                   <p className="sb-inspector-field-label">Photos</p>
                   <p className="text-xs text-text-muted">
-                    {photos.length} of 4 photos · Looks best with 3–4
+                    {photos.length} of 4 photos
+                    {composition === "polaroid" ? " · Looks best with 3–4" : ""}
                   </p>
                   <ol className="space-y-3">
                     {photos.map((photo, index) => (
@@ -261,20 +264,22 @@ function PhotoInspectorSection({
                         >
                           {index + 1}. {photo.filename}
                         </p>
-                        <label className="mt-2 block">
-                          <span className="text-xs font-medium text-text-secondary">
-                            Caption (optional)
-                          </span>
-                          <input
-                            key={`${photo.id}-${photo.caption}`}
-                            className="sb-control mt-1"
-                            defaultValue={photo.caption}
-                            maxLength={40}
-                            onBlur={(event) =>
-                              onCaption(photo.id, event.target.value)
-                            }
-                          />
-                        </label>
+                        {composition === "polaroid" ? (
+                          <label className="mt-2 block">
+                            <span className="text-xs font-medium text-text-secondary">
+                              Caption (optional)
+                            </span>
+                            <input
+                              key={`${photo.id}-${photo.caption}`}
+                              className="sb-control mt-1"
+                              defaultValue={photo.caption}
+                              maxLength={40}
+                              onBlur={(event) =>
+                                onCaption(photo.id, event.target.value)
+                              }
+                            />
+                          </label>
+                        ) : null}
                         <div className="mt-2 flex flex-wrap gap-1">
                           <Button
                             type="button"

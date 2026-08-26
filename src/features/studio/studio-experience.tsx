@@ -354,13 +354,14 @@ export function StudioExperience() {
     project.design.photoComposition,
   );
   const activePhotoId =
-    activePhotoComposition === "polaroid" &&
+    (activePhotoComposition === "polaroid" ||
+      activePhotoComposition === "split") &&
     selectedPhotoId &&
     photoAssetIds.includes(selectedPhotoId)
       ? selectedPhotoId
       : photoAssetId;
   const activePhotoFrame =
-    activePhotoComposition === "polaroid"
+    activePhotoComposition === "polaroid" || activePhotoComposition === "split"
       ? renderResult.photoFrames?.find(
           (frame) => frame.assetId === activePhotoId,
         )

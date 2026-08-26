@@ -213,4 +213,36 @@ describe("Photo composition project state", () => {
         .polaroid.one,
     ).toMatchObject({ position: { x: 0.5, y: 0.9 }, scale: 1.6 });
   });
+
+  it("keeps Split crops per photo while preserving captions across composition switches", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    const phone = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    store.getState().setPrimaryPhoto("one");
+    store.getState().addPhoto("two");
+    store.getState().setPhotoCaption("one", "Polaroid caption");
+    store.getState().setPhotoTransform(phone, "split", "one", {
+      position: { x: 0.1, y: 0.2 },
+      scale: 1.4,
+      rotation: 0,
+    });
+    store.getState().setPhotoTransform(phone, "split", "two", {
+      position: { x: 0.8, y: 0.7 },
+      scale: 2,
+      rotation: 0,
+    });
+    store.getState().setPhotoComposition("split");
+    store.getState().setPhotoComposition("polaroid");
+    const project = selectActiveProject(store.getState())!;
+    expect(project.design.photoCaptions).toEqual({
+      one: "Polaroid caption",
+    });
+    expect(project.deviceVariants[0]!.photoTransforms.split).toMatchObject({
+      one: { position: { x: 0.1, y: 0.2 }, scale: 1.4 },
+      two: { position: { x: 0.8, y: 0.7 }, scale: 2 },
+    });
+  });
 });

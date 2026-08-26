@@ -57,7 +57,7 @@ export type ImageRenderNode = BaseRenderNode & {
   crop?: Rect;
   focalPoint?: Point;
   zoom?: number;
-  cornerRadius?: number;
+  cornerRadius?: number | readonly [number, number, number, number];
 };
 
 export type LineRenderNode = BaseRenderNode & {

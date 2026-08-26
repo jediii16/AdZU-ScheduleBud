@@ -43,6 +43,12 @@ export type PhotoSplitDayLayout = {
   occurrenceCount: number;
 };
 
+export type PhotoSplitCellLayout = {
+  assetId: string;
+  index: number;
+  bounds: Rect;
+};
+
 export type PhotoSplitRenderResult = ScheduleRenderResult & {
   composition: "split";
   compositionFamily: TargetCompositionFamily;
@@ -50,6 +56,8 @@ export type PhotoSplitRenderResult = ScheduleRenderResult & {
   dayLayout: readonly PhotoSplitDayLayout[];
   photoFrame: Rect;
   photoAssetId: string | null;
+  photoCells: readonly PhotoSplitCellLayout[];
+  photoMosaicGap: number;
   scheduleRegion: Rect;
 };
 
@@ -69,6 +77,104 @@ type ScheduleFit = {
   rowHeights: number[];
   scheduleHeight: number;
 };
+
+type SplitPhotoCount = 1 | 2 | 3 | 4;
+
+function splitMosaicGap(family: TargetCompositionFamily): number {
+  if (family === "phonePortrait") return 7;
+  if (family === "desktopLandscape" || family === "square") return 10;
+  return 8;
+}
+
+export function resolvePhotoSplitMosaicFrames(
+  region: Rect,
+  count: SplitPhotoCount,
+  portrait: boolean,
+  requestedGap: number,
+): readonly Rect[] {
+  const gap = Math.max(
+    0,
+    Math.min(requestedGap, region.width / 4, region.height / 4),
+  );
+  if (count === 1) return [region];
+  if (count === 2) {
+    if (portrait) {
+      const cellWidth = (region.width - gap) / 2;
+      return [
+        { ...region, width: cellWidth },
+        { ...region, x: region.x + cellWidth + gap, width: cellWidth },
+      ];
+    }
+    const cellHeight = (region.height - gap) / 2;
+    return [
+      { ...region, height: cellHeight },
+      { ...region, y: region.y + cellHeight + gap, height: cellHeight },
+    ];
+  }
+  if (count === 3) {
+    const contentHeight = region.height - gap;
+    const featuredHeight = contentHeight * (portrait ? 0.55 : 0.6);
+    const lowerHeight = contentHeight - featuredHeight;
+    const lowerWidth = (region.width - gap) / 2;
+    return [
+      { ...region, height: featuredHeight },
+      {
+        x: region.x,
+        y: region.y + featuredHeight + gap,
+        width: lowerWidth,
+        height: lowerHeight,
+      },
+      {
+        x: region.x + lowerWidth + gap,
+        y: region.y + featuredHeight + gap,
+        width: lowerWidth,
+        height: lowerHeight,
+      },
+    ];
+  }
+  const cellWidth = (region.width - gap) / 2;
+  const cellHeight = (region.height - gap) / 2;
+  return [
+    { x: region.x, y: region.y, width: cellWidth, height: cellHeight },
+    {
+      x: region.x + cellWidth + gap,
+      y: region.y,
+      width: cellWidth,
+      height: cellHeight,
+    },
+    {
+      x: region.x,
+      y: region.y + cellHeight + gap,
+      width: cellWidth,
+      height: cellHeight,
+    },
+    {
+      x: region.x + cellWidth + gap,
+      y: region.y + cellHeight + gap,
+      width: cellWidth,
+      height: cellHeight,
+    },
+  ];
+}
+
+function splitCellCornerRadius(
+  cell: Rect,
+  region: Rect,
+  radius: number,
+): readonly [number, number, number, number] {
+  const touches = (left: number, right: number) =>
+    Math.abs(left - right) < 0.001;
+  const atLeft = touches(cell.x, region.x);
+  const atTop = touches(cell.y, region.y);
+  const atRight = touches(cell.x + cell.width, region.x + region.width);
+  const atBottom = touches(cell.y + cell.height, region.y + region.height);
+  return [
+    atLeft && atTop ? radius : 0,
+    atRight && atTop ? radius : 0,
+    atRight && atBottom ? radius : 0,
+    atLeft && atBottom ? radius : 0,
+  ];
+}
 
 export function resolvePhotoSplitColumnCount(
   family: TargetCompositionFamily,
@@ -166,7 +272,8 @@ export function buildPhotoSplitRenderModel(
     family,
     project.design.typography.scale,
   );
-  const photoAssetId = project.assetReferences.photoAssetIds[0] ?? null;
+  const photoAssetIds = project.assetReferences.photoAssetIds.slice(0, 4);
+  const photoAssetId = photoAssetIds[0] ?? null;
   const titleVisible =
     project.design.wallpaperTitle.visible &&
     project.design.wallpaperTitle.text.trim().length > 0;
@@ -195,9 +302,17 @@ export function buildPhotoSplitRenderModel(
       : family === "tabletLandscape"
         ? 60
         : 48;
+  const preferredPhotoFraction =
+    family === "desktopLandscape"
+      ? 0.48
+      : family === "tabletLandscape"
+        ? 0.47
+        : family === "square"
+          ? 0.46
+          : 1;
   let photoWidth = portrait
     ? availableWidth
-    : Math.round(availableWidth * 0.42);
+    : Math.round(availableWidth * preferredPhotoFraction);
   let scheduleWidth = portrait
     ? availableWidth
     : availableWidth - photoWidth - gutter;
@@ -298,22 +413,37 @@ export function buildPhotoSplitRenderModel(
     width: photoWidth,
     height: photoHeight,
   };
+  const photoMosaicGap = splitMosaicGap(family);
+  const localPhotoCells =
+    photoAssetIds.length > 0
+      ? resolvePhotoSplitMosaicFrames(
+          localPhotoFrame,
+          photoAssetIds.length as SplitPhotoCount,
+          portrait,
+          photoMosaicGap,
+        )
+      : [];
   const photoNodes: RenderNode[] = [];
-  if (photoAssetId) {
+  photoAssetIds.forEach((assetId, index) => {
+    const frame = localPhotoCells[index]!;
     const transform = clampPhotoTransform(
-      photoTransformFor(variant, "split", photoAssetId),
+      photoTransformFor(variant, "split", assetId),
     );
     photoNodes.push({
-      id: "photo-split-image",
+      id: `photo-split-image-${assetId}`,
       kind: "image",
-      geometry: localPhotoFrame,
-      assetId: photoAssetId,
+      geometry: frame,
+      assetId,
       fit: "cover",
       focalPoint: transform.position,
       zoom: transform.scale,
-      cornerRadius: fit.metrics.radius,
+      cornerRadius: splitCellCornerRadius(
+        frame,
+        localPhotoFrame,
+        fit.metrics.radius,
+      ),
     });
-  }
+  });
   const nodes: RenderNode[] = [];
   if (titleVisible) {
     const titleX = portrait ? 0 : scheduleX;
@@ -437,10 +567,19 @@ export function buildPhotoSplitRenderModel(
   };
   const scheduleRegion: Rect = {
     x: originX + scheduleX,
-    y: originY,
+    y: originY + (portrait ? photoHeight + fit.metrics.photoGap : 0),
     width: scheduleWidth,
-    height: groupHeight,
+    height: groupHeight - (portrait ? photoHeight + fit.metrics.photoGap : 0),
   };
+  const photoCells = photoAssetIds.map((assetId, index) => ({
+    assetId,
+    index,
+    bounds: {
+      ...localPhotoCells[index]!,
+      x: localPhotoCells[index]!.x + originX,
+      y: localPhotoCells[index]!.y + originY,
+    },
+  }));
   const layers: RenderModel["layers"] = [
     {
       id: "background",
@@ -478,6 +617,13 @@ export function buildPhotoSplitRenderModel(
     },
     photoFrame,
     photoAssetId,
+    photoFrames: photoCells.map((cell) => ({
+      assetId: cell.assetId,
+      frame: cell.bounds,
+      rotation: 0,
+    })),
+    photoCells,
+    photoMosaicGap,
     scheduleRegion,
     composition: "split",
     compositionFamily: family,
