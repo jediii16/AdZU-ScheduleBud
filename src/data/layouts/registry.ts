@@ -10,7 +10,7 @@ export const layoutRegistry: readonly LayoutDefinition[] = [
   { id: "cards", name: "Cards", status: "available" },
   { id: "minimal", name: "Minimal", status: "available" },
   { id: "grid", name: "Grid", status: "available" },
-  { id: "planner", name: "Planner", status: "planned" },
+  { id: "planner", name: "Planner", status: "available" },
   { id: "photo", name: "Photo", status: "planned" },
 ];
 

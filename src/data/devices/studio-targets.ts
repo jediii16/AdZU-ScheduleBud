@@ -12,6 +12,14 @@ export function balancedPositionFor(
   layoutId: LayoutId = "cards",
   orientation?: Orientation,
 ) {
+  if (layoutId === "planner") {
+    if (category === "phone") return { x: 0.5, y: 0.44 };
+    if (category === "tablet")
+      return { x: 0.5, y: orientation === "landscape" ? 0.47 : 0.45 };
+    if (category === "desktop" || category === "laptop")
+      return { x: 0.5, y: 0.47 };
+    return { x: 0.5, y: 0.5 };
+  }
   if (layoutId === "grid") {
     if (category === "phone") return { x: 0.5, y: 0.4 };
     if (category === "tablet")

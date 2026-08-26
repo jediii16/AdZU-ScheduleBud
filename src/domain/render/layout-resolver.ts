@@ -5,6 +5,7 @@ import type { ScheduleProject } from "@/domain/project";
 import { buildCardsRenderModel } from "./cards-layout";
 import { buildMinimalRenderModel } from "./minimal-layout";
 import { buildGridRenderModel } from "./grid-layout";
+import { buildPlannerRenderModel } from "./planner-layout";
 
 export function resolveProjectLayout(
   project: ScheduleProject,
@@ -23,5 +24,6 @@ export function buildScheduleRenderModel(
   const layout = resolveProjectLayout(project, variant);
   if (layout === "minimal") return buildMinimalRenderModel(project, variant);
   if (layout === "grid") return buildGridRenderModel(project, variant);
+  if (layout === "planner") return buildPlannerRenderModel(project, variant);
   return buildCardsRenderModel(project, variant);
 }

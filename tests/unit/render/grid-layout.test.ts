@@ -92,6 +92,7 @@ describe("Clean Slate Grid RenderModel", () => {
       "cards",
       "minimal",
       "grid",
+      "planner",
     ]);
   });
 

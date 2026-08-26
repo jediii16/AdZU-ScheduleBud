@@ -84,7 +84,7 @@ export function DesignStudioPanel({
         <div
           role="radiogroup"
           aria-label="Schedule layout"
-          className="sb-inspector-children grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
+          className="sb-inspector-children grid grid-cols-4 rounded-sm border border-border bg-muted/40 p-1"
         >
           {availableLayouts.map((layout) => (
             <button
@@ -92,7 +92,7 @@ export function DesignStudioPanel({
               type="button"
               role="radio"
               aria-checked={activeLayout === layout.id}
-              className={`min-h-10 cursor-pointer rounded-sm px-3 text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${activeLayout === layout.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
+              className={`min-h-10 min-w-0 cursor-pointer rounded-sm px-1.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${activeLayout === layout.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
               onClick={() => onLayout(layout.id)}
             >
               {layout.name}
@@ -183,7 +183,7 @@ export function DesignStudioPanel({
           })}
         </div>
       </section>
-      {activeLayout !== "minimal" ? (
+      {activeLayout === "cards" || activeLayout === "grid" ? (
         <div className="sb-inspector-major-section">
           <p className="sb-inspector-heading">Subject palette</p>
           <div
