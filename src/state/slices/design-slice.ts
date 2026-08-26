@@ -32,7 +32,50 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
       edit("Change theme variant", "themeVariantId", value),
     setLayout(value) {
       if (layoutById.get(value)?.status !== "available") return;
-      edit("Change layout", "layoutId", value);
+      context.commit("Change layout", (project) => ({
+        ...project,
+        design: {
+          ...project.design,
+          layoutId: value,
+          photoComposition:
+            value === "photo" ? "hero" : project.design.photoComposition,
+          templateModified:
+            project.design.baseTemplateId !== null ||
+            project.design.templateModified,
+        },
+      }));
+    },
+    setHeroPhoto(assetId) {
+      context.commit(
+        assetId ? "Set Hero photo" : "Remove Hero photo",
+        (project) => {
+          const previousIds = new Set(project.assetReferences.photoAssetIds);
+          return {
+            ...project,
+            design: {
+              ...project.design,
+              photoComposition: assetId
+                ? "hero"
+                : project.design.photoComposition,
+              templateModified:
+                project.design.baseTemplateId !== null ||
+                project.design.templateModified,
+            },
+            assetReferences: {
+              ...project.assetReferences,
+              photoAssetIds: assetId ? [assetId] : [],
+            },
+            deviceVariants: project.deviceVariants.map((variant) => ({
+              ...variant,
+              photoTransforms: Object.fromEntries(
+                Object.entries(variant.photoTransforms).filter(
+                  ([storedAssetId]) => !previousIds.has(storedAssetId),
+                ),
+              ),
+            })),
+          };
+        },
+      );
     },
     applyTemplateMetadata(templateId, design) {
       if (themeById.get(design.themeId)?.status !== "available") return;

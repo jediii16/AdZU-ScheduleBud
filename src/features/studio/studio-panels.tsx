@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { availableLayouts } from "@/data/layouts/registry";
@@ -45,6 +45,171 @@ const INSPECTOR_FIELD_ORDER: readonly (keyof VisibleFields)[] = [
   "section",
 ];
 
+function PhotoInspectorSection({
+  photo,
+  adjusting,
+  zoom,
+  onFile,
+  onAdjust,
+  onRemove,
+  onZoomStart,
+  onZoom,
+  onZoomEnd,
+  onReset,
+  onDone,
+}: {
+  photo?: { id: string; filename: string } | undefined;
+  adjusting: boolean;
+  zoom: number;
+  onFile(file: File): Promise<void>;
+  onAdjust(): void;
+  onRemove(): void;
+  onZoomStart(): void;
+  onZoom(value: number): void;
+  onZoomEnd(): void;
+  onReset(): void;
+  onDone(): void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const receiveFile = async (file: File) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onFile(file);
+    } catch (reason) {
+      console.error("ScheduleBud photo selection failed", reason);
+      setError("We couldn't read this photo. Choose a PNG, JPG, or WebP file.");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+  return (
+    <section
+      className="sb-inspector-major-section"
+      aria-labelledby="photo-heading"
+    >
+      <h3 id="photo-heading" className="sb-inspector-heading">
+        Photo
+      </h3>
+      <div className="sb-inspector-children">
+        <input
+          ref={inputRef}
+          className="sr-only"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          aria-label="Choose Hero photo"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void receiveFile(file);
+          }}
+        />
+        {!photo ? (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+            >
+              {busy ? "Adding…" : "Add photo"}
+            </Button>
+            <p className="mt-2 text-xs leading-5 text-text-muted">
+              PNG, JPG or WebP
+              <br />
+              Stays on this device
+            </p>
+          </>
+        ) : adjusting ? (
+          <div className="space-y-3">
+            <p
+              className="truncate text-sm font-semibold"
+              title={photo.filename}
+            >
+              {photo.filename}
+            </p>
+            <p className="text-xs text-text-muted">
+              Drag the photo to reposition
+            </p>
+            <label className="block">
+              <span className="mb-1 flex justify-between text-xs font-semibold text-text-secondary">
+                <span>Zoom</span>
+                <span className="font-mono">{zoom.toFixed(1)}×</span>
+              </span>
+              <input
+                aria-label="Photo zoom"
+                className="w-full accent-[var(--brand)]"
+                type="range"
+                min="1"
+                max="3"
+                step="0.05"
+                value={zoom}
+                onPointerDown={onZoomStart}
+                onPointerUp={onZoomEnd}
+                onKeyDown={onZoomStart}
+                onKeyUp={onZoomEnd}
+                onChange={(event) => onZoom(Number(event.target.value))}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="ghost" onClick={onReset}>
+                Reset crop
+              </Button>
+              <Button type="button" size="sm" onClick={onDone}>
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p
+              className="truncate text-sm font-semibold"
+              title={photo.filename}
+            >
+              {photo.filename}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onAdjust}
+              >
+                Adjust
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => inputRef.current?.click()}
+              >
+                Replace
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={onRemove}
+              >
+                Remove
+              </Button>
+            </div>
+          </div>
+        )}
+        {error ? (
+          <p role="alert" className="mt-3 text-xs leading-5 text-warning">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 export function DesignStudioPanel({
   design,
   visibleFields,
@@ -55,6 +220,17 @@ export function DesignStudioPanel({
   onTitleText,
   onField,
   onDayVisibility,
+  photo,
+  photoAdjusting = false,
+  photoZoom = 1,
+  onPhotoFile = async () => {},
+  onPhotoAdjust = () => {},
+  onPhotoRemove = () => {},
+  onPhotoZoomStart = () => {},
+  onPhotoZoom = () => {},
+  onPhotoZoomEnd = () => {},
+  onPhotoReset = () => {},
+  onPhotoDone = () => {},
 }: {
   design: ProjectDesign;
   visibleFields: VisibleFields;
@@ -65,6 +241,17 @@ export function DesignStudioPanel({
   onTitleText(value: string): void;
   onField(field: keyof VisibleFields, value: boolean): void;
   onDayVisibility(value: ProjectDesign["dayVisibility"]): void;
+  photo?: { id: string; filename: string } | undefined;
+  photoAdjusting?: boolean;
+  photoZoom?: number;
+  onPhotoFile?(file: File): Promise<void>;
+  onPhotoAdjust?(): void;
+  onPhotoRemove?(): void;
+  onPhotoZoomStart?(): void;
+  onPhotoZoom?(value: number): void;
+  onPhotoZoomEnd?(): void;
+  onPhotoReset?(): void;
+  onPhotoDone?(): void;
 }) {
   return (
     <section aria-labelledby="studio-design-heading">
@@ -84,7 +271,7 @@ export function DesignStudioPanel({
         <div
           role="radiogroup"
           aria-label="Schedule layout"
-          className="sb-inspector-children grid grid-cols-4 rounded-sm border border-border bg-muted/40 p-1"
+          className="sb-inspector-children grid grid-cols-5 rounded-sm border border-border bg-muted/40 p-1"
         >
           {availableLayouts.map((layout) => (
             <button
@@ -92,7 +279,7 @@ export function DesignStudioPanel({
               type="button"
               role="radio"
               aria-checked={activeLayout === layout.id}
-              className={`min-h-10 min-w-0 cursor-pointer rounded-sm px-1.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${activeLayout === layout.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
+              className={`min-h-10 min-w-0 cursor-pointer rounded-sm px-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${activeLayout === layout.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
               onClick={() => onLayout(layout.id)}
             >
               {layout.name}
@@ -100,6 +287,21 @@ export function DesignStudioPanel({
           ))}
         </div>
       </section>
+      {activeLayout === "photo" ? (
+        <PhotoInspectorSection
+          photo={photo}
+          adjusting={photoAdjusting}
+          zoom={photoZoom}
+          onFile={onPhotoFile}
+          onAdjust={onPhotoAdjust}
+          onRemove={onPhotoRemove}
+          onZoomStart={onPhotoZoomStart}
+          onZoom={onPhotoZoom}
+          onZoomEnd={onPhotoZoomEnd}
+          onReset={onPhotoReset}
+          onDone={onPhotoDone}
+        />
+      ) : null}
       <section className="sb-inspector-major-section">
         <h3 className="sb-inspector-heading">Wallpaper title</h3>
         <div className="sb-inspector-children space-y-3">

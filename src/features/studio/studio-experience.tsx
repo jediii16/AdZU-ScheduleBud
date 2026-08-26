@@ -29,9 +29,15 @@ import {
   resolveSafeAreaModel,
   safeAreaSnapAnchors,
 } from "@/domain/device/safe-areas";
-import { inferOrientation, type DeviceCategory } from "@/domain/device/types";
 import {
+  inferOrientation,
+  type DeviceCategory,
+  type PhotoTransform,
+} from "@/domain/device/types";
+import {
+  DEFAULT_PHOTO_TRANSFORM,
   buildScheduleRenderModel,
+  panPhotoTransform,
   resolveLayoutDetailCapabilities,
   resolveLayoutVisibleFields,
   resolveAlignmentSnap,
@@ -46,15 +52,19 @@ import {
 import {
   PngExportCoordinator,
   exportStagePng,
+  photoExportBlockReason,
   type ExportStatus,
 } from "@/features/export/png-export";
 import { ScheduleArtboard } from "@/renderer/konva/artboard";
 import { createPersistence } from "@/storage/persistence";
 import {
+  inspectTemporaryImage,
   removeScreenGuide,
+  savePhoto,
   saveScreenGuide,
   type InspectedImage,
 } from "@/storage/assets";
+import type { StoredAsset } from "@/storage/types";
 import { useScheduleBudStore, useScheduleBudStoreApi } from "@/state/react";
 import type { EditorState } from "@/state/types";
 import {
@@ -106,10 +116,17 @@ export function StudioExperience() {
   const [exportGate, setExportGate] = useState<WarningGateState>("idle");
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [guideOpacity, setGuideOpacity] = useState(0.35);
+  const [photoAdjusting, setPhotoAdjusting] = useState(false);
   const [loadedGuide, setLoadedGuide] = useState<{
     id: string;
     image: HTMLImageElement;
   } | null>(null);
+  const [loadedPhoto, setLoadedPhoto] = useState<{
+    id: string;
+    image: HTMLImageElement;
+    asset: StoredAsset;
+  } | null>(null);
+  const photoPanStart = useRef<PhotoTransform | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -180,6 +197,7 @@ export function StudioExperience() {
   const target = activeVariant
     ? studioTargetForVariant(activeVariant)
     : undefined;
+  const photoAssetId = project?.assetReferences.photoAssetIds[0] ?? null;
   useEffect(() => {
     const guideId = activeVariant?.preview.guideAssetId;
     if (!guideId) return;
@@ -201,6 +219,31 @@ export function StudioExperience() {
     loadedGuide && loadedGuide.id === activeVariant?.preview.guideAssetId
       ? loadedGuide.image
       : null;
+  useEffect(() => {
+    if (!photoAssetId) return;
+    let active = true;
+    let url: string | null = null;
+    void studioPersistence.assets.read(photoAssetId).then((asset) => {
+      if (!active || !asset || asset.kind !== "photo") return;
+      url = URL.createObjectURL(asset.blob);
+      const image = new Image();
+      image.onload = () => {
+        if (active) setLoadedPhoto({ id: photoAssetId, image, asset });
+      };
+      image.src = url;
+    });
+    return () => {
+      active = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [photoAssetId]);
+  const photoImages = useMemo(
+    () =>
+      loadedPhoto
+        ? new Map([[loadedPhoto.id, loadedPhoto.image]])
+        : new Map<string, HTMLImageElement>(),
+    [loadedPhoto],
+  );
   const renderResult = useMemo(
     () =>
       project && activeVariant && target
@@ -285,6 +328,12 @@ export function StudioExperience() {
     activeVariant,
     detailCapabilities,
   );
+  const activePhotoTransform =
+    photoAssetId && activeVariant.photoTransforms[photoAssetId]
+      ? activeVariant.photoTransforms[photoAssetId]!
+      : DEFAULT_PHOTO_TRANSFORM;
+  const photoExportIssue = photoExportBlockReason(activeLayout, photoAssetId);
+  const missingHeroPhoto = photoExportIssue !== null;
 
   const setSection = (section: NonNullable<EditorState["activeSection"]>) => {
     store.getState().setActiveEditorSection(section);
@@ -406,7 +455,72 @@ export function StudioExperience() {
     await removeScreenGuide(studioPersistence.assets, id);
     setLoadedGuide(null);
   };
+  const chooseHeroPhoto = async (file: File) => {
+    const inspected = await inspectTemporaryImage(file, undefined, file.name);
+    const saved = await savePhoto(studioPersistence.assets, {
+      ...inspected,
+      id: crypto.randomUUID(),
+      projectId: project.id,
+      createdAt: new Date().toISOString(),
+    });
+    store.getState().setHeroPhoto(saved.id);
+    setPhotoAdjusting(false);
+    setExportError(null);
+  };
+  const removeHeroPhoto = () => {
+    store.getState().setHeroPhoto(null);
+    setPhotoAdjusting(false);
+  };
+  const beginPhotoCrop = () => {
+    if (!photoAssetId || !loadedPhoto) return;
+    photoPanStart.current = activePhotoTransform;
+    if (!store.getState().history.transaction)
+      store.getState().beginHistoryTransaction("Adjust photo crop");
+  };
+  const movePhotoCrop = (delta: { x: number; y: number }) => {
+    if (
+      !photoAssetId ||
+      !loadedPhoto ||
+      !renderResult.photoFrame ||
+      !photoPanStart.current
+    )
+      return;
+    store
+      .getState()
+      .setPhotoTransform(
+        activeVariant.id,
+        photoAssetId,
+        panPhotoTransform(
+          photoPanStart.current,
+          { width: loadedPhoto.asset.width, height: loadedPhoto.asset.height },
+          renderResult.photoFrame,
+          delta,
+        ),
+      );
+  };
+  const finishPhotoCrop = () => {
+    photoPanStart.current = null;
+    store.getState().commitHistoryTransaction();
+  };
+  const beginPhotoZoom = () => {
+    if (!store.getState().history.transaction)
+      store.getState().beginHistoryTransaction("Adjust photo zoom");
+  };
+  const finishPhotoZoom = () => store.getState().commitHistoryTransaction();
   const runExport = async () => {
+    if (missingHeroPhoto) {
+      setExportError(photoExportIssue);
+      return;
+    }
+    if (
+      activeLayout === "photo" &&
+      (!loadedPhoto || loadedPhoto.id !== photoAssetId)
+    ) {
+      setExportError(
+        "Your photo is still preparing. Try exporting again in a moment.",
+      );
+      return;
+    }
     const gate = attemptWarningGate(issueCount > 0, exportGate);
     setExportGate(gate.state);
     if (!gate.allowed) return;
@@ -489,7 +603,10 @@ export function StudioExperience() {
         visibleFields={visibleFields}
         activeLayout={activeLayout}
         detailCapabilities={detailCapabilities}
-        onLayout={(layoutId) => store.getState().setLayout(layoutId)}
+        onLayout={(layoutId) => {
+          if (layoutId !== "photo") setPhotoAdjusting(false);
+          store.getState().setLayout(layoutId);
+        }}
         onTitleVisible={(visible) =>
           store.getState().setWallpaperTitleVisible(visible)
         }
@@ -509,6 +626,38 @@ export function StudioExperience() {
           store.getState().setVisibleField(field, visible);
         }}
         onDayVisibility={(value) => store.getState().setDayVisibility(value)}
+        photo={
+          photoAssetId
+            ? {
+                id: photoAssetId,
+                filename:
+                  loadedPhoto?.id === photoAssetId
+                    ? (loadedPhoto.asset.filename ?? "Hero photo")
+                    : "Loading photo…",
+              }
+            : undefined
+        }
+        photoAdjusting={photoAdjusting}
+        photoZoom={activePhotoTransform.scale}
+        onPhotoFile={chooseHeroPhoto}
+        onPhotoAdjust={() => setPhotoAdjusting(true)}
+        onPhotoRemove={removeHeroPhoto}
+        onPhotoZoomStart={beginPhotoZoom}
+        onPhotoZoom={(scale) => {
+          if (!photoAssetId) return;
+          store.getState().setPhotoTransform(activeVariant.id, photoAssetId, {
+            ...activePhotoTransform,
+            scale,
+          });
+        }}
+        onPhotoZoomEnd={finishPhotoZoom}
+        onPhotoReset={() => {
+          if (photoAssetId)
+            store
+              .getState()
+              .clearPhotoTransform(activeVariant.id, photoAssetId);
+        }}
+        onPhotoDone={() => setPhotoAdjusting(false)}
       />
     );
 
@@ -558,7 +707,9 @@ export function StudioExperience() {
         <Button
           onClick={guardedExport}
           disabled={
-            exportStatus === "preparing" || exportStatus === "exporting"
+            missingHeroPhoto ||
+            exportStatus === "preparing" ||
+            exportStatus === "exporting"
           }
         >
           {exportStatus === "downloaded" ? (
@@ -570,6 +721,15 @@ export function StudioExperience() {
           <span className="sm:hidden">Export</span>
         </Button>
       </header>
+      {missingHeroPhoto ? (
+        <div
+          role="status"
+          className="z-20 shrink-0 border-b border-border bg-surface px-4 py-2 text-xs text-text-secondary"
+        >
+          Photo Hero needs a photo before export. Open Design and choose Add
+          photo.
+        </div>
+      ) : null}
       {exportGate === "revealed" ? (
         <div
           role="status"
@@ -625,6 +785,20 @@ export function StudioExperience() {
             safeAreas={safeAreas}
             guideImage={guideImage}
             guideOpacity={guideOpacity}
+            assetImages={photoImages}
+            photoEditor={
+              activeLayout === "photo" && renderResult.photoFrame
+                ? {
+                    frame: renderResult.photoFrame,
+                    hasPhoto:
+                      Boolean(photoAssetId) && loadedPhoto?.id === photoAssetId,
+                    adjusting: photoAdjusting,
+                    onPanStart: beginPhotoCrop,
+                    onPanMove: movePhotoCrop,
+                    onPanEnd: finishPhotoCrop,
+                  }
+                : undefined
+            }
             onDragStart={beginMove}
             onDragMove={setPositionFromOrigin}
             onDragEnd={(x, y, previewScale) => {

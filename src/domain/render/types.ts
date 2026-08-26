@@ -50,6 +50,8 @@ export type ImageRenderNode = BaseRenderNode & {
   assetId: string;
   fit: "cover" | "contain" | "stretch";
   crop?: Rect;
+  focalPoint?: Point;
+  zoom?: number;
   cornerRadius?: number;
 };
 
@@ -91,6 +93,8 @@ export type ScheduleRenderResult = {
   overlay: EditorOverlayModel;
   scheduleBounds: Rect;
   positionRange: { minX: number; maxX: number; minY: number; maxY: number };
+  photoFrame?: Rect;
+  photoAssetId?: string | null;
 };
 
 export type EditorOverlayModel = {

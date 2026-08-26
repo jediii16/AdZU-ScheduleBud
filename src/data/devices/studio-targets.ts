@@ -12,6 +12,7 @@ export function balancedPositionFor(
   layoutId: LayoutId = "cards",
   orientation?: Orientation,
 ) {
+  if (layoutId === "photo") return { x: 0.5, y: 0.5 };
   if (layoutId === "planner") {
     if (category === "phone") return { x: 0.5, y: 0.44 };
     if (category === "tablet")

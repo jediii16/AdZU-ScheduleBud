@@ -4,6 +4,7 @@ import {
   supportsOrientationSwitch,
   type DeviceVariant,
 } from "@/domain/device/types";
+import { clampPhotoTransform } from "@/domain/render/photo-crop";
 import type { DeviceSlice, StoreContext } from "../types";
 
 function updateVariant(
@@ -256,10 +257,13 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
     setPhotoTransform: (id, assetId, transform) =>
       edit("Change photo crop", id, (variant) => ({
         ...variant,
-        photoTransforms: { ...variant.photoTransforms, [assetId]: transform },
+        photoTransforms: {
+          ...variant.photoTransforms,
+          [assetId]: clampPhotoTransform(transform),
+        },
       })),
     clearPhotoTransform: (id, assetId) =>
-      edit("Remove photo crop", id, (variant) => {
+      edit("Reset photo crop", id, (variant) => {
         const photoTransforms = { ...variant.photoTransforms };
         delete photoTransforms[assetId];
         return { ...variant, photoTransforms };

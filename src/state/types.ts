@@ -125,6 +125,7 @@ export interface DesignSlice {
   setTheme(themeId: string): void;
   setThemeVariant(themeVariantId: string | null): void;
   setLayout(layoutId: LayoutId): void;
+  setHeroPhoto(assetId: string | null): void;
   applyTemplateMetadata(
     templateId: string,
     design: Omit<ProjectDesign, "baseTemplateId" | "templateModified">,

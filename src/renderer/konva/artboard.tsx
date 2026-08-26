@@ -9,8 +9,18 @@ import type { AlignmentGuides } from "@/domain/render";
 import type { DeviceVariant } from "@/domain/device/types";
 import type { SafeAreaModel } from "@/domain/device/safe-areas";
 import { PreviewEnvironmentOverlay } from "./editor-overlay/preview-environment";
+import { PhotoEditorOverlay } from "./editor-overlay/photo-overlay";
 import { ScheduleEditorOverlay } from "./editor-overlay/schedule-overlay";
-import { ScheduleScene } from "./schedule-scene";
+import { ScheduleScene, type RenderAssetImages } from "./schedule-scene";
+
+type PhotoEditorInteraction = {
+  frame: { x: number; y: number; width: number; height: number };
+  hasPhoto: boolean;
+  adjusting: boolean;
+  onPanStart(): void;
+  onPanMove(delta: { x: number; y: number }): void;
+  onPanEnd(): void;
+};
 
 export function ScheduleArtboard({
   result,
@@ -25,6 +35,8 @@ export function ScheduleArtboard({
   safeAreas,
   guideImage,
   guideOpacity,
+  assetImages,
+  photoEditor,
 }: {
   result: ScheduleRenderResult;
   zoom: number;
@@ -38,11 +50,15 @@ export function ScheduleArtboard({
   safeAreas: SafeAreaModel;
   guideImage: HTMLImageElement | null;
   guideOpacity: number;
+  assetImages?: RenderAssetImages | undefined;
+  photoEditor?: PhotoEditorInteraction | undefined;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [space, setSpace] = useState({ width: 720, height: 720 });
   const [scheduleSelected, setScheduleSelected] = useState(false);
   const [scheduleHovered, setScheduleHovered] = useState(false);
+  const [photoDragging, setPhotoDragging] = useState(false);
+  const photoDragStart = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
@@ -84,6 +100,12 @@ export function ScheduleArtboard({
         style={{
           width: result.model.width * scale,
           height: result.model.height * scale,
+          cursor:
+            photoEditor?.adjusting && photoEditor.hasPhoto
+              ? photoDragging
+                ? "grabbing"
+                : "grab"
+              : undefined,
         }}
         onPointerDown={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
@@ -91,6 +113,24 @@ export function ScheduleArtboard({
             x: (event.clientX - rect.left) / scale,
             y: (event.clientY - rect.top) / scale,
           };
+          if (photoEditor?.adjusting && photoEditor.hasPhoto) {
+            const frame = photoEditor.frame;
+            if (
+              point.x >= frame.x &&
+              point.x <= frame.x + frame.width &&
+              point.y >= frame.y &&
+              point.y <= frame.y + frame.height
+            ) {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              photoDragStart.current = {
+                x: event.clientX,
+                y: event.clientY,
+              };
+              setPhotoDragging(true);
+              photoEditor.onPanStart();
+              return;
+            }
+          }
           const bounds = result.scheduleBounds;
           setScheduleSelected(
             point.x >= bounds.x &&
@@ -99,6 +139,28 @@ export function ScheduleArtboard({
               point.y <= bounds.y + bounds.height,
           );
         }}
+        onPointerMove={(event) => {
+          const start = photoDragStart.current;
+          if (!start || !photoEditor?.adjusting) return;
+          photoEditor.onPanMove({
+            x: (event.clientX - start.x) / scale,
+            y: (event.clientY - start.y) / scale,
+          });
+        }}
+        onPointerUp={(event) => {
+          if (!photoDragStart.current) return;
+          photoDragStart.current = null;
+          setPhotoDragging(false);
+          if (event.currentTarget.hasPointerCapture(event.pointerId))
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          photoEditor?.onPanEnd();
+        }}
+        onPointerCancel={() => {
+          if (!photoDragStart.current) return;
+          photoDragStart.current = null;
+          setPhotoDragging(false);
+          photoEditor?.onPanEnd();
+        }}
       >
         <Stage
           width={result.model.width * scale}
@@ -106,7 +168,7 @@ export function ScheduleArtboard({
           scaleX={scale}
           scaleY={scale}
         >
-          <ScheduleScene model={result.model} />
+          <ScheduleScene model={result.model} assets={assetImages} />
           <PreviewEnvironmentOverlay
             variant={variant}
             safeAreas={safeAreas}
@@ -115,23 +177,33 @@ export function ScheduleArtboard({
             guideOpacity={guideOpacity}
             previewScale={scale}
           />
-          <ScheduleEditorOverlay
-            bounds={result.scheduleBounds}
-            canvasSize={{
-              width: result.model.width,
-              height: result.model.height,
-            }}
-            previewScale={scale}
-            dragging={dragging}
-            guides={guides}
-            selected={scheduleSelected}
-            hovered={scheduleHovered}
-            onHover={setScheduleHovered}
-            onSelect={() => setScheduleSelected(true)}
-            onDragStart={onDragStart}
-            onDragMove={(x, y) => onDragMove(x, y, scale)}
-            onDragEnd={(x, y) => onDragEnd(x, y, scale)}
-          />
+          {photoEditor ? (
+            <PhotoEditorOverlay
+              frame={photoEditor.frame}
+              hasPhoto={photoEditor.hasPhoto}
+              adjusting={photoEditor.adjusting}
+              previewScale={scale}
+            />
+          ) : null}
+          {!photoEditor?.adjusting ? (
+            <ScheduleEditorOverlay
+              bounds={result.scheduleBounds}
+              canvasSize={{
+                width: result.model.width,
+                height: result.model.height,
+              }}
+              previewScale={scale}
+              dragging={dragging}
+              guides={guides}
+              selected={scheduleSelected}
+              hovered={scheduleHovered}
+              onHover={setScheduleHovered}
+              onSelect={() => setScheduleSelected(true)}
+              onDragStart={onDragStart}
+              onDragMove={(x, y) => onDragMove(x, y, scale)}
+              onDragEnd={(x, y) => onDragEnd(x, y, scale)}
+            />
+          ) : null}
         </Stage>
       </div>
       <div
@@ -143,7 +215,7 @@ export function ScheduleArtboard({
           width={result.model.width}
           height={result.model.height}
         >
-          <ScheduleScene model={result.model} />
+          <ScheduleScene model={result.model} assets={assetImages} />
         </Stage>
       </div>
     </div>

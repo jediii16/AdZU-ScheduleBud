@@ -7,6 +7,7 @@ import {
   collectReferencedAssetIds,
   findUnreferencedAssets,
   inspectTemporaryImage,
+  savePhoto,
   saveScreenGuide,
   replaceScreenGuide,
   removeScreenGuide,
@@ -240,6 +241,28 @@ describe("asset lifecycle helpers", () => {
       kind: "screen-guide",
       projectId: "one",
     });
+  });
+
+  it("stores original Hero photo bytes as an exportable local photo asset", async () => {
+    const blob = new NodeBlob(["original-photo"], { type: "image/webp" });
+    await savePhoto(assets, {
+      blob,
+      mimeType: "image/webp",
+      width: 2400,
+      height: 1600,
+      filename: "campus.webp",
+      id: "hero-photo",
+      projectId: "one",
+      createdAt: NOW,
+    });
+    const stored = await assets.read("hero-photo");
+    expect(stored).toMatchObject({
+      kind: "photo",
+      filename: "campus.webp",
+      width: 2400,
+      height: 1600,
+    });
+    expect(await stored?.blob.text()).toBe("original-photo");
   });
 
   it("replaces and removes only screen-guide assets", async () => {

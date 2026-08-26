@@ -48,7 +48,7 @@ export type InspectedImage = {
   filename?: string;
 };
 export type ImageBitmapLike = { width: number; height: number; close(): void };
-export const SCREEN_GUIDE_MIME_TYPES = [
+export const LOCAL_IMAGE_MIME_TYPES = [
   "image/png",
   "image/jpeg",
   "image/webp",
@@ -60,7 +60,7 @@ export async function inspectTemporaryImage(
     createImageBitmap(source),
   filename?: string,
 ): Promise<InspectedImage> {
-  if (!(SCREEN_GUIDE_MIME_TYPES as readonly string[]).includes(blob.type))
+  if (!(LOCAL_IMAGE_MIME_TYPES as readonly string[]).includes(blob.type))
     throw new TypeError("Choose a PNG, JPEG, or WebP image.");
   const bitmap = await createBitmap(blob);
   try {
@@ -103,6 +103,25 @@ export async function saveScreenGuide(
     id: input.id,
     projectId: input.projectId,
     kind: "screen-guide",
+    blob: input.blob,
+    mimeType: input.mimeType,
+    width: input.width,
+    height: input.height,
+    createdAt: input.createdAt,
+    ...(input.filename ? { filename: input.filename } : {}),
+  };
+  await repository.write(asset);
+  return asset;
+}
+
+export async function savePhoto(
+  repository: AssetRepository,
+  input: InspectedImage & { id: string; projectId: string; createdAt: string },
+): Promise<StoredAsset> {
+  const asset: StoredAsset = {
+    id: input.id,
+    projectId: input.projectId,
+    kind: "photo",
     blob: input.blob,
     mimeType: input.mimeType,
     width: input.width,

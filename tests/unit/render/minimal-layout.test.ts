@@ -76,6 +76,7 @@ describe("Clean Slate Minimal RenderModel", () => {
       "minimal",
       "grid",
       "planner",
+      "photo",
     ]);
   });
 

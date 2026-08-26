@@ -1,9 +1,19 @@
 import type Konva from "konva";
+import type { LayoutId } from "@/domain/design/types";
 import type { RenderModel } from "@/domain/render";
 import { ensureRenderModelFonts } from "@/renderer/konva/font-loading";
 
 export type ExportStatus =
   "idle" | "preparing" | "exporting" | "downloaded" | "error";
+
+export function photoExportBlockReason(
+  layoutId: LayoutId,
+  photoAssetId: string | null,
+): string | null {
+  return layoutId === "photo" && !photoAssetId
+    ? "Add a photo in Design before exporting this Hero wallpaper."
+    : null;
+}
 
 export class PngExportCoordinator {
   private running = false;

@@ -70,6 +70,7 @@ describe("Clean Slate Planner RenderModel", () => {
       "minimal",
       "grid",
       "planner",
+      "photo",
     ]);
     const project = plannerProject(["Mon"]);
     const result = buildScheduleRenderModel(

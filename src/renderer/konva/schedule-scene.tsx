@@ -1,12 +1,24 @@
 "use client";
 
 import { Fragment } from "react";
-import { Layer, Line, Rect, Text } from "react-konva";
+import { Image as KonvaImage, Layer, Line, Rect, Text } from "react-konva";
 
 import type { RenderModel, RenderNode } from "@/domain/render";
+import {
+  DEFAULT_PHOTO_TRANSFORM,
+  resolvePhotoCoverCrop,
+} from "@/domain/render";
 import { fontFamilyForId } from "./font-loading";
 
-function SceneNode({ node }: { node: RenderNode }) {
+export type RenderAssetImages = ReadonlyMap<string, HTMLImageElement>;
+
+function SceneNode({
+  node,
+  assets,
+}: {
+  node: RenderNode;
+  assets?: RenderAssetImages | undefined;
+}) {
   if (node.visible === false) return null;
   const common = { opacity: node.opacity ?? 1, listening: false };
   switch (node.kind) {
@@ -65,19 +77,61 @@ function SceneNode({ node }: { node: RenderNode }) {
           {...(node.closed === undefined ? {} : { closed: node.closed })}
         />
       );
-    case "image":
-      return null;
+    case "image": {
+      const image = assets?.get(node.assetId);
+      if (!image) return null;
+      const crop =
+        node.crop ??
+        (node.fit === "cover"
+          ? resolvePhotoCoverCrop(
+              {
+                width: image.naturalWidth || image.width,
+                height: image.naturalHeight || image.height,
+              },
+              node.geometry,
+              {
+                ...DEFAULT_PHOTO_TRANSFORM,
+                position: node.focalPoint ?? DEFAULT_PHOTO_TRANSFORM.position,
+                scale: node.zoom ?? DEFAULT_PHOTO_TRANSFORM.scale,
+              },
+            )
+          : undefined);
+      return (
+        <KonvaImage
+          {...common}
+          {...node.geometry}
+          image={image}
+          {...(crop
+            ? {
+                cropX: crop.x,
+                cropY: crop.y,
+                cropWidth: crop.width,
+                cropHeight: crop.height,
+              }
+            : {})}
+          {...(node.cornerRadius === undefined
+            ? {}
+            : { cornerRadius: node.cornerRadius })}
+        />
+      );
+    }
   }
 }
 
-export function ScheduleScene({ model }: { model: RenderModel }) {
+export function ScheduleScene({
+  model,
+  assets,
+}: {
+  model: RenderModel;
+  assets?: RenderAssetImages | undefined;
+}) {
   return model.layers
     .filter((layer) => layer.nodes.length > 0)
     .map((layer) => (
       <Layer key={layer.id} name={`export-${layer.id}`} listening={false}>
         {layer.nodes.map((node) => (
           <Fragment key={node.id}>
-            <SceneNode node={node} />
+            <SceneNode node={node} assets={assets} />
           </Fragment>
         ))}
       </Layer>

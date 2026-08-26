@@ -93,6 +93,7 @@ describe("Clean Slate Grid RenderModel", () => {
       "minimal",
       "grid",
       "planner",
+      "photo",
     ]);
   });
 

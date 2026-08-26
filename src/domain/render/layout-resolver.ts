@@ -6,6 +6,7 @@ import { buildCardsRenderModel } from "./cards-layout";
 import { buildMinimalRenderModel } from "./minimal-layout";
 import { buildGridRenderModel } from "./grid-layout";
 import { buildPlannerRenderModel } from "./planner-layout";
+import { buildPhotoHeroRenderModel } from "./photo-layout";
 
 export function resolveProjectLayout(
   project: ScheduleProject,
@@ -25,5 +26,6 @@ export function buildScheduleRenderModel(
   if (layout === "minimal") return buildMinimalRenderModel(project, variant);
   if (layout === "grid") return buildGridRenderModel(project, variant);
   if (layout === "planner") return buildPlannerRenderModel(project, variant);
+  if (layout === "photo") return buildPhotoHeroRenderModel(project, variant);
   return buildCardsRenderModel(project, variant);
 }

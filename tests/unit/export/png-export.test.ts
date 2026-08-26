@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   PngExportCoordinator,
+  photoExportBlockReason,
   sanitizePngFilename,
 } from "@/features/export/png-export";
 
 describe("PNG export coordination", () => {
+  it("requires a referenced asset only for Photo Hero export", () => {
+    expect(photoExportBlockReason("photo", null)).toMatch(/Add a photo/);
+    expect(photoExportBlockReason("photo", "photo-1")).toBeNull();
+    expect(photoExportBlockReason("planner", null)).toBeNull();
+  });
   it("uses predictable sanitized filenames", () => {
     expect(sanitizePngFilename("My Semester / Phone")).toBe(
       "my-semester-phone.png",

@@ -11,7 +11,7 @@ export const layoutRegistry: readonly LayoutDefinition[] = [
   { id: "minimal", name: "Minimal", status: "available" },
   { id: "grid", name: "Grid", status: "available" },
   { id: "planner", name: "Planner", status: "available" },
-  { id: "photo", name: "Photo", status: "planned" },
+  { id: "photo", name: "Photo", status: "available" },
 ];
 
 export const layoutById = new Map(
