@@ -7,14 +7,17 @@ import {
 } from "@/features/export/png-export";
 
 describe("PNG export coordination", () => {
-  it("requires one Photo generally and exactly four for Polaroid", () => {
+  it("requires one Photo and allows one to four Polaroid photos", () => {
     expect(photoExportBlockReason("photo", 0)).toMatch(/Add a photo/);
     expect(photoExportBlockReason("photo", 1, "hero")).toBeNull();
     expect(photoExportBlockReason("photo", 1, "split")).toBeNull();
-    expect(photoExportBlockReason("photo", 3, "polaroid")).toMatch(
-      /exactly 4 photos/,
-    );
+    expect(photoExportBlockReason("photo", 1, "polaroid")).toBeNull();
+    expect(photoExportBlockReason("photo", 2, "polaroid")).toBeNull();
+    expect(photoExportBlockReason("photo", 3, "polaroid")).toBeNull();
     expect(photoExportBlockReason("photo", 4, "polaroid")).toBeNull();
+    expect(photoExportBlockReason("photo", 5, "polaroid")).toMatch(
+      /maximum of 4/,
+    );
     expect(photoExportBlockReason("planner", 0)).toBeNull();
   });
   it("uses predictable sanitized filenames", () => {

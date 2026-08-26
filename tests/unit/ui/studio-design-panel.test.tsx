@@ -31,12 +31,14 @@ describe("layout design inspector", () => {
   it("selects Photo, shows its local asset action, and hides Subject Palette", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
+    const onComposition = vi.fn();
     render(
       <DesignStudioPanel
         design={{ ...project.design, layoutId: "photo" }}
         visibleFields={project.design.visibleFields}
         activeLayout="photo"
         detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        onPhotoComposition={onComposition}
         onLayout={vi.fn()}
         onTitleVisible={vi.fn()}
         onTitleText={vi.fn()}
@@ -49,6 +51,15 @@ describe("layout design inspector", () => {
       "true",
     );
     expect(screen.getByRole("button", { name: "Add photo" })).toBeVisible();
+    expect(screen.getByRole("radio", { name: "hero" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("radio", { name: "split" })).toBeVisible();
+    expect(screen.getByRole("radio", { name: "polaroid" })).toBeVisible();
+    fireEvent.click(screen.getByRole("radio", { name: "split" }));
+    expect(onComposition).toHaveBeenCalledWith("split");
+    expect(screen.getByText("Previewing an empty photo frame")).toBeVisible();
     expect(screen.getByLabelText("Choose Photo")).toHaveAttribute(
       "accept",
       "image/png,image/jpeg,image/webp",
@@ -78,7 +89,35 @@ describe("layout design inspector", () => {
     );
     expect(screen.getByText(filename)).toHaveAttribute("title", filename);
     expect(screen.getByText("Drag the photo to reposition")).toBeVisible();
+    expect(screen.getByLabelText("Photo composition")).toBeVisible();
     expect(screen.queryByText("internal-asset-id")).toBeNull();
+  });
+
+  it("explains the default four-frame Polaroid placeholder", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photoComposition="polaroid"
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Previewing 4 empty frames · Add 1–4 photos"),
+    ).toBeVisible();
+    expect(screen.getByRole("radio", { name: "polaroid" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
   });
 
   it("offers Hero, Split, and Polaroid in the compact Photo composition control", () => {
@@ -144,7 +183,9 @@ describe("layout design inspector", () => {
     );
 
     expect(screen.getByText("Maximum 4 photos")).toBeVisible();
-    expect(screen.getByText("4 photos ready")).toBeVisible();
+    expect(
+      screen.getByText("4 of 4 photos · Looks best with 3–4"),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "+ Add photo" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Move photo 2 up" }));
     expect(onMove).toHaveBeenCalledWith("two", "up");
@@ -154,7 +195,7 @@ describe("layout design inspector", () => {
     expect(onCaption).toHaveBeenCalledWith("one", "semester memories");
   });
 
-  it("explains the four-photo Polaroid requirement during setup", () => {
+  it("presents one to four Polaroid photos as valid", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
     render(
@@ -178,8 +219,8 @@ describe("layout design inspector", () => {
     );
 
     expect(
-      screen.getByText("Polaroid requires 4 photos · 2 more to add"),
-    ).toHaveAttribute("role", "status");
+      screen.getByText("2 of 4 photos · Looks best with 3–4"),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "+ Add photo" })).toBeEnabled();
   });
 });

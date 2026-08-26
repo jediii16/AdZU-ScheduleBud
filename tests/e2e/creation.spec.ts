@@ -305,6 +305,46 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   expect(await pngDimensions(desktop)).toEqual({ width: 1920, height: 1080 });
 });
 
+test("Studio zoom keeps the entire canvas reachable in both scroll directions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page);
+  const workspace = page.getByTestId("artboard-workspace");
+  const preview = page.getByTestId("artboard-preview");
+
+  for (let step = 0; step < 5; step += 1)
+    await page.getByRole("button", { name: "Zoom in" }).click();
+  await expect(page.getByText("150%", { exact: true })).toBeVisible();
+
+  const overflow = await workspace.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(overflow.scrollHeight).toBeGreaterThan(overflow.clientHeight);
+
+  await workspace.evaluate((element) => element.scrollTo({ top: 0 }));
+  await expect
+    .poll(async () => {
+      const workspaceBox = await workspace.boundingBox();
+      const previewBox = await preview.boundingBox();
+      if (!workspaceBox || !previewBox) return Number.NEGATIVE_INFINITY;
+      return previewBox.y - workspaceBox.y;
+    })
+    .toBeGreaterThanOrEqual(0);
+
+  await workspace.evaluate((element) =>
+    element.scrollTo({ top: element.scrollHeight }),
+  );
+  await expect
+    .poll(() => workspace.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  await workspace.evaluate((element) => element.scrollTo({ top: 0 }));
+  await expect
+    .poll(() => workspace.evaluate((element) => element.scrollTop))
+    .toBe(0);
+});
+
 test("Studio edits title and class inclusion without deleting the class", async ({
   page,
 }) => {

@@ -9,7 +9,10 @@ import type { AlignmentGuides } from "@/domain/render";
 import type { DeviceVariant } from "@/domain/device/types";
 import type { SafeAreaModel } from "@/domain/device/safe-areas";
 import { PreviewEnvironmentOverlay } from "./editor-overlay/preview-environment";
-import { PhotoEditorOverlay } from "./editor-overlay/photo-overlay";
+import {
+  PhotoEditorOverlay,
+  PolaroidPlaceholderOverlay,
+} from "./editor-overlay/photo-overlay";
 import { ScheduleEditorOverlay } from "./editor-overlay/schedule-overlay";
 import { ScheduleScene, type RenderAssetImages } from "./schedule-scene";
 
@@ -79,7 +82,7 @@ export function ScheduleArtboard({
     <div
       ref={containerRef}
       data-testid="artboard-workspace"
-      className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-4 select-none"
+      className="flex min-h-0 flex-1 overflow-auto overscroll-contain p-4 select-none"
       onPointerDown={(event) => {
         if (event.currentTarget === event.target) setScheduleSelected(false);
       }}
@@ -97,7 +100,7 @@ export function ScheduleArtboard({
         data-schedule-selected={scheduleSelected ? "true" : "false"}
         data-guide-vertical={guides.verticalCenter ? "true" : "false"}
         data-guide-horizontal={guides.horizontalCenter ? "true" : "false"}
-        className="shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
+        className="m-auto shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
         style={{
           width: result.model.width * scale,
           height: result.model.height * scale,
@@ -189,6 +192,12 @@ export function ScheduleArtboard({
             guideOpacity={guideOpacity}
             previewScale={scale}
           />
+          {result.photoPlaceholders?.length ? (
+            <PolaroidPlaceholderOverlay
+              placeholders={result.photoPlaceholders}
+              previewScale={scale}
+            />
+          ) : null}
           {photoEditor ? (
             <PhotoEditorOverlay
               frame={photoEditor.frame}

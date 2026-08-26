@@ -24,9 +24,29 @@ import {
   type PendingPortalImport,
   type PortalImportWarning,
 } from "@/domain/import";
-import type { Meeting, ScheduleDay, Subject } from "@/domain/schedule";
+import {
+  detectConflicts,
+  type Meeting,
+  type ScheduleDay,
+  type Subject,
+} from "@/domain/schedule";
 import { useScheduleBudStoreApi } from "@/state/react";
 import { ensureCreationProject } from "./project-policy";
+
+const DAY_NAMES: Record<ScheduleDay, string> = {
+  Mon: "Monday",
+  Tue: "Tuesday",
+  Wed: "Wednesday",
+  Thu: "Thursday",
+  Fri: "Friday",
+  Sat: "Saturday",
+};
+
+function displayReviewTime(time: string): string {
+  const [hourValue, minute] = time.split(":").map(Number);
+  const hour = hourValue! % 12 || 12;
+  return `${hour}:${String(minute).padStart(2, "0")} ${hourValue! < 12 ? "AM" : "PM"}`;
+}
 
 function studentFileError(error: unknown): string {
   if (error instanceof PortalImportError) {
@@ -38,49 +58,75 @@ function studentFileError(error: unknown): string {
 }
 
 export type PortalWarningSummary = {
-  category: "missing-day" | "invalid-time" | "skipped-row";
+  key: string;
+  subjectId: string | null;
+  subjectCode: string;
   count: number;
-  title: string;
   explanation: string;
 };
 
 export function summarizePortalWarnings(
   warnings: readonly PortalImportWarning[],
+  subjects: readonly Subject[] = [],
 ): PortalWarningSummary[] {
-  const countRows = (codes: readonly PortalImportWarning["code"][]) =>
-    new Set(
-      warnings
-        .filter((warning) => codes.includes(warning.code))
-        .map((warning) => warning.rowNumber),
-    ).size;
-  const counts = {
-    missingDay: countRows(["invalid-day"]),
-    invalidTime: countRows(["invalid-time"]),
-    skippedRow: countRows(["missing-subject"]),
-  };
-  const summaries: PortalWarningSummary[] = [];
-  if (counts.missingDay > 0)
-    summaries.push({
-      category: "missing-day",
-      count: counts.missingDay,
-      title: `${counts.missingDay} ${counts.missingDay === 1 ? "meeting has" : "meetings have"} no valid day.`,
-      explanation: "Add the correct day before designing when possible.",
-    });
-  if (counts.invalidTime > 0)
-    summaries.push({
-      category: "invalid-time",
-      count: counts.invalidTime,
-      title: `${counts.invalidTime} ${counts.invalidTime === 1 ? "meeting has" : "meetings have"} an invalid time.`,
-      explanation: "The imported value is preserved for review.",
-    });
-  if (counts.skippedRow > 0)
-    summaries.push({
-      category: "skipped-row",
-      count: counts.skippedRow,
-      title: `${counts.skippedRow} ${counts.skippedRow === 1 ? "row was" : "rows were"} skipped because no subject code was supplied.`,
-      explanation: "No schedule data was guessed for those rows.",
-    });
-  return summaries;
+  const subjectForRow = (rowNumber: number) =>
+    subjects.find((subject) =>
+      [
+        ...(subject.importMetadata?.sourceRows ?? []),
+        ...subject.meetings.flatMap(
+          (meeting) => meeting.importMetadata?.sourceRows ?? [],
+        ),
+      ].includes(rowNumber),
+    );
+  const groups = new Map<
+    string,
+    { subject: Subject | null; warnings: PortalImportWarning[] }
+  >();
+
+  warnings.forEach((warning) => {
+    const subject =
+      warning.code === "missing-subject"
+        ? null
+        : (subjectForRow(warning.rowNumber) ?? null);
+    const key = subject?.id ?? "unidentified-class";
+    const group = groups.get(key) ?? { subject, warnings: [] };
+    group.warnings.push(warning);
+    groups.set(key, group);
+  });
+
+  return [...groups.entries()].map(([key, group]) => {
+    const countRows = (code: PortalImportWarning["code"]) =>
+      new Set(
+        group.warnings
+          .filter((warning) => warning.code === code)
+          .map((warning) => warning.rowNumber),
+      ).size;
+    const invalidDays = countRows("invalid-day");
+    const invalidTimes = countRows("invalid-time");
+    const skippedRows = countRows("missing-subject");
+    const explanations: string[] = [];
+
+    if (invalidDays > 0)
+      explanations.push(
+        `${invalidDays === 1 ? "A meeting has" : `${invalidDays} meetings have`} no valid day. Add the correct day before designing when possible.`,
+      );
+    if (invalidTimes > 0)
+      explanations.push(
+        `${invalidTimes === 1 ? "A meeting has" : `${invalidTimes} meetings have`} an invalid time. The imported value is preserved for review.`,
+      );
+    if (skippedRows > 0)
+      explanations.push(
+        `${skippedRows === 1 ? "An import row was" : `${skippedRows} import rows were`} skipped because no subject code was supplied. No schedule data was guessed.`,
+      );
+
+    return {
+      key,
+      subjectId: group.subject?.id ?? null,
+      subjectCode: group.subject?.code || "Unidentified class",
+      count: group.warnings.length,
+      explanation: explanations.join(" "),
+    };
+  });
 }
 
 export function actionablePortalWarnings(
@@ -119,7 +165,30 @@ export function PendingPortalReview({
     0,
   );
   const actionableWarnings = actionablePortalWarnings(pending);
-  const warningSummaries = summarizePortalWarnings(actionableWarnings);
+  const warningSummaries = summarizePortalWarnings(
+    actionableWarnings,
+    pending.subjects,
+  );
+  const conflicts = detectConflicts(pending.subjects);
+  const reviewIssueCount = actionableWarnings.length + conflicts.length;
+  const warnedSubjectIds = new Set([
+    ...warningSummaries.flatMap((summary) =>
+      summary.subjectId ? [summary.subjectId] : [],
+    ),
+    ...conflicts.flatMap((conflict) => [
+      conflict.leftSubjectId,
+      conflict.rightSubjectId,
+    ]),
+  ]);
+  const subjectCodeForWarning = (warning: PortalImportWarning) =>
+    pending.subjects.find((subject) =>
+      [
+        ...(subject.importMetadata?.sourceRows ?? []),
+        ...subject.meetings.flatMap(
+          (meeting) => meeting.importMetadata?.sourceRows ?? [],
+        ),
+      ].includes(warning.rowNumber),
+    )?.code ?? "Unidentified class";
   const hasMissingCode = pending.subjects.some(
     (subject) => subject.code.trim().length === 0,
   );
@@ -172,119 +241,156 @@ export function PendingPortalReview({
         </h2>
         <p className="mt-3 text-text-secondary">
           {pending.subjects.length} subjects · {meetingCount} meetings ·{" "}
-          {actionableWarnings.length} warnings
+          {reviewIssueCount} {reviewIssueCount === 1 ? "warning" : "warnings"}
         </p>
       </div>
-      {actionableWarnings.length > 0 ? (
+      {reviewIssueCount > 0 ? (
         <div className="mb-6">
           <IssueNotice title="Some imported details need review.">
             <ul className="divide-y divide-warning/20">
               {warningSummaries.map((summary) => (
-                <li
-                  key={summary.category}
-                  className="py-2 first:pt-0 last:pb-0"
-                >
-                  <strong className="font-semibold text-foreground">
-                    {summary.title}
+                <li key={summary.key} className="py-2 first:pt-0 last:pb-0">
+                  <strong className="font-semibold text-destructive">
+                    {summary.subjectCode} needs review.
                   </strong>{" "}
                   {summary.explanation}
                 </li>
               ))}
+              {conflicts.map((conflict) => (
+                <li
+                  key={`${conflict.leftMeetingId}-${conflict.rightMeetingId}-${conflict.day}`}
+                  className="py-2 first:pt-0 last:pb-0"
+                >
+                  <strong className="font-semibold text-destructive">
+                    {conflict.leftSubjectCode} and {conflict.rightSubjectCode}{" "}
+                    overlap.
+                  </strong>{" "}
+                  {DAY_NAMES[conflict.day]},{" "}
+                  {displayReviewTime(conflict.overlapStart)}–
+                  {displayReviewTime(conflict.overlapEnd)}. Review both meeting
+                  times.
+                </li>
+              ))}
             </ul>
-            <details className="mt-3 border-t border-warning/20 pt-3">
-              <summary className="cursor-pointer font-semibold text-foreground">
-                Show details
-              </summary>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
-                {actionableWarnings.map((warning, index) => (
-                  <li key={`${warning.rowNumber}-${warning.code}-${index}`}>
-                    Row {warning.rowNumber}: {warning.message}
-                  </li>
-                ))}
-              </ul>
-            </details>
+            {actionableWarnings.length > 0 ? (
+              <details className="mt-3 border-t border-warning/20 pt-3">
+                <summary className="cursor-pointer font-semibold text-foreground">
+                  Show details
+                </summary>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
+                  {actionableWarnings.map((warning, index) => (
+                    <li key={`${warning.rowNumber}-${warning.code}-${index}`}>
+                      <strong className="font-semibold text-destructive">
+                        {subjectCodeForWarning(warning)}:
+                      </strong>{" "}
+                      {warning.message}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </IssueNotice>
         </div>
       ) : null}
       <div className="divide-y divide-border border-y border-border">
-        {pending.subjects.map((subject) => (
-          <article key={subject.id} className="py-4 sm:py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h3 className="font-heading font-bold">{subject.code}</h3>
-                <p className="mt-1 text-xs leading-5 text-text-muted">
-                  {subject.enabled
-                    ? subject.meetings.map(meetingSummary).join(" · ")
-                    : "Not included in schedule"}
-                </p>
-              </div>
-              <label className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2 text-xs font-semibold text-text-secondary transition-colors duration-150 hover:bg-muted/70 motion-reduce:transition-none">
-                <input
-                  type="checkbox"
-                  className="sb-check"
-                  checked={subject.enabled}
-                  onChange={(event) =>
-                    updateSubject(subject.id, {
-                      enabled: event.target.checked,
-                    })
-                  }
-                />
-                Include in schedule
-              </label>
-            </div>
-            <details className="mt-4">
-              <summary className="min-h-11 cursor-pointer rounded-sm py-3 text-sm font-semibold text-brand transition-colors duration-150 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
-                Edit subject and meetings
-              </summary>
-              <div className="mt-5 space-y-5 rounded-md bg-card p-4 sm:p-5">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label>
-                    <span className="sb-label">Code</span>
-                    <input
-                      className="sb-control"
-                      required
-                      aria-invalid={!subject.code.trim() || undefined}
-                      value={subject.code}
-                      onChange={(event) =>
-                        updateSubject(subject.id, {
-                          code: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    <span className="sb-label">Units</span>
-                    <input
-                      className="sb-control"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={subject.units}
-                      onChange={(event) =>
-                        updateSubject(subject.id, {
-                          units: Number(event.target.value) || 0,
-                        })
-                      }
-                    />
-                  </label>
+        {pending.subjects.map((subject) => {
+          const needsReview = warnedSubjectIds.has(subject.id);
+          return (
+            <article
+              key={subject.id}
+              aria-label={
+                needsReview ? `${subject.code} needs review` : undefined
+              }
+              className={`px-4 py-4 sm:py-5 ${needsReview ? "border-l-4 border-destructive bg-destructive/5" : ""}`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3
+                      className={`font-heading font-bold ${needsReview ? "text-destructive" : ""}`}
+                    >
+                      {subject.code}
+                    </h3>
+                    {needsReview ? (
+                      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[0.6875rem] font-bold text-destructive">
+                        Needs review
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    {subject.enabled
+                      ? subject.meetings.map(meetingSummary).join(" · ")
+                      : "Not included in schedule"}
+                  </p>
                 </div>
-                {subject.meetings.map((meeting) => (
-                  <MeetingFields
-                    key={meeting.id}
-                    meeting={meeting}
-                    showValidation={subject.enabled}
-                    onChange={(updates) =>
-                      updateMeeting(subject.id, meeting.id, updates)
-                    }
-                    onToggleDay={(day) =>
-                      toggleDay(subject.id, meeting.id, day)
+                <label className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2 text-xs font-semibold text-text-secondary transition-colors duration-150 hover:bg-muted/70 motion-reduce:transition-none">
+                  <input
+                    type="checkbox"
+                    className="sb-check"
+                    checked={subject.enabled}
+                    onChange={(event) =>
+                      updateSubject(subject.id, {
+                        enabled: event.target.checked,
+                      })
                     }
                   />
-                ))}
+                  Include in schedule
+                </label>
               </div>
-            </details>
-          </article>
-        ))}
+              <details className="mt-4">
+                <summary className="min-h-11 cursor-pointer rounded-sm py-3 text-sm font-semibold text-brand transition-colors duration-150 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
+                  Edit subject and meetings
+                </summary>
+                <div className="mt-5 space-y-5 rounded-md bg-card p-4 sm:p-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label>
+                      <span className="sb-label">Code</span>
+                      <input
+                        className="sb-control"
+                        required
+                        aria-invalid={!subject.code.trim() || undefined}
+                        value={subject.code}
+                        onChange={(event) =>
+                          updateSubject(subject.id, {
+                            code: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span className="sb-label">Units</span>
+                      <input
+                        className="sb-control"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={subject.units}
+                        onChange={(event) =>
+                          updateSubject(subject.id, {
+                            units: Number(event.target.value) || 0,
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                  {subject.meetings.map((meeting) => (
+                    <MeetingFields
+                      key={meeting.id}
+                      meeting={meeting}
+                      showValidation={subject.enabled}
+                      onChange={(updates) =>
+                        updateMeeting(subject.id, meeting.id, updates)
+                      }
+                      onToggleDay={(day) =>
+                        toggleDay(subject.id, meeting.id, day)
+                      }
+                    />
+                  ))}
+                </div>
+              </details>
+            </article>
+          );
+        })}
       </div>
       <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button variant="outline" size="lg" onClick={onCancel}>

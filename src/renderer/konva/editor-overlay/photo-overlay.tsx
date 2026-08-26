@@ -1,8 +1,70 @@
 "use client";
 
+import { Fragment } from "react";
 import { Layer, Line, Rect, Text } from "react-konva";
 import type { Rect as ModelRect } from "@/domain/render";
 import { fontFamilyForId } from "../font-loading";
+
+export type PolaroidPlaceholderFrame = {
+  slot: number;
+  paper: ModelRect;
+  frame: ModelRect;
+  rotation: number;
+};
+
+export function PolaroidPlaceholderOverlay({
+  placeholders,
+  previewScale,
+}: {
+  placeholders: readonly PolaroidPlaceholderFrame[];
+  previewScale: number;
+}) {
+  return (
+    <Layer name="polaroid-placeholder-overlay" listening={false}>
+      {placeholders.map((placeholder) => (
+        <Fragment key={placeholder.slot}>
+          <Rect
+            name="polaroid-empty-paper"
+            {...placeholder.paper}
+            rotation={placeholder.rotation}
+            fill="#FBF8F1"
+            stroke="#D7DCE4"
+            strokeWidth={1 / previewScale}
+            cornerRadius={Math.max(3, placeholder.paper.width * 0.015)}
+            shadowColor="#1B2533"
+            shadowBlur={Math.max(2, placeholder.paper.width * 0.015)}
+            shadowOffsetY={Math.max(1, placeholder.paper.height * 0.01)}
+            shadowOpacity={0.08}
+          />
+          <Rect
+            name="polaroid-empty-photo"
+            {...placeholder.frame}
+            rotation={placeholder.rotation}
+            fill="#E9EDF2"
+            stroke="#CDD4DE"
+            strokeWidth={1 / previewScale}
+            cornerRadius={Math.max(2, placeholder.frame.width * 0.008)}
+          />
+          <Text
+            name="polaroid-empty-copy"
+            {...placeholder.frame}
+            rotation={placeholder.rotation}
+            text={`Photo ${placeholder.slot}`}
+            align="center"
+            verticalAlign="middle"
+            fontFamily={fontFamilyForId("body-sans")}
+            fontSize={Math.max(
+              14,
+              Math.min(28, placeholder.frame.width * 0.075),
+            )}
+            fontStyle="normal 600"
+            fill="#7A8799"
+          />
+        </Fragment>
+      ))}
+    </Layer>
+  );
+}
 
 export function PhotoEditorOverlay({
   frame,

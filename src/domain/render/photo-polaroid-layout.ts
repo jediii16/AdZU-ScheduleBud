@@ -37,6 +37,7 @@ import type {
 } from "./types";
 
 export const POLAROID_CAPTION_MAX_LENGTH = 40;
+const POLAROID_PAPER_ASPECT = 0.82;
 
 export type PolaroidFrameLayout = {
   assetId: string;
@@ -86,43 +87,115 @@ type PolaroidTemplate = {
   x: number;
   y: number;
   height: number;
+  maxWidth: number;
   rotation: number;
 };
 
-const POLAROID_FOUR_PHOTO_TEMPLATES: Record<
+type PolaroidPhotoCount = 1 | 2 | 3 | 4;
+
+type ResolvedPolaroidSlot = {
+  paper: Rect;
+  image: Rect;
+  rawImage: Rect;
+  side: number;
+  bottom: number;
+  rotation: number;
+};
+
+const POLAROID_TEMPLATES: Record<
   TargetCompositionFamily,
-  readonly PolaroidTemplate[]
+  Record<PolaroidPhotoCount, readonly PolaroidTemplate[]>
 > = {
-  phonePortrait: [
-    { x: 0.1, y: 0.02, height: 0.45, rotation: -1.4 },
-    { x: 0.62, y: 0.07, height: 0.44, rotation: 1.2 },
-    { x: 0.06, y: 0.53, height: 0.44, rotation: 1 },
-    { x: 0.58, y: 0.5, height: 0.46, rotation: -1.1 },
-  ],
-  tabletPortrait: [
-    { x: 0.02, y: 0.08, height: 0.76, rotation: -1.3 },
-    { x: 0.245, y: 0.02, height: 0.78, rotation: 1.1 },
-    { x: 0.475, y: 0.1, height: 0.76, rotation: -0.8 },
-    { x: 0.7, y: 0.04, height: 0.78, rotation: 1.2 },
-  ],
-  tabletLandscape: [
-    { x: 0.02, y: 0.04, height: 0.37, rotation: -1.4 },
-    { x: 0.48, y: 0.1, height: 0.36, rotation: 1.2 },
-    { x: 0.08, y: 0.57, height: 0.36, rotation: 0.9 },
-    { x: 0.5, y: 0.52, height: 0.38, rotation: -1.2 },
-  ],
-  desktopLandscape: [
-    { x: 0.02, y: 0.03, height: 0.44, rotation: -1.4 },
-    { x: 0.48, y: 0.1, height: 0.42, rotation: 1.2 },
-    { x: 0.08, y: 0.54, height: 0.42, rotation: 0.9 },
-    { x: 0.52, y: 0.49, height: 0.44, rotation: -1.2 },
-  ],
-  square: [
-    { x: 0.02, y: 0.01, height: 0.27, rotation: -1.4 },
-    { x: 0.4, y: 0.25, height: 0.27, rotation: 1.2 },
-    { x: 0.06, y: 0.49, height: 0.27, rotation: 0.9 },
-    { x: 0.44, y: 0.73, height: 0.27, rotation: -1.1 },
-  ],
+  phonePortrait: {
+    1: [{ x: 0.27, y: 0.04, height: 0.9, maxWidth: 0.5, rotation: -1.1 }],
+    2: [
+      { x: 0.12, y: 0.05, height: 0.68, maxWidth: 0.42, rotation: -1.4 },
+      { x: 0.49, y: 0.18, height: 0.68, maxWidth: 0.42, rotation: 1.3 },
+    ],
+    3: [
+      { x: 0.05, y: 0.14, height: 0.58, maxWidth: 0.32, rotation: -1.5 },
+      { x: 0.35, y: 0.03, height: 0.62, maxWidth: 0.33, rotation: 1.2 },
+      { x: 0.65, y: 0.16, height: 0.58, maxWidth: 0.32, rotation: -1 },
+    ],
+    4: [
+      { x: 0.12, y: 0.01, height: 0.44, maxWidth: 0.38, rotation: -1.6 },
+      { x: 0.5, y: 0.08, height: 0.44, maxWidth: 0.38, rotation: 1.4 },
+      { x: 0.06, y: 0.54, height: 0.43, maxWidth: 0.38, rotation: 1.2 },
+      { x: 0.47, y: 0.51, height: 0.44, maxWidth: 0.38, rotation: -1.3 },
+    ],
+  },
+  tabletPortrait: {
+    1: [{ x: 0.3, y: 0.015, height: 0.96, maxWidth: 0.42, rotation: -1.2 }],
+    2: [
+      { x: 0.2, y: 0.04, height: 0.86, maxWidth: 0.38, rotation: -1.5 },
+      { x: 0.47, y: 0.12, height: 0.86, maxWidth: 0.38, rotation: 1.4 },
+    ],
+    3: [
+      { x: 0.11, y: 0.14, height: 0.78, maxWidth: 0.31, rotation: -1.5 },
+      { x: 0.37, y: 0.02, height: 0.82, maxWidth: 0.32, rotation: 1.3 },
+      { x: 0.62, y: 0.15, height: 0.78, maxWidth: 0.31, rotation: -1.1 },
+    ],
+    4: [
+      { x: 0.05, y: 0.15, height: 0.7, maxWidth: 0.27, rotation: -1.6 },
+      { x: 0.28, y: 0.02, height: 0.74, maxWidth: 0.28, rotation: 1.4 },
+      { x: 0.51, y: 0.14, height: 0.7, maxWidth: 0.27, rotation: -1.1 },
+      { x: 0.72, y: 0.04, height: 0.72, maxWidth: 0.27, rotation: 1.5 },
+    ],
+  },
+  tabletLandscape: {
+    1: [{ x: 0.16, y: 0.12, height: 0.72, maxWidth: 0.68, rotation: -1.1 }],
+    2: [
+      { x: 0.01, y: 0.15, height: 0.43, maxWidth: 0.49, rotation: 1.5 },
+      { x: 0.48, y: 0.19, height: 0.43, maxWidth: 0.49, rotation: -1.4 },
+    ],
+    3: [
+      { x: 0.02, y: 0.05, height: 0.4, maxWidth: 0.5, rotation: -1.5 },
+      { x: 0.47, y: 0.12, height: 0.4, maxWidth: 0.5, rotation: 1.4 },
+      { x: 0.24, y: 0.56, height: 0.4, maxWidth: 0.5, rotation: -1.1 },
+    ],
+    4: [
+      { x: 0.02, y: 0.04, height: 0.37, maxWidth: 0.44, rotation: -1.4 },
+      { x: 0.48, y: 0.1, height: 0.36, maxWidth: 0.44, rotation: 1.2 },
+      { x: 0.08, y: 0.57, height: 0.36, maxWidth: 0.44, rotation: 0.9 },
+      { x: 0.5, y: 0.52, height: 0.38, maxWidth: 0.44, rotation: -1.2 },
+    ],
+  },
+  desktopLandscape: {
+    1: [{ x: 0.15, y: 0.1, height: 0.76, maxWidth: 0.7, rotation: -1.1 }],
+    2: [
+      { x: 0.01, y: 0.15, height: 0.5, maxWidth: 0.49, rotation: 1.5 },
+      { x: 0.48, y: 0.19, height: 0.5, maxWidth: 0.49, rotation: -1.4 },
+    ],
+    3: [
+      { x: 0.02, y: 0.04, height: 0.43, maxWidth: 0.5, rotation: -1.5 },
+      { x: 0.47, y: 0.11, height: 0.43, maxWidth: 0.5, rotation: 1.4 },
+      { x: 0.24, y: 0.55, height: 0.43, maxWidth: 0.5, rotation: -1.1 },
+    ],
+    4: [
+      { x: 0.02, y: 0.03, height: 0.44, maxWidth: 0.44, rotation: -1.4 },
+      { x: 0.4, y: 0.015, height: 0.43, maxWidth: 0.44, rotation: 1.5 },
+      { x: 0.08, y: 0.5, height: 0.42, maxWidth: 0.44, rotation: 0.9 },
+      { x: 0.52, y: 0.46, height: 0.44, maxWidth: 0.44, rotation: -1.2 },
+    ],
+  },
+  square: {
+    1: [{ x: 0.12, y: 0.2, height: 0.56, maxWidth: 0.76, rotation: -1.1 }],
+    2: [
+      { x: 0.03, y: 0.08, height: 0.44, maxWidth: 0.68, rotation: -1.3 },
+      { x: 0.24, y: 0.5, height: 0.44, maxWidth: 0.68, rotation: 1.2 },
+    ],
+    3: [
+      { x: 0.03, y: 0.02, height: 0.31, maxWidth: 0.62, rotation: -1.5 },
+      { x: 0.29, y: 0.345, height: 0.31, maxWidth: 0.62, rotation: 1.4 },
+      { x: 0.05, y: 0.67, height: 0.31, maxWidth: 0.62, rotation: -1.1 },
+    ],
+    4: [
+      { x: 0.03, y: 0.01, height: 0.235, maxWidth: 0.58, rotation: -1.6 },
+      { x: 0.42, y: 0.255, height: 0.235, maxWidth: 0.58, rotation: 1.5 },
+      { x: 0.07, y: 0.505, height: 0.235, maxWidth: 0.58, rotation: 1.2 },
+      { x: 0.41, y: 0.755, height: 0.235, maxWidth: 0.58, rotation: -1.3 },
+    ],
+  },
 };
 
 function rotatePoint(origin: Point, point: Point, degrees: number): Point {
@@ -173,7 +246,7 @@ function resolveScheduleFit(
     family,
     project.design.typography.scale,
   );
-  const candidates =
+  const targetCandidates =
     family === "desktopLandscape"
       ? [
           { spacing: 1.08, type: 1.15 },
@@ -191,6 +264,12 @@ function resolveScheduleFit(
             { spacing: 0.78, type: 0.96 },
             { spacing: 0.7, type: 0.92 },
           ];
+  const candidates = [
+    ...targetCandidates,
+    { spacing: 0.62, type: 0.88 },
+    { spacing: 0.52, type: 0.82 },
+    { spacing: 0.44, type: 0.76 },
+  ];
   let result: ScheduleFit | null = null;
   for (const candidate of candidates) {
     const metrics = compactPhotoVerticalMetrics(baseMetrics, candidate.spacing);
@@ -254,18 +333,17 @@ function buildPolaroidNodes(
   theme: CleanSlateRenderTheme,
 ) {
   const assetIds = project.assetReferences.photoAssetIds.slice(0, 4);
-  const template = POLAROID_FOUR_PHOTO_TEMPLATES[family];
-  const nodes: RenderNode[] = [];
-  const layouts: PolaroidFrameLayout[] = [];
-  const photoFrames: Array<{
-    assetId: string;
-    frame: Rect;
-    rotation: number;
-  }> = [];
-  assetIds.forEach((assetId, index) => {
-    const item = template[index]!;
-    const paperHeight = area.height * item.height;
-    const paperWidth = Math.min(paperHeight * 0.82, area.width * 0.68);
+  const layoutCount = (
+    assetIds.length === 0 ? 4 : assetIds.length
+  ) as PolaroidPhotoCount;
+  const templates = POLAROID_TEMPLATES[family][layoutCount];
+  const slots: ResolvedPolaroidSlot[] = templates.map((item) => {
+    const desiredPaperHeight = area.height * item.height;
+    const paperWidth = Math.min(
+      desiredPaperHeight * POLAROID_PAPER_ASPECT,
+      area.width * item.maxWidth,
+    );
+    const paperHeight = paperWidth / POLAROID_PAPER_ASPECT;
     const paper: Rect = {
       x: area.x + Math.min(area.width - paperWidth, area.width * item.x),
       y: area.y + area.height * item.y,
@@ -286,13 +364,32 @@ function buildPolaroidNodes(
       { x: rawImage.x, y: rawImage.y },
       item.rotation,
     );
-    const image: Rect = { ...rawImage, ...imagePoint };
+    return {
+      paper,
+      image: { ...rawImage, ...imagePoint },
+      rawImage,
+      side,
+      bottom,
+      rotation: item.rotation,
+    };
+  });
+  const nodes: RenderNode[] = [];
+  const layouts: PolaroidFrameLayout[] = [];
+  const photoFrames: Array<{
+    assetId: string;
+    frame: Rect;
+    rotation: number;
+  }> = [];
+  assetIds.forEach((assetId, index) => {
+    const { paper, image, rawImage, side, bottom, rotation } = slots[index]!;
+    const paperWidth = paper.width;
+    const paperHeight = paper.height;
     const caption = project.design.photoCaptions[assetId] ?? "";
     nodes.push({
       id: `polaroid-paper-${assetId}`,
       kind: "rect",
       geometry: paper,
-      rotation: item.rotation,
+      rotation,
       fill: theme.polaroidPaper,
       cornerRadius: Math.max(3, paperWidth * 0.015),
       shadowColor: theme.polaroidShadow,
@@ -307,7 +404,7 @@ function buildPolaroidNodes(
       id: `polaroid-image-${assetId}`,
       kind: "image",
       geometry: image,
-      rotation: item.rotation,
+      rotation,
       assetId,
       fit: "cover",
       focalPoint: transform.position,
@@ -320,7 +417,7 @@ function buildPolaroidNodes(
         x: paper.x + side,
         y: rawImage.y + rawImage.height + paperHeight * 0.025,
       };
-      const captionPoint = rotatePoint(paper, rawCaption, item.rotation);
+      const captionPoint = rotatePoint(paper, rawCaption, rotation);
       captionBounds = {
         x: captionPoint.x,
         y: captionPoint.y,
@@ -342,7 +439,7 @@ function buildPolaroidNodes(
             align: "center",
             verticalAlign: "middle",
             wrap: "none",
-            rotation: item.rotation,
+            rotation,
           },
         ),
       );
@@ -352,12 +449,21 @@ function buildPolaroidNodes(
       paper,
       image,
       captionBounds,
-      rotation: item.rotation,
+      rotation,
       caption,
     });
-    photoFrames.push({ assetId, frame: image, rotation: item.rotation });
+    photoFrames.push({ assetId, frame: image, rotation });
   });
-  return { nodes, layouts, photoFrames };
+  const placeholders =
+    assetIds.length === 0
+      ? slots.map((slot, index) => ({
+          slot: index + 1,
+          paper: slot.paper,
+          frame: slot.image,
+          rotation: slot.rotation,
+        }))
+      : [];
+  return { nodes, layouts, photoFrames, placeholders };
 }
 
 export function buildPhotoPolaroidRenderModel(
@@ -413,6 +519,9 @@ export function buildPhotoPolaroidRenderModel(
   let groupHeight: number;
   let scheduleFit: ScheduleFit;
   if (portrait) {
+    const minimumPhotoGroupHeight = availableHeight * 0.18;
+    const maximumScheduleHeight =
+      availableHeight - minimumPhotoGroupHeight - baseMetrics.photoGap;
     scheduleFit = resolveScheduleFit(
       project,
       variant,
@@ -420,13 +529,14 @@ export function buildPhotoPolaroidRenderModel(
       byDay,
       columns,
       dayWidth,
-      availableHeight * 0.7,
+      maximumScheduleHeight,
       titleVisible,
       family,
     );
     const gap = scheduleFit.metrics.photoGap;
+    const preferredPhotoHeightRatio = family === "tabletPortrait" ? 0.44 : 0.36;
     photoAreaHeight = Math.min(
-      availableHeight * 0.36,
+      availableHeight * preferredPhotoHeightRatio,
       availableHeight - gap - scheduleFit.height,
     );
     if (photoAreaHeight < availableHeight * 0.18)
@@ -598,6 +708,19 @@ export function buildPhotoPolaroidRenderModel(
       y: item.frame.y + originY,
     },
   }));
+  const translatedPhotoPlaceholders = polaroid.placeholders.map((item) => ({
+    ...item,
+    paper: {
+      ...item.paper,
+      x: item.paper.x + originX,
+      y: item.paper.y + originY,
+    },
+    frame: {
+      ...item.frame,
+      x: item.frame.x + originX,
+      y: item.frame.y + originY,
+    },
+  }));
   const translatedPolaroids = polaroid.layouts.map((item) => ({
     ...item,
     paper: {
@@ -669,6 +792,7 @@ export function buildPhotoPolaroidRenderModel(
     },
     photoAssetId: project.assetReferences.photoAssetIds[0] ?? null,
     photoFrames: translatedPhotoFrames,
+    photoPlaceholders: translatedPhotoPlaceholders,
     polaroids: translatedPolaroids,
     dayLayout,
     scheduleRegion,

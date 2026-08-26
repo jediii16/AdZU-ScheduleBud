@@ -14,8 +14,8 @@ export function photoExportBlockReason(
   if (layoutId !== "photo") return null;
   if (photoAssetCount === 0)
     return "Add a photo in Design before exporting this Photo wallpaper.";
-  if (composition === "polaroid" && photoAssetCount !== 4)
-    return "Polaroid requires exactly 4 photos before export.";
+  if (composition === "polaroid" && photoAssetCount > 4)
+    return "Polaroid supports a maximum of 4 photos.";
   return null;
 }
 

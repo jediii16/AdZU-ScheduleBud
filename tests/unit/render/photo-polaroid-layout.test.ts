@@ -51,6 +51,43 @@ function polaroidProject(photoCount: number) {
   return project;
 }
 
+function densePolaroidProject() {
+  const project = polaroidProject(4);
+  let id = 0;
+  const meetings = [
+    ["Mon", "CS.412", "08:00", "09:20"],
+    ["Mon", "CIT.017", "11:00", "12:20"],
+    ["Mon", "CIT.016", "12:30", "13:50"],
+    ["Tue", "CIT.015", "08:00", "09:20"],
+    ["Tue", "CS.413", "11:00", "12:20"],
+    ["Wed", "COGNATE3", "08:00", "10:50"],
+    ["Thu", "CS.412", "08:00", "09:20"],
+    ["Thu", "CIT.017", "11:00", "12:20"],
+    ["Thu", "CIT.016", "12:30", "13:50"],
+    ["Fri", "CIT.015", "08:00", "09:20"],
+    ["Fri", "CS.413", "11:00", "12:20"],
+  ] as const;
+  project.schedule = meetings.map(([day, code, startTime, endTime]) =>
+    normalizeSubject(
+      {
+        code,
+        section: "A",
+        meetings: [
+          {
+            days: [day],
+            startTime,
+            endTime,
+            room: "ADV LAB",
+            professor: "Professor Rivera",
+          },
+        ],
+      },
+      (kind) => `dense-polaroid-${kind}-${++id}`,
+    ),
+  );
+  return project;
+}
+
 function target(
   project: ReturnType<typeof polaroidProject>,
   input: Pick<DeviceVariant, "category" | "dimensions" | "orientation">,
@@ -129,6 +166,40 @@ function expectInsideTarget(
       }
     }
   }
+}
+
+function expectCaptionCentersClear(
+  result: ReturnType<typeof buildPhotoPolaroidRenderModel>,
+) {
+  for (const photo of result.polaroids) {
+    if (!photo.captionBounds) continue;
+    const center = {
+      x: photo.captionBounds.x + photo.captionBounds.width / 2,
+      y: photo.captionBounds.y + photo.captionBounds.height / 2,
+    };
+    for (const other of result.polaroids.filter(
+      (candidate) => candidate.assetId !== photo.assetId,
+    )) {
+      expect(
+        center.x >= other.paper.x &&
+          center.x <= other.paper.x + other.paper.width &&
+          center.y >= other.paper.y &&
+          center.y <= other.paper.y + other.paper.height,
+      ).toBe(false);
+    }
+  }
+}
+
+function rectanglesOverlap(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+) {
+  return !(
+    left.x + left.width <= right.x ||
+    right.x + right.width <= left.x ||
+    left.y + left.height <= right.y ||
+    right.y + right.height <= left.y
+  );
 }
 
 describe("Clean Slate Photo Polaroid", () => {
@@ -309,4 +380,236 @@ describe("Clean Slate Photo Polaroid", () => {
       desktopCode?.kind === "text" ? desktopCode.fontSize : 0,
     ).toBeGreaterThanOrEqual(25);
   });
+
+  it("layers the raised Desktop second photo between the first and fourth without covering its caption", () => {
+    const project = polaroidProject(4);
+    const result = buildPhotoPolaroidRenderModel(
+      project,
+      target(project, {
+        category: "desktop",
+        dimensions: { width: 1920, height: 1080 },
+        orientation: "landscape",
+      }),
+    );
+    const [first, second, , fourth] = result.polaroids;
+    expect(second!.rotation).toBeGreaterThan(0);
+    expect(second!.paper.y).toBeLessThan(first!.paper.y);
+    expect(second!.paper.x).toBeLessThan(first!.paper.x + first!.paper.width);
+    expect(second!.paper.x + second!.paper.width).toBeGreaterThan(
+      first!.paper.x + first!.paper.width,
+    );
+    expect(second!.captionBounds).not.toBeNull();
+    expect(
+      second!.captionBounds!.y + second!.captionBounds!.height,
+    ).toBeLessThanOrEqual(fourth!.paper.y);
+    const photoNodeIds = result.model.layers[2].nodes.map((node) => node.id);
+    expect(photoNodeIds.indexOf("polaroid-paper-photo-2")).toBeLessThan(
+      photoNodeIds.indexOf("polaroid-paper-photo-4"),
+    );
+    expect(
+      fourth!.paper.y - (second!.paper.y + second!.paper.height),
+    ).toBeLessThan(30);
+    expectInsideTarget(result);
+  });
+
+  it.each([
+    {
+      category: "desktop" as const,
+      dimensions: { width: 1920, height: 1080 },
+      orientation: "landscape" as const,
+    },
+    {
+      category: "tablet" as const,
+      dimensions: { width: 2048, height: 1536 },
+      orientation: "landscape" as const,
+    },
+  ])("keeps both two-photo captions clear on $category landscape", (input) => {
+    const project = polaroidProject(2);
+    const result = buildPhotoPolaroidRenderModel(
+      project,
+      target(project, input),
+    );
+    const [first, second] = result.polaroids;
+    expect(rectanglesOverlap(first!.paper, second!.paper)).toBe(true);
+    expect(rectanglesOverlap(first!.captionBounds!, second!.paper)).toBe(false);
+    expect(rectanglesOverlap(second!.captionBounds!, first!.paper)).toBe(false);
+    expectInsideTarget(result);
+  });
+
+  it("uses a substantial staggered four-photo row on Tablet Portrait", () => {
+    const project = polaroidProject(4);
+    const result = buildPhotoPolaroidRenderModel(
+      project,
+      target(project, {
+        category: "tablet",
+        dimensions: { width: 1536, height: 2048 },
+        orientation: "portrait",
+      }),
+    );
+    expect(
+      Math.min(...result.polaroids.map((photo) => photo.paper.height)),
+    ).toBeGreaterThan(180);
+    expect(
+      Math.max(...result.polaroids.map((photo) => photo.paper.y)) -
+        Math.min(...result.polaroids.map((photo) => photo.paper.y)),
+    ).toBeLessThan(
+      Math.min(...result.polaroids.map((photo) => photo.paper.height)),
+    );
+    expectInsideTarget(result);
+  });
+
+  it("provides four editor-only slots only while the collection is empty", () => {
+    const empty = polaroidProject(0);
+    const phone = target(empty, {
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+      orientation: "portrait",
+    });
+    const emptyResult = buildPhotoPolaroidRenderModel(empty, phone);
+    expect(emptyResult.photoPlaceholders).toHaveLength(4);
+    expect(emptyResult.photoPlaceholders?.map((item) => item.slot)).toEqual([
+      1, 2, 3, 4,
+    ]);
+    expect(JSON.stringify(emptyResult.model)).not.toMatch(
+      /polaroid-empty|Photo 1|placeholder/,
+    );
+
+    const partial = polaroidProject(2);
+    const partialResult = buildPhotoPolaroidRenderModel(partial, phone);
+    expect(partialResult.photoPlaceholders).toEqual([]);
+  });
+
+  it.each([1, 2, 3, 4] as const)(
+    "reflows %i photos into a complete count-aware composition",
+    (photoCount) => {
+      const project = polaroidProject(photoCount);
+      const desktop = target(project, {
+        category: "desktop",
+        dimensions: { width: 1920, height: 1080 },
+        orientation: "landscape",
+      });
+      const result = buildPhotoPolaroidRenderModel(project, desktop);
+      expect(result.polaroids).toHaveLength(photoCount);
+      expect(result.photoPlaceholders).toEqual([]);
+      expectInsideTarget(result);
+      expectCaptionCentersClear(result);
+    },
+  );
+
+  it("makes sparse compositions larger and recomputes placement after removal", () => {
+    const results = ([1, 2, 3, 4] as const).map((photoCount) => {
+      const project = polaroidProject(photoCount);
+      return buildPhotoPolaroidRenderModel(
+        project,
+        target(project, {
+          category: "square",
+          dimensions: { width: 1080, height: 1080 },
+          orientation: "square",
+        }),
+      );
+    });
+    const firstPaperArea = results.map((result) => {
+      const paper = result.polaroids[0]!.paper;
+      return paper.width * paper.height;
+    });
+    expect(firstPaperArea[0]).toBeGreaterThan(firstPaperArea[1]!);
+    expect(firstPaperArea[1]).toBeGreaterThan(firstPaperArea[3]!);
+    expect(firstPaperArea[2]).toBeGreaterThan(firstPaperArea[3]!);
+    expect(
+      new Set(
+        results.map((result) =>
+          JSON.stringify(
+            result.polaroids.map(({ paper, rotation }) => ({
+              paper,
+              rotation,
+            })),
+          ),
+        ),
+      ).size,
+    ).toBe(4);
+  });
+
+  it.each([
+    {
+      category: "phone" as const,
+      dimensions: { width: 1080, height: 2400 },
+      orientation: "portrait" as const,
+    },
+    {
+      category: "tablet" as const,
+      dimensions: { width: 1536, height: 2048 },
+      orientation: "portrait" as const,
+    },
+    {
+      category: "tablet" as const,
+      dimensions: { width: 2048, height: 1536 },
+      orientation: "landscape" as const,
+    },
+    {
+      category: "desktop" as const,
+      dimensions: { width: 1920, height: 1080 },
+      orientation: "landscape" as const,
+    },
+    {
+      category: "square" as const,
+      dimensions: { width: 1080, height: 1080 },
+      orientation: "square" as const,
+    },
+  ])("keeps every count inside $category $orientation bounds", (input) => {
+    for (const photoCount of [1, 2, 3, 4]) {
+      const project = polaroidProject(photoCount);
+      const result = buildPhotoPolaroidRenderModel(
+        project,
+        target(project, input),
+      );
+      expect(result.polaroids).toHaveLength(photoCount);
+      expect(
+        result.polaroids.every(
+          (photo) =>
+            Math.abs(photo.paper.width / photo.paper.height - 0.82) < 0.001,
+        ),
+      ).toBe(true);
+      expectInsideTarget(result);
+      expectCaptionCentersClear(result);
+    }
+  });
+
+  it.each([
+    {
+      category: "phone" as const,
+      dimensions: { width: 1080, height: 2400 },
+      orientation: "portrait" as const,
+    },
+    {
+      category: "tablet" as const,
+      dimensions: { width: 1536, height: 2048 },
+      orientation: "portrait" as const,
+    },
+    {
+      category: "tablet" as const,
+      dimensions: { width: 2048, height: 1536 },
+      orientation: "landscape" as const,
+    },
+    {
+      category: "desktop" as const,
+      dimensions: { width: 1920, height: 1080 },
+      orientation: "landscape" as const,
+    },
+    {
+      category: "square" as const,
+      dimensions: { width: 1080, height: 1080 },
+      orientation: "square" as const,
+    },
+  ])(
+    "fits the dense reference schedule without throwing on $category $orientation",
+    (input) => {
+      const project = densePolaroidProject();
+      const result = buildPhotoPolaroidRenderModel(
+        project,
+        target(project, input),
+      );
+      expectInsideTarget(result);
+      expect(result.dayLayout).toHaveLength(5);
+    },
+  );
 });

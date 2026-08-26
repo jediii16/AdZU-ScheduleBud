@@ -248,16 +248,26 @@ describe("curriculum creation", () => {
 
 describe("Portal creation", () => {
   it("groups repeated warning categories while preserving detailed rows", () => {
-    const summaries = summarizePortalWarnings([
-      { code: "invalid-day", message: "Unknown X", rowNumber: 4 },
-      { code: "invalid-day", message: "Unknown Y", rowNumber: 4 },
-      { code: "invalid-time", message: "Bad time", rowNumber: 5 },
-      { code: "missing-subject", message: "No code", rowNumber: 6 },
-    ]);
+    const subject = normalizeSubject(
+      {
+        code: "OPEN.101",
+        units: 0,
+        importMetadata: { source: "portal", sourceRows: [4, 5] },
+      },
+      (kind) => `${kind}-summary`,
+    );
+    const summaries = summarizePortalWarnings(
+      [
+        { code: "invalid-day", message: "Unknown X", rowNumber: 4 },
+        { code: "invalid-day", message: "Unknown Y", rowNumber: 4 },
+        { code: "invalid-time", message: "Bad time", rowNumber: 5 },
+        { code: "missing-subject", message: "No code", rowNumber: 6 },
+      ],
+      [subject],
+    );
     expect(summaries).toMatchObject([
-      { category: "missing-day", count: 1 },
-      { category: "invalid-time", count: 1 },
-      { category: "skipped-row", count: 1 },
+      { subjectCode: "OPEN.101", count: 3 },
+      { subjectCode: "Unidentified class", count: 1 },
     ]);
   });
 
@@ -393,12 +403,85 @@ describe("Portal creation", () => {
         onConfirm={vi.fn()}
       />,
     );
-    expect(screen.getByText(/1 meeting has an invalid time/i)).toBeVisible();
+    expect(screen.getByText(/OPEN\.101 needs review/i)).toBeVisible();
+    expect(screen.getByText(/A meeting has an invalid time/i)).toBeVisible();
+    expect(
+      screen.getByRole("article", { name: "OPEN.101 needs review" }),
+    ).toHaveClass("border-destructive");
+    expect(screen.getByText("Needs review")).toBeVisible();
     expect(screen.getByText(/Bad time/i)).not.toBeVisible();
     fireEvent.click(screen.getByText("Show details"));
-    expect(screen.getByText(/Bad time/i)).toBeVisible();
+    expect(screen.getByText(/Bad time/i)).toHaveTextContent(
+      "OPEN.101: Bad time",
+    );
     fireEvent.click(screen.getByText("Edit subject and meetings"));
     expect(screen.getByLabelText("Start time")).toBeVisible();
+  });
+
+  it("flags overlapping imported subjects before confirmation", () => {
+    const subjects = [
+      normalizeSubject(
+        {
+          code: "COMPINTRO",
+          units: 0,
+          meetings: [
+            { days: ["Tue", "Fri"], startTime: "17:00", endTime: "18:20" },
+          ],
+        },
+        (kind) => `${kind}-compintro`,
+      ),
+      normalizeSubject(
+        {
+          code: "NSTP1",
+          units: 0,
+          meetings: [{ days: ["Fri"], startTime: "17:00", endTime: "19:50" }],
+        },
+        (kind) => `${kind}-nstp`,
+      ),
+    ];
+    const pending = {
+      kind: "pending-portal-import" as const,
+      subjects,
+      warnings: [],
+      metadata: { schoolYears: [], sourceRowCount: 2 },
+    };
+    const onChange = vi.fn();
+    const view = render(
+      <PendingPortalReview
+        pending={pending}
+        onChange={onChange}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/1 warning/i)).toBeVisible();
+    expect(screen.getByText(/COMPINTRO and NSTP1 overlap/i)).toBeVisible();
+    expect(screen.getByText(/Friday, 5:00 PM–6:20 PM/i)).toBeVisible();
+    expect(
+      screen.getByRole("article", { name: "COMPINTRO needs review" }),
+    ).toHaveClass("border-destructive");
+    expect(
+      screen.getByRole("article", { name: "NSTP1 needs review" }),
+    ).toHaveClass("border-destructive");
+    expect(screen.queryByText("Show details")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(
+        screen.getByRole("article", { name: "NSTP1 needs review" }),
+      ).getByRole("checkbox", { name: "Include in schedule" }),
+    );
+    const changed = onChange.mock.calls[0]![0];
+    view.rerender(
+      <PendingPortalReview
+        pending={changed}
+        onChange={onChange}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/overlap/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/0 warnings/i)).toBeVisible();
   });
 
   it("makes excluded pending subjects non-actionable without discarding warnings", () => {

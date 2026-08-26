@@ -52,6 +52,44 @@ type InspectorPhoto = {
   caption: string;
 };
 
+const PHOTO_COMPOSITIONS: readonly AvailablePhotoComposition[] = [
+  "hero",
+  "split",
+  "polaroid",
+];
+
+function PhotoCompositionControl({
+  composition,
+  onComposition,
+}: {
+  composition: AvailablePhotoComposition;
+  onComposition(value: AvailablePhotoComposition): void;
+}) {
+  return (
+    <div>
+      <span className="sb-inspector-field-label">Composition</span>
+      <div
+        role="radiogroup"
+        aria-label="Photo composition"
+        className="grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
+      >
+        {PHOTO_COMPOSITIONS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={composition === value}
+            className={`min-h-9 min-w-0 rounded-sm px-1 text-xs font-semibold capitalize transition-colors ${composition === value ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground"}`}
+            onClick={() => onComposition(value)}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PhotoInspectorSection({
   photos,
   composition,
@@ -131,216 +169,206 @@ function PhotoInspectorSection({
             if (file) void receiveFile(file);
           }}
         />
-        {photos.length === 0 ? (
-          <>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => chooseFile("replace-primary")}
-            >
-              {busy ? "Adding…" : "Add photo"}
-            </Button>
-            <p className="mt-2 text-xs leading-5 text-text-muted">
-              PNG, JPG or WebP
-              <br />
-              Stays on this device
-            </p>
-          </>
-        ) : adjusting && selectedPhoto ? (
-          <div className="space-y-3">
-            <p
-              className="truncate text-sm font-semibold"
-              title={selectedPhoto.filename}
-            >
-              {selectedPhoto.filename}
-            </p>
-            <p className="text-xs text-text-muted">
-              Drag the photo to reposition
-            </p>
-            <label className="block">
-              <span className="mb-1 flex justify-between text-xs font-semibold text-text-secondary">
-                <span>Zoom</span>
-                <span className="font-mono">{zoom.toFixed(1)}×</span>
-              </span>
-              <input
-                aria-label="Photo zoom"
-                className="w-full accent-[var(--brand)]"
-                type="range"
-                min="1"
-                max="3"
-                step="0.05"
-                value={zoom}
-                onPointerDown={onZoomStart}
-                onPointerUp={onZoomEnd}
-                onKeyDown={onZoomStart}
-                onKeyUp={onZoomEnd}
-                onChange={(event) => onZoom(Number(event.target.value))}
-              />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="ghost" onClick={onReset}>
-                Reset crop
-              </Button>
-              <Button type="button" size="sm" onClick={onDone}>
-                Done
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
+        <div className="space-y-4">
+          <PhotoCompositionControl
+            composition={composition}
+            onComposition={onComposition}
+          />
+          {photos.length === 0 ? (
             <div>
-              <span className="sb-inspector-field-label">Composition</span>
-              <div
-                role="radiogroup"
-                aria-label="Photo composition"
-                className="grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
+              <p className="mb-3 text-xs leading-5 text-text-muted">
+                {composition === "polaroid"
+                  ? "Previewing 4 empty frames · Add 1–4 photos"
+                  : "Previewing an empty photo frame"}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => chooseFile("replace-primary")}
               >
-                {(["hero", "split", "polaroid"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={composition === value}
-                    className={`min-h-9 min-w-0 rounded-sm px-1 text-xs font-semibold capitalize transition-colors ${composition === value ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground"}`}
-                    onClick={() => onComposition(value)}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
+                {busy ? "Adding…" : "Add photo"}
+              </Button>
+              <p className="mt-2 text-xs leading-5 text-text-muted">
+                PNG, JPG or WebP
+                <br />
+                Stays on this device
+              </p>
             </div>
-            {composition === "polaroid" ? (
-              <div className="space-y-3">
-                <p className="sb-inspector-field-label">Photos</p>
-                <p
-                  className="text-xs text-text-muted"
-                  role={photos.length === 4 ? undefined : "status"}
-                >
-                  {photos.length === 4
-                    ? "4 photos ready"
-                    : `Polaroid requires 4 photos · ${4 - photos.length} more to add`}
-                </p>
-                <ol className="space-y-3">
-                  {photos.map((photo, index) => (
-                    <li
-                      key={photo.id}
-                      className="border-b border-border pb-3 last:border-0 last:pb-0"
-                    >
-                      <p
-                        className="truncate text-sm font-semibold"
-                        title={photo.filename}
-                      >
-                        {index + 1}. {photo.filename}
-                      </p>
-                      <label className="mt-2 block">
-                        <span className="text-xs font-medium text-text-secondary">
-                          Caption (optional)
-                        </span>
-                        <input
-                          key={`${photo.id}-${photo.caption}`}
-                          className="sb-control mt-1"
-                          defaultValue={photo.caption}
-                          maxLength={40}
-                          onBlur={(event) =>
-                            onCaption(photo.id, event.target.value)
-                          }
-                        />
-                      </label>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onAdjust(photo.id)}
-                        >
-                          Adjust
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          aria-label={`Move photo ${index + 1} up`}
-                          disabled={index === 0}
-                          onClick={() => onMove(photo.id, "up")}
-                        >
-                          ↑
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          aria-label={`Move photo ${index + 1} down`}
-                          disabled={index === photos.length - 1}
-                          onClick={() => onMove(photo.id, "down")}
-                        >
-                          ↓
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onRemove(photo.id)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
+          ) : adjusting && selectedPhoto ? (
+            <div className="space-y-3">
+              <p
+                className="truncate text-sm font-semibold"
+                title={selectedPhoto.filename}
+              >
+                {selectedPhoto.filename}
+              </p>
+              <p className="text-xs text-text-muted">
+                Drag the photo to reposition
+              </p>
+              <label className="block">
+                <span className="mb-1 flex justify-between text-xs font-semibold text-text-secondary">
+                  <span>Zoom</span>
+                  <span className="font-mono">{zoom.toFixed(1)}×</span>
+                </span>
+                <input
+                  aria-label="Photo zoom"
+                  className="w-full accent-[var(--brand)]"
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.05"
+                  value={zoom}
+                  onPointerDown={onZoomStart}
+                  onPointerUp={onZoomEnd}
+                  onKeyDown={onZoomStart}
+                  onKeyUp={onZoomEnd}
+                  onChange={(event) => onZoom(Number(event.target.value))}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  disabled={busy || atLimit}
-                  onClick={() => chooseFile("append")}
+                  variant="ghost"
+                  onClick={onReset}
                 >
-                  {busy ? "Adding…" : "+ Add photo"}
+                  Reset crop
                 </Button>
-                {atLimit ? (
-                  <p className="text-xs text-text-muted">Maximum 4 photos</p>
-                ) : null}
+                <Button type="button" size="sm" onClick={onDone}>
+                  Done
+                </Button>
               </div>
-            ) : (
-              <div>
-                <p
-                  className="truncate text-sm font-semibold"
-                  title={photos[0]!.filename}
-                >
-                  {photos[0]!.filename}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {composition === "polaroid" ? (
+                <div className="space-y-3">
+                  <p className="sb-inspector-field-label">Photos</p>
+                  <p className="text-xs text-text-muted">
+                    {photos.length} of 4 photos · Looks best with 3–4
+                  </p>
+                  <ol className="space-y-3">
+                    {photos.map((photo, index) => (
+                      <li
+                        key={photo.id}
+                        className="border-b border-border pb-3 last:border-0 last:pb-0"
+                      >
+                        <p
+                          className="truncate text-sm font-semibold"
+                          title={photo.filename}
+                        >
+                          {index + 1}. {photo.filename}
+                        </p>
+                        <label className="mt-2 block">
+                          <span className="text-xs font-medium text-text-secondary">
+                            Caption (optional)
+                          </span>
+                          <input
+                            key={`${photo.id}-${photo.caption}`}
+                            className="sb-control mt-1"
+                            defaultValue={photo.caption}
+                            maxLength={40}
+                            onBlur={(event) =>
+                              onCaption(photo.id, event.target.value)
+                            }
+                          />
+                        </label>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onAdjust(photo.id)}
+                          >
+                            Adjust
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            aria-label={`Move photo ${index + 1} up`}
+                            disabled={index === 0}
+                            onClick={() => onMove(photo.id, "up")}
+                          >
+                            ↑
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            aria-label={`Move photo ${index + 1} down`}
+                            disabled={index === photos.length - 1}
+                            onClick={() => onMove(photo.id, "down")}
+                          >
+                            ↓
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onRemove(photo.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => onAdjust(photos[0]!.id)}
+                    disabled={busy || atLimit}
+                    onClick={() => chooseFile("append")}
                   >
-                    Adjust
+                    {busy ? "Adding…" : "+ Add photo"}
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => chooseFile("replace-primary")}
-                  >
-                    Replace
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onRemove(photos[0]!.id)}
-                  >
-                    Remove
-                  </Button>
+                  {atLimit ? (
+                    <p className="text-xs text-text-muted">Maximum 4 photos</p>
+                  ) : null}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              ) : (
+                <div>
+                  <p
+                    className="truncate text-sm font-semibold"
+                    title={photos[0]!.filename}
+                  >
+                    {photos[0]!.filename}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onAdjust(photos[0]!.id)}
+                    >
+                      Adjust
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => chooseFile("replace-primary")}
+                    >
+                      Replace
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onRemove(photos[0]!.id)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         {error ? (
           <p role="alert" className="mt-3 text-xs leading-5 text-warning">
             {error}

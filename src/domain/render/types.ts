@@ -105,6 +105,12 @@ export type ScheduleRenderResult = {
     frame: Rect;
     rotation: number;
   }[];
+  photoPlaceholders?: readonly {
+    slot: number;
+    paper: Rect;
+    frame: Rect;
+    rotation: number;
+  }[];
 };
 
 export type EditorOverlayModel = {
