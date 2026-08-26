@@ -11,6 +11,10 @@ export const deviceCategorySchema = z.enum([
 ]);
 export type DeviceCategory = z.infer<typeof deviceCategorySchema>;
 
+export function supportsOrientationSwitch(category: DeviceCategory): boolean {
+  return category === "phone" || category === "tablet";
+}
+
 export const normalizedPointSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),

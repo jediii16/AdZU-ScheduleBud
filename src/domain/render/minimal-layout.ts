@@ -59,7 +59,6 @@ export type MinimalClassLayout = {
   occurrenceId: string;
   day: ScheduleDay;
   bounds: Rect;
-  markerColor: string;
 };
 
 export type MinimalRenderResult = ScheduleRenderResult & {
@@ -75,8 +74,7 @@ type MinimalMetrics = {
   columnGap: number;
   rowGap: number;
   classGap: number;
-  markerWidth: number;
-  markerGap: number;
+  textInset: number;
   titleBlockHeight: number;
   titleTextHeight: number;
   dayHeaderHeight: number;
@@ -110,21 +108,6 @@ function mergedFields(
       ],
     ),
   ) as VisibleFields;
-}
-
-function subjectColor(
-  project: ScheduleProject,
-  subjectId: string,
-  subjectIndex: number,
-  theme: CleanSlateRenderTheme,
-): string {
-  const colors = project.design.subjectColors;
-  if (colors.mode === "single" && colors.singleColor) return colors.singleColor;
-  if (colors.mode === "per-subject" && colors.bySubjectId[subjectId])
-    return colors.bySubjectId[subjectId]!;
-  return theme.minimalMarkerPalette[
-    subjectIndex % theme.minimalMarkerPalette.length
-  ]!;
 }
 
 function textNode(
@@ -238,8 +221,7 @@ function metricsFor(
       columnGap: 42,
       rowGap: 64,
       classGap: 34,
-      markerWidth: 6,
-      markerGap: 18,
+      textInset: 24,
       titleTextHeight: 92,
       dayHeaderHeight: 82,
       primaryHeight: 42,
@@ -253,8 +235,7 @@ function metricsFor(
       columnGap: 52,
       rowGap: 70,
       classGap: 38,
-      markerWidth: 6,
-      markerGap: 19,
+      textInset: 25,
       titleTextHeight: 103,
       dayHeaderHeight: 92,
       primaryHeight: 47,
@@ -268,8 +249,7 @@ function metricsFor(
       columnGap: 34,
       rowGap: 54,
       classGap: 27,
-      markerWidth: 5,
-      markerGap: 14,
+      textInset: 19,
       titleTextHeight: 82,
       dayHeaderHeight: 72,
       primaryHeight: 38,
@@ -283,8 +263,7 @@ function metricsFor(
       columnGap: 32,
       rowGap: 44,
       classGap: 23,
-      markerWidth: 4,
-      markerGap: 13,
+      textInset: 17,
       titleTextHeight: 64,
       dayHeaderHeight: 62,
       primaryHeight: 31,
@@ -298,8 +277,7 @@ function metricsFor(
       columnGap: 34,
       rowGap: 48,
       classGap: 25,
-      markerWidth: 5,
-      markerGap: 14,
+      textInset: 19,
       titleTextHeight: 65,
       dayHeaderHeight: 62,
       primaryHeight: 29,
@@ -374,10 +352,7 @@ function makeClassPlan(
   typography: MinimalTypography,
   metrics: MinimalMetrics,
 ): MinimalClassPlan {
-  const textWidth = Math.max(
-    1,
-    width - metrics.markerWidth - metrics.markerGap,
-  );
+  const textWidth = Math.max(1, width - metrics.textInset);
   const code = subject.code.trim();
   const primary = fitText({
     text: code,
@@ -434,26 +409,13 @@ function drawClass(
   x: number,
   y: number,
   width: number,
-  color: string,
   typography: MinimalTypography,
   metrics: MinimalMetrics,
   theme: CleanSlateRenderTheme,
 ) {
   const id = `${day}-${plan.occurrence.id}`;
-  const textX = x + metrics.markerWidth + metrics.markerGap;
-  const textWidth = width - metrics.markerWidth - metrics.markerGap;
-  nodes.push({
-    id: `marker-${id}`,
-    kind: "rect",
-    geometry: {
-      x,
-      y: y + 2,
-      width: metrics.markerWidth,
-      height: Math.max(1, plan.height - 4),
-    },
-    fill: color,
-    cornerRadius: metrics.markerWidth / 2,
-  });
+  const textX = x + metrics.textInset;
+  const textWidth = width - metrics.textInset;
   let cursor = y;
   nodes.push(
     textNode(
@@ -541,9 +503,6 @@ export function buildMinimalRenderModel(
   const fields = mergedFields(project, variant);
   const subjects = new Map(
     project.schedule.map((subject) => [subject.id, subject]),
-  );
-  const subjectOrder = new Map(
-    project.schedule.map((subject, index) => [subject.id, index]),
   );
   const occurrences = expandOccurrences(project.schedule, "full").toSorted(
     (left, right) =>
@@ -741,19 +700,13 @@ export function buildMinimalRenderModel(
               { x, y: y + typography.day * 1.5 },
               { x: x + plan.width * 0.3, y: y + typography.day * 1.5 },
             ],
-        stroke: theme.dayAccent,
+        stroke: theme.minimalRule,
         strokeWidth: Math.max(2, Math.round(typography.day / 18)),
         lineCap: "round",
       },
     );
     let classY = y + metrics.dayHeaderHeight;
     for (const item of plan.classes) {
-      const markerColor = subjectColor(
-        project,
-        item.subject.id,
-        subjectOrder.get(item.subject.id) ?? 0,
-        theme,
-      );
       drawClass(
         nodes,
         item,
@@ -761,7 +714,6 @@ export function buildMinimalRenderModel(
         x,
         classY,
         plan.width,
-        markerColor,
         typography,
         metrics,
         theme,
@@ -775,7 +727,6 @@ export function buildMinimalRenderModel(
           width: plan.width,
           height: item.height,
         },
-        markerColor,
       });
       classY += item.height + metrics.classGap;
     }

@@ -9,9 +9,18 @@ import {
   deviceDimensionsSchema,
   deviceVariantSchema,
   inferScreenMatch,
+  supportsOrientationSwitch,
 } from "@/domain/device/types";
 
 describe("device category and screen matching", () => {
+  it("allows orientation switching only for Phone and Tablet", () => {
+    expect(supportsOrientationSwitch("phone")).toBe(true);
+    expect(supportsOrientationSwitch("tablet")).toBe(true);
+    expect(supportsOrientationSwitch("laptop")).toBe(false);
+    expect(supportsOrientationSwitch("desktop")).toBe(false);
+    expect(supportsOrientationSwitch("square")).toBe(false);
+  });
+
   it("keeps semantic category independent from custom dimensions", () => {
     expect(
       deviceVariantSchema.parse({

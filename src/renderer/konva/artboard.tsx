@@ -41,6 +41,8 @@ export function ScheduleArtboard({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [space, setSpace] = useState({ width: 720, height: 720 });
+  const [scheduleSelected, setScheduleSelected] = useState(false);
+  const [scheduleHovered, setScheduleHovered] = useState(false);
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
@@ -60,7 +62,10 @@ export function ScheduleArtboard({
     <div
       ref={containerRef}
       data-testid="artboard-workspace"
-      className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-4"
+      className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-4 select-none"
+      onPointerDown={(event) => {
+        if (event.currentTarget === event.target) setScheduleSelected(false);
+      }}
     >
       <div
         data-testid="artboard-preview"
@@ -72,12 +77,27 @@ export function ScheduleArtboard({
         data-schedule-width={result.scheduleBounds.width}
         data-schedule-height={result.scheduleBounds.height}
         data-dragging={dragging ? "true" : "false"}
+        data-schedule-selected={scheduleSelected ? "true" : "false"}
         data-guide-vertical={guides.verticalCenter ? "true" : "false"}
         data-guide-horizontal={guides.horizontalCenter ? "true" : "false"}
         className="shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
         style={{
           width: result.model.width * scale,
           height: result.model.height * scale,
+        }}
+        onPointerDown={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect();
+          const point = {
+            x: (event.clientX - rect.left) / scale,
+            y: (event.clientY - rect.top) / scale,
+          };
+          const bounds = result.scheduleBounds;
+          setScheduleSelected(
+            point.x >= bounds.x &&
+              point.x <= bounds.x + bounds.width &&
+              point.y >= bounds.y &&
+              point.y <= bounds.y + bounds.height,
+          );
         }}
       >
         <Stage
@@ -104,6 +124,10 @@ export function ScheduleArtboard({
             previewScale={scale}
             dragging={dragging}
             guides={guides}
+            selected={scheduleSelected}
+            hovered={scheduleHovered}
+            onHover={setScheduleHovered}
+            onSelect={() => setScheduleSelected(true)}
             onDragStart={onDragStart}
             onDragMove={(x, y) => onDragMove(x, y, scale)}
             onDragEnd={(x, y) => onDragEnd(x, y, scale)}

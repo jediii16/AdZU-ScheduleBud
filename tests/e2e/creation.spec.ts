@@ -43,10 +43,11 @@ async function exportedPng(page: Page): Promise<Buffer> {
 
 async function openTargetPicker(page: Page) {
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await page.getByRole("button", { name: "Change target" }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
   await expect(
-    page.getByRole("dialog", { name: "Change target" }),
+    page.getByRole("dialog", { name: "Choose a device" }),
   ).toBeVisible();
+  await expect(page.getByText("This project", { exact: true })).toHaveCount(0);
 }
 
 async function choosePreset(
@@ -55,7 +56,15 @@ async function choosePreset(
   name: RegExp,
 ) {
   await openTargetPicker(page);
-  await page.getByRole("tab", { name: category, exact: true }).click();
+  await choosePresetFromOpenPicker(page, category, name);
+}
+
+async function choosePresetFromOpenPicker(
+  page: Page,
+  category: "Phone" | "Tablet" | "Laptop" | "Desktop" | "Square",
+  name: RegExp,
+) {
+  await page.getByRole("radio", { name: category, exact: true }).click();
   await page.getByRole("button", { name }).click();
 }
 
@@ -260,18 +269,33 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   expect(await pngDimensions(phone)).toEqual({ width: 1080, height: 2400 });
 
   await page.getByRole("button", { name: "Device", exact: true }).click();
+  const changeDevice = page.getByRole("button", { name: "Change device" });
+  const switchOrientation = page.getByRole("button", {
+    name: "Switch orientation",
+  });
+  await expect(switchOrientation).toBeVisible();
+  const deviceButtonBox = await changeDevice.boundingBox();
+  const orientationButtonBox = await switchOrientation.boundingBox();
+  expect(deviceButtonBox).not.toBeNull();
+  expect(orientationButtonBox).not.toBeNull();
+  expect(Math.abs(deviceButtonBox!.y - orientationButtonBox!.y)).toBeLessThan(
+    2,
+  );
   const horizontal = page.getByLabel("Horizontal schedule position");
   await horizontal.fill("80");
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await changeDevice.click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await expect(switchOrientation).toHaveCount(0);
   await expect(preview).toHaveAttribute("data-target-width", "1920");
   await expect(preview).toHaveAttribute("data-target-height", "1080");
   await horizontal.fill("20");
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("button", { name: /phone · 1080 × 2400/i }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await choosePresetFromOpenPicker(page, "Phone", /Generic FHD\+ Portrait/);
+  await expect(switchOrientation).toBeVisible();
   await expect(horizontal).toHaveValue("80");
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await expect(switchOrientation).toHaveCount(0);
   await expect(horizontal).toHaveValue("20");
 
   const desktopDownload = page.waitForEvent("download");
@@ -291,12 +315,15 @@ test("Studio edits title and class inclusion without deleting the class", async 
   for (const detail of ["Time", "Room", "Professor", "Section"]) {
     await expect(page.getByLabel(detail, { exact: true })).toBeVisible();
   }
+  const titleInput = page.getByLabel("Title", { exact: true });
+  const savedTitle = await titleInput.inputValue();
   await page.getByLabel("Show title").uncheck();
-  await expect(page.getByLabel("Title text")).toBeDisabled();
+  await expect(titleInput).toHaveCount(0);
   await page.getByLabel("Show title").check();
-  await page.getByLabel("Title text").fill("First Semester");
-  await page.getByLabel("Title text").blur();
-  await expect(page.getByLabel("Title text")).toHaveValue("First Semester");
+  await expect(titleInput).toHaveValue(savedTitle);
+  await titleInput.fill("First Semester");
+  await titleInput.blur();
+  await expect(titleInput).toHaveValue("First Semester");
 
   await page.getByRole("button", { name: "Classes", exact: true }).click();
   await page.getByRole("checkbox", { name: "Included" }).click();
@@ -309,6 +336,53 @@ test("Studio edits title and class inclusion without deleting the class", async 
   await expect(page.getByLabel("Snap to guides")).toBeChecked();
   await page.getByLabel("Snap to guides").uncheck();
   await expect(page.getByLabel("Snap to guides")).not.toBeChecked();
+});
+
+test("Studio schedule selection appears on interaction and clears outside", async ({
+  page,
+}) => {
+  await createStudioSchedule(page, "SELECT 1", ["Mon", "Tue"]);
+  const preview = page.getByTestId("artboard-preview");
+  const geometry = await preview.evaluate((element) => {
+    const number = (name: string) =>
+      Number(element.getAttribute(`data-${name}`) ?? "0");
+    return {
+      scale: number("preview-scale"),
+      canvasWidth: number("target-width"),
+      canvasHeight: number("target-height"),
+      x: number("schedule-x"),
+      y: number("schedule-y"),
+      width: number("schedule-width"),
+      height: number("schedule-height"),
+    };
+  });
+  await preview.click({
+    position: {
+      x: (geometry.x + geometry.width / 2) * geometry.scale,
+      y: (geometry.y + geometry.height / 2) * geometry.scale,
+    },
+  });
+  await expect(preview).toHaveAttribute("data-schedule-selected", "true");
+
+  const outside = [
+    { x: 2, y: 2 },
+    { x: geometry.canvasWidth - 2, y: 2 },
+    { x: 2, y: geometry.canvasHeight - 2 },
+  ].find(
+    (point) =>
+      point.x < geometry.x ||
+      point.x > geometry.x + geometry.width ||
+      point.y < geometry.y ||
+      point.y > geometry.y + geometry.height,
+  );
+  expect(outside).toBeDefined();
+  await preview.click({
+    position: {
+      x: outside!.x * geometry.scale,
+      y: outside!.y * geometry.scale,
+    },
+  });
+  await expect(preview).toHaveAttribute("data-schedule-selected", "false");
 });
 
 test("long class editing cannot scroll the Studio shell out of the viewport", async ({
@@ -452,8 +526,8 @@ test("Clean Slate Cards visual fixtures remain deterministic", async ({
   );
   await page.getByLabel("Show title").check();
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot(
     "desktop-cards-clean-5-days-title.png",
     {
@@ -502,7 +576,7 @@ test("multi-device picker creates Tablet and custom Phone variants and preserves
 }) => {
   await createStudioSchedule(page, "TARGET 1", ["Mon", "Tue", "Wed"]);
   await openTargetPicker(page);
-  await page.getByRole("tab", { name: "Tablet" }).click();
+  await page.getByRole("radio", { name: "Tablet" }).click();
   await page.getByRole("button", { name: /Generic 4:3 Portrait/ }).click();
   await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
     "data-target-width",
@@ -510,17 +584,17 @@ test("multi-device picker creates Tablet and custom Phone variants and preserves
   );
   await page.getByLabel("Horizontal schedule position").fill("25");
 
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("tab", { name: "Phone", exact: true }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await page.getByRole("radio", { name: "Phone", exact: true }).click();
   await page.getByLabel("Custom width").fill("1170");
   await page.getByLabel("Custom height").fill("2532");
-  await page.getByRole("button", { name: "Create custom phone" }).click();
+  await page.getByRole("button", { name: "Use custom size" }).click();
   await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
     "data-target-width",
     "1170",
   );
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("button", { name: /tablet · 1536 × 2048/i }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await choosePresetFromOpenPicker(page, "Tablet", /Generic 4:3 Portrait/);
   await expect(page.getByLabel("Horizontal schedule position")).toHaveValue(
     "25",
   );
@@ -531,7 +605,11 @@ test("Match My Screen uses dimensions locally and persists a guide only when req
 }) => {
   await createStudioSchedule(page, "MATCH 1", ["Mon", "Tue"]);
   await openTargetPicker(page);
-  await page.getByRole("tab", { name: "Match My Screen" }).click();
+  await page.getByRole("button", { name: "Match My Screen" }).click();
+  await expect(
+    page.getByRole("button", { name: "Upload screenshot" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Screen screenshot")).toHaveClass(/sr-only/);
   await page
     .getByLabel("Screen screenshot")
     .setInputFiles(
@@ -559,8 +637,8 @@ test("generic lock-screen safe areas report overlap and Tablet exports exact dim
   await page.getByLabel("Show safe areas").check();
   await page.getByLabel("Vertical schedule position").fill("0");
   await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("tab", { name: "Tablet" }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await page.getByRole("radio", { name: "Tablet" }).click();
   await page.getByRole("button", { name: /Generic 4:3 Landscape/ }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
@@ -575,9 +653,9 @@ test("mobile target picker remains a usable sheet", async ({ page }) => {
   await createStudioSchedule(page, "PICKER 1");
   await openTargetPicker(page);
   await expect(
-    page.getByRole("dialog", { name: "Change target" }),
+    page.getByRole("dialog", { name: "Choose a device" }),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Square" }).click();
+  await page.getByRole("radio", { name: "Square" }).click();
   await expect(page.getByRole("button", { name: /Square 1080/ })).toBeVisible();
   expect(
     await page.evaluate(
@@ -586,6 +664,13 @@ test("mobile target picker remains a usable sheet", async ({ page }) => {
         document.documentElement.clientWidth,
     ),
   ).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("dialog", { name: "Choose a device" }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Change device" }),
+  ).toBeFocused();
 });
 
 test("device preview environments remain visually restrained", async ({
@@ -610,15 +695,15 @@ test("device preview environments remain visually restrained", async ({
     animations: "disabled",
   });
 
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("tab", { name: "Tablet" }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await page.getByRole("radio", { name: "Tablet" }).click();
   await page.getByRole("button", { name: /Generic 4:3 Portrait/ }).click();
   await expect(preview).toHaveScreenshot("tablet-cards-preview.png", {
     animations: "disabled",
   });
 
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await page.getByRole("button", { name: "Windows" }).click();
   await expect(preview).toHaveScreenshot("desktop-windows-preview.png", {
     animations: "disabled",
@@ -628,8 +713,8 @@ test("device preview environments remain visually restrained", async ({
     animations: "disabled",
   });
 
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("tab", { name: "Match My Screen" }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await page.getByRole("button", { name: "Match My Screen" }).click();
   await page
     .getByLabel("Screen screenshot")
     .setInputFiles(
@@ -656,21 +741,25 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
     "Thu",
     "Fri",
   ]);
+  await expect(page.getByLabel("Clean Slate subject palette")).toBeVisible();
   await switchToMinimal(page);
+  await expect(page.getByLabel("Clean Slate subject palette")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(
     page.getByRole("radio", { name: "Cards", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByLabel("Clean Slate subject palette")).toBeVisible();
   await page.getByRole("button", { name: "Redo" }).click();
   await expect(
     page.getByRole("radio", { name: "Minimal", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByLabel("Clean Slate subject palette")).toHaveCount(0);
 
   await page.getByLabel("Show title").uncheck();
   await page.getByLabel("Show title").check();
-  await page.getByLabel("Title text").fill("First Semester");
-  await page.getByLabel("Title text").blur();
+  await page.getByLabel("Title", { exact: true }).fill("First Semester");
+  await page.getByLabel("Title", { exact: true }).blur();
   await page.getByLabel("Hide days without classes").uncheck();
   await page.getByLabel("Hide days without classes").check();
 
@@ -725,7 +814,7 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
   await choosePreset(page, "Square", /Square 1080/);
   await expect(preview).toHaveAttribute("data-target-width", "1080");
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   const desktopDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await desktopDownload)).toEqual({
@@ -735,11 +824,11 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
 
   await choosePreset(page, "Phone", /Generic FHD\+ Portrait/);
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await page.getByRole("button", { name: "Change target" }).click();
-  await page.getByRole("tab", { name: "Phone", exact: true }).click();
+  await page.getByRole("button", { name: "Change device" }).click();
+  await page.getByRole("radio", { name: "Phone", exact: true }).click();
   await page.getByLabel("Custom width").fill("1170");
   await page.getByLabel("Custom height").fill("2532");
-  await page.getByRole("button", { name: "Create custom phone" }).click();
+  await page.getByRole("button", { name: "Use custom size" }).click();
   const customDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await customDownload)).toEqual({
@@ -815,7 +904,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
     "tablet-landscape-minimal-clean-target.png",
   );
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-minimal-clean-5-days.png", {
     animations: "disabled",
   });
@@ -846,7 +935,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
     animations: "disabled",
   });
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-minimal-clean-3-days.png", {
     animations: "disabled",
   });
@@ -882,7 +971,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
     "tablet-landscape-minimal-clean-6-days-target.png",
   );
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-minimal-clean-6-days.png", {
     animations: "disabled",
   });
@@ -984,15 +1073,29 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   await expect(page.getByText("Subject code", { exact: true })).toBeVisible();
   await expect(page.getByText("Always shown", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Available on larger Grid targets", { exact: true }),
+    page.getByText("Larger Grid devices only", { exact: true }),
   ).toHaveCount(2);
+  const detailsGroup = page.getByRole("group", { name: "Class details" });
+  const timePosition = await detailsGroup
+    .getByText("Time", { exact: true })
+    .boundingBox();
+  const roomPosition = await detailsGroup
+    .getByText("Room", { exact: true })
+    .boundingBox();
+  expect(timePosition).not.toBeNull();
+  expect(roomPosition).not.toBeNull();
+  expect(timePosition!.y).toBeLessThan(roomPosition!.y);
   await expect(page.getByLabel("Room")).toBeChecked();
   await expect(page.getByLabel("Time")).not.toBeChecked();
-  await page.getByLabel("Room").uncheck();
-  await page.getByLabel("Room").check();
+  await detailsGroup.getByText("Room", { exact: true }).click();
+  await expect(page.getByLabel("Room")).not.toBeChecked();
+  await detailsGroup.getByText("Room", { exact: true }).click();
+  await expect(page.getByLabel("Room")).toBeChecked();
   await page.getByLabel("Time").check();
-  await expect(page.getByLabel("Professor")).toHaveCount(0);
-  await expect(page.getByLabel("Section")).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "Professor" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("checkbox", { name: "Section" })).toHaveCount(0);
 
   const preview = page.getByTestId("artboard-preview");
   const geometry = await preview.evaluate((element) => ({
@@ -1043,10 +1146,10 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
   await expect(preview).toHaveAttribute("data-target-width", "2048");
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await page.getByRole("button", { name: "Design", exact: true }).click();
-  await expect(page.getByLabel("Professor")).toBeVisible();
-  await expect(page.getByLabel("Section")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Professor" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Section" })).toBeVisible();
   const desktopDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await desktopDownload)).toEqual({
@@ -1135,7 +1238,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
     { animations: "disabled" },
   );
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-5-days.png", {
     animations: "disabled",
   });
@@ -1168,7 +1271,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
     { animations: "disabled" },
   );
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-6-days.png", {
     animations: "disabled",
   });
@@ -1182,7 +1285,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
     },
   ]);
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-3-days.png", {
     animations: "disabled",
   });
@@ -1230,7 +1333,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
     animations: "disabled",
   });
   await openTargetPicker(page);
-  await page.getByRole("button", { name: /desktop · 1920 × 1080/i }).click();
+  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-overlap.png", {
     animations: "disabled",
   });

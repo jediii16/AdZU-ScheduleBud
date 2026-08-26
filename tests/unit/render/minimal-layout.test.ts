@@ -76,14 +76,14 @@ describe("Clean Slate Minimal RenderModel", () => {
     ]);
   });
 
-  it("uses the central resolver to select Minimal without card surfaces", () => {
+  it("uses the central resolver to select monochrome Minimal without card surfaces", () => {
     const project = projectWithDays(["Mon"]);
     const result = buildScheduleRenderModel(
       project,
       project.deviceVariants[0]!,
     );
     const nodes = result.model.layers.flatMap((layer) => layer.nodes);
-    expect(nodes.some((node) => node.id.startsWith("marker-"))).toBe(true);
+    expect(nodes.some((node) => node.id.startsWith("marker-"))).toBe(false);
     expect(nodes.some((node) => node.id.startsWith("card-"))).toBe(false);
   });
 
@@ -236,11 +236,9 @@ describe("Clean Slate Minimal RenderModel", () => {
     expect(
       fullResult.dayLayout.find((day) => day.day === "Sat")?.occurrenceCount,
     ).toBe(0);
-    expect(
-      fullResult.model.layers[3].nodes.some((node) =>
-        node.id.startsWith("marker-Sat"),
-      ),
-    ).toBe(false);
+    expect(fullResult.classLayout.some((item) => item.day === "Sat")).toBe(
+      false,
+    );
   });
 
   it("does not render or reveal days from disabled and incomplete subjects", () => {
@@ -362,7 +360,7 @@ describe("Clean Slate Minimal RenderModel", () => {
     ).toBe(true);
   });
 
-  it("uses resolved per-subject colors for thin markers", () => {
+  it("ignores subject colors and emits no per-class color markers", () => {
     const project = projectWithDays(["Mon"]);
     const subjectId = project.schedule[0]!.id;
     project.design.subjectColors = {
@@ -371,14 +369,19 @@ describe("Clean Slate Minimal RenderModel", () => {
       bySubjectId: { [subjectId]: "#123456" },
     };
     const result = buildMinimalRenderModel(project, project.deviceVariants[0]!);
-    expect(result.classLayout[0]?.markerColor).toBe("#123456");
-    const marker = result.model.layers[3].nodes.find((node) =>
-      node.id.startsWith("marker-"),
-    );
-    expect(marker?.kind === "rect" ? marker.geometry.width : 0).toBe(6);
+    const nodes = result.model.layers[3].nodes;
+    expect(nodes.some((node) => node.id.startsWith("marker-"))).toBe(false);
+    expect(
+      nodes.some(
+        (node) =>
+          (node.kind === "rect" && node.fill === "#123456") ||
+          (node.kind === "line" && node.stroke === "#123456") ||
+          (node.kind === "text" && node.fill === "#123456"),
+      ),
+    ).toBe(false);
   });
 
-  it("uses stronger Minimal-only support and automatic marker colors", () => {
+  it("uses Minimal-only support contrast and neutral weekday rules", () => {
     const project = projectWithDays(["Mon"]);
     const result = buildMinimalRenderModel(project, project.deviceVariants[0]!);
     const support = result.model.layers[3].nodes.find(
@@ -393,13 +396,15 @@ describe("Clean Slate Minimal RenderModel", () => {
     expect(professor?.kind === "text" ? professor.fill : null).toBe(
       CLEAN_SLATE_RENDER_THEME.minimalSupport,
     );
-    expect(result.classLayout[0]!.markerColor).toBe(
-      CLEAN_SLATE_RENDER_THEME.minimalMarkerPalette[0],
+    const dayRule = result.model.layers[3].nodes.find(
+      (node) => node.kind === "line" && node.id.startsWith("day-line-"),
     );
-    const marker = result.model.layers[3].nodes.find((node) =>
-      node.id.startsWith("marker-"),
+    expect(dayRule?.kind === "line" ? dayRule.stroke : null).toBe(
+      CLEAN_SLATE_RENDER_THEME.minimalRule,
     );
-    expect(marker?.kind === "rect" ? marker.geometry.width : 0).toBe(6);
+    expect(dayRule?.kind === "line" ? dayRule.stroke : null).not.toBe(
+      CLEAN_SLATE_RENDER_THEME.dayAccent,
+    );
   });
 
   it("uses independent Phone and Desktop typography scales", () => {

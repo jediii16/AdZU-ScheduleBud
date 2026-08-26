@@ -1,6 +1,7 @@
 import {
   clampNormalizedPoint,
   inferOrientation,
+  supportsOrientationSwitch,
   type DeviceVariant,
 } from "@/domain/device/types";
 import type { DeviceSlice, StoreContext } from "../types";
@@ -111,6 +112,7 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
     },
     setDeviceOrientation(variantId, orientation) {
       edit("Change device orientation", variantId, (variant) => {
+        if (!supportsOrientationSwitch(variant.category)) return variant;
         const { width, height } = variant.dimensions;
         const dimensions =
           orientation === "square"

@@ -12,6 +12,10 @@ export function ScheduleEditorOverlay({
   previewScale,
   dragging,
   guides,
+  selected,
+  hovered,
+  onHover,
+  onSelect,
 }: {
   bounds: ModelRect;
   onDragStart(): void;
@@ -21,6 +25,10 @@ export function ScheduleEditorOverlay({
   previewScale: number;
   dragging: boolean;
   guides: AlignmentGuides;
+  selected: boolean;
+  hovered: boolean;
+  onHover(value: boolean): void;
+  onSelect(): void;
 }) {
   const strokeWidth = 1 / previewScale;
   const crosshairSize = 6 / previewScale;
@@ -88,13 +96,37 @@ export function ScheduleEditorOverlay({
         {...bounds}
         fill="rgba(20,95,155,0.001)"
         stroke="#145F9B"
-        strokeWidth={1.5 / previewScale}
-        dash={[7 / previewScale, 5 / previewScale]}
+        strokeEnabled={selected || hovered || dragging}
+        opacity={selected || dragging ? 1 : 0.62}
+        strokeWidth={(selected || dragging ? 1.5 : 1) / previewScale}
+        dash={selected || dragging ? [] : [5 / previewScale, 4 / previewScale]}
         cornerRadius={8}
         draggable
-        onDragStart={onDragStart}
+        onMouseEnter={(event) => {
+          onHover(true);
+          const stage = event.target.getStage();
+          if (stage)
+            stage.container().style.cursor = dragging ? "grabbing" : "grab";
+        }}
+        onMouseLeave={(event) => {
+          onHover(false);
+          const stage = event.target.getStage();
+          if (stage && !dragging) stage.container().style.cursor = "default";
+        }}
+        onMouseDown={onSelect}
+        onTouchStart={onSelect}
+        onDragStart={(event) => {
+          onSelect();
+          const stage = event.target.getStage();
+          if (stage) stage.container().style.cursor = "grabbing";
+          onDragStart();
+        }}
         onDragMove={(event) => onDragMove(event.target.x(), event.target.y())}
-        onDragEnd={(event) => onDragEnd(event.target.x(), event.target.y())}
+        onDragEnd={(event) => {
+          const stage = event.target.getStage();
+          if (stage) stage.container().style.cursor = "grab";
+          onDragEnd(event.target.x(), event.target.y());
+        }}
       />
     </Layer>
   );

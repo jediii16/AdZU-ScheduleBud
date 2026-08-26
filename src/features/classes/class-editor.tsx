@@ -224,9 +224,10 @@ export function StoreSubjectList({
                           : ""}
                       </p>
                     </div>
-                    <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-text-secondary">
+                    <label className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2 text-xs font-semibold text-text-secondary transition-colors duration-150 hover:bg-muted/70 motion-reduce:transition-none">
                       <input
                         type="checkbox"
+                        className="sb-check"
                         checked={subject.enabled}
                         onChange={(event) =>
                           setSubjectEnabled(subject.id, event.target.checked)
@@ -236,7 +237,7 @@ export function StoreSubjectList({
                     </label>
                   </div>
                   <details className="mt-4">
-                    <summary className="cursor-pointer text-sm font-semibold text-brand">
+                    <summary className="min-h-11 cursor-pointer rounded-sm py-3 text-sm font-semibold text-brand transition-colors duration-150 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
                       Edit class
                     </summary>
                     <div className="mt-5 space-y-5 rounded-md bg-card p-4 sm:p-5">

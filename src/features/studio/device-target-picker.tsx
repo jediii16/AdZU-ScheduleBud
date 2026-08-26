@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Dialog } from "@base-ui/react/dialog";
+import { Check, ImageUp, Trash2, X } from "lucide-react";
+import { useRef, useState, type RefObject } from "react";
+
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   deviceCategoryRegistry,
   devicePresetRegistry,
@@ -14,21 +17,24 @@ import {
   type DeviceCategory,
   type DeviceVariant,
 } from "@/domain/device/types";
+import { cn } from "@/lib/utils";
 import { inspectTemporaryImage, type InspectedImage } from "@/storage/assets";
 
 export function DeviceTargetPicker({
   open,
   variants,
+  activeVariantId,
+  returnFocusRef,
   onClose,
-  onSwitch,
   onPreset,
   onCustom,
   onMatched,
 }: {
   open: boolean;
   variants: readonly DeviceVariant[];
+  activeVariantId: string;
+  returnFocusRef?: RefObject<HTMLElement | null>;
   onClose(): void;
-  onSwitch(id: string): void;
   onPreset(preset: DevicePreset): void;
   onCustom(category: DeviceCategory, width: number, height: number): void;
   onMatched(
@@ -37,13 +43,15 @@ export function DeviceTargetPicker({
     saveGuide: boolean,
   ): Promise<void>;
 }) {
-  const [section, setSection] = useState<DeviceCategory | "match">("phone");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [category, setCategory] = useState<DeviceCategory>("phone");
+  const [matchMode, setMatchMode] = useState(false);
   const [custom, setCustom] = useState({ width: "1080", height: "2400" });
   const [error, setError] = useState<string | null>(null);
   const [image, setImage] = useState<InspectedImage | null>(null);
   const [matchCategory, setMatchCategory] = useState<DeviceCategory>("phone");
   const [saveGuide, setSaveGuide] = useState(false);
-  if (!open) return null;
+
   const commitCustom = () => {
     const parsed = deviceDimensionsSchema.safeParse({
       width: Number(custom.width),
@@ -56,13 +64,10 @@ export function DeviceTargetPicker({
       return;
     }
     setError(null);
-    onCustom(
-      section === "match" ? matchCategory : section,
-      parsed.data.width,
-      parsed.data.height,
-    );
+    onCustom(category, parsed.data.width, parsed.data.height);
     onClose();
   };
+
   const inspect = async (file: File) => {
     try {
       const inspected = await inspectTemporaryImage(file, undefined, file.name);
@@ -81,223 +86,305 @@ export function DeviceTargetPicker({
       setError(null);
     } catch (reason) {
       console.error("ScheduleBud screen inspection failed", reason);
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "We couldn't read this image.",
-      );
+      setImage(null);
+      setError("We couldn't read this image. Choose a PNG, JPG, or WebP file.");
     }
   };
+
+  const clearImage = () => {
+    setImage(null);
+    setError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end bg-black/25 md:items-center md:justify-center"
-      role="presentation"
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="target-picker-title"
-        className="max-h-[92dvh] w-full overflow-y-auto rounded-t-md bg-surface-elevated p-5 shadow-xl md:max-w-2xl md:rounded-md"
-      >
-        <header className="flex items-start justify-between border-b border-border pb-4">
-          <div>
-            <p className="sb-label">Wallpaper target</p>
-            <h2 id="target-picker-title" className="sb-section-title">
-              Change target
-            </h2>
-          </div>
-          <Button
-            aria-label="Close target picker"
-            size="icon"
-            variant="ghost"
-            onClick={onClose}
-          >
-            <X aria-hidden="true" />
-          </Button>
-        </header>
-        {variants.length > 0 ? (
-          <div className="border-b border-border py-4">
-            <p className="sb-label">Saved targets</p>
-            <div className="flex flex-wrap gap-2">
-              {variants.map((variant) => (
-                <Button
-                  key={variant.id}
-                  variant="outline"
-                  onClick={() => {
-                    onSwitch(variant.id);
-                    onClose();
-                  }}
-                >
-                  {variant.category} · {variant.dimensions.width} ×{" "}
-                  {variant.dimensions.height}
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        <div
-          className="flex gap-1 overflow-x-auto border-b border-border py-4"
-          role="tablist"
-          aria-label="Target category"
+    <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="fixed inset-0 z-40 min-h-dvh bg-foreground/25 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none" />
+        <Dialog.Popup
+          finalFocus={returnFocusRef}
+          className="fixed right-0 bottom-0 left-0 z-50 max-h-[92dvh] overflow-y-auto rounded-t-md border-t border-border bg-surface-elevated p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl outline-none transition-[transform,opacity] duration-150 data-ending-style:translate-y-3 data-ending-style:opacity-0 data-starting-style:translate-y-3 data-starting-style:opacity-0 motion-reduce:transition-none md:top-1/2 md:right-auto md:bottom-auto md:left-1/2 md:max-h-[88dvh] md:w-[min(42rem,calc(100vw-2rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-md md:border"
         >
-          {deviceCategoryRegistry.map((category) => (
-            <Button
-              key={category.id}
-              role="tab"
-              aria-selected={section === category.id}
-              variant={section === category.id ? "default" : "ghost"}
-              onClick={() => setSection(category.id)}
-            >
-              {category.label}
-            </Button>
-          ))}
-          <Button
-            role="tab"
-            aria-selected={section === "match"}
-            variant={section === "match" ? "default" : "ghost"}
-            onClick={() => setSection("match")}
-          >
-            Match My Screen
-          </Button>
-        </div>
-        {section === "match" ? (
-          <div className="space-y-4 py-5">
-            <div className="border-y border-border py-4">
-              <p className="font-semibold">
-                Use a screenshot from your target screen
-              </p>
-              <p className="mt-1 text-sm text-text-secondary">
-                Your screenshot stays on this device. PNG, JPEG, or WebP.
-              </p>
-              <input
-                aria-label="Screen screenshot"
-                className="mt-3 block w-full text-sm"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void inspect(file);
-                }}
-              />
-            </div>
-            {image ? (
-              <div className="space-y-4">
-                <p className="font-mono text-sm font-semibold">
-                  {image.width} × {image.height}
-                </p>
-                <label>
-                  <span className="sb-label">What kind of screen is this?</span>
-                  <select
-                    aria-label="Screen category"
-                    className="sb-control"
-                    value={matchCategory}
-                    onChange={(event) =>
-                      setMatchCategory(event.target.value as DeviceCategory)
-                    }
-                  >
-                    {deviceCategoryRegistry.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex min-h-11 items-center justify-between border-y border-border py-2 text-sm font-semibold">
-                  Use as preview guide
-                  <input
-                    type="checkbox"
-                    checked={saveGuide}
-                    onChange={(event) => setSaveGuide(event.target.checked)}
-                  />
-                </label>
-                <Button
-                  onClick={() =>
-                    void onMatched(image, matchCategory, saveGuide).then(
-                      onClose,
-                    )
-                  }
-                >
-                  Use screenshot dimensions
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="grid gap-6 py-5 md:grid-cols-[1fr_0.8fr]">
+          <header className="flex items-start justify-between border-b border-border pb-4">
             <div>
-              <p className="sb-label">Recommended presets</p>
-              <div className="divide-y divide-border border-y border-border">
-                {devicePresetRegistry
-                  .filter((preset) => preset.category === section)
-                  .map((preset) => (
+              <p className="sb-label">Device</p>
+              <Dialog.Title className="sb-section-title">
+                Choose a device
+              </Dialog.Title>
+              <Dialog.Description className="mt-1 text-sm text-text-secondary">
+                ScheduleBud remembers your composition for each device size.
+              </Dialog.Description>
+            </div>
+            <Dialog.Close
+              aria-label="Close device picker"
+              className={buttonVariants({ variant: "ghost", size: "icon-lg" })}
+            >
+              <X aria-hidden="true" />
+            </Dialog.Close>
+          </header>
+
+          {!matchMode ? (
+            <>
+              <section className="py-5">
+                <h3 className="sb-inspector-heading">Device type</h3>
+                <div
+                  className="mt-2 flex gap-1 overflow-x-auto border border-border bg-muted/40 p-1"
+                  role="radiogroup"
+                  aria-label="Device type"
+                >
+                  {deviceCategoryRegistry.map((item) => (
                     <button
-                      key={preset.id}
+                      key={item.id}
                       type="button"
-                      className="flex min-h-14 w-full items-center justify-between gap-3 py-2 text-left"
-                      onClick={() => {
-                        onPreset(preset);
-                        onClose();
-                      }}
+                      role="radio"
+                      aria-checked={category === item.id}
+                      className={cn(
+                        "min-h-10 shrink-0 cursor-pointer rounded-sm px-3 text-sm font-semibold transition-colors duration-150 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                        category === item.id
+                          ? "bg-surface-elevated text-brand shadow-sm"
+                          : "text-text-secondary",
+                      )}
+                      onClick={() => setCategory(item.id)}
                     >
-                      <span className="font-semibold">
-                        {preset.displayName}
-                      </span>
-                      <span className="font-mono text-xs text-text-muted">
-                        {preset.width} × {preset.height}
-                      </span>
+                      {item.label}
                     </button>
                   ))}
+                </div>
+              </section>
+
+              <div className="grid gap-6 pb-5 md:grid-cols-[1fr_0.8fr]">
+                <section>
+                  <h3 className="sb-inspector-heading">Recommended sizes</h3>
+                  <div className="mt-2 divide-y divide-border border-y border-border">
+                    {devicePresetRegistry
+                      .filter((preset) => preset.category === category)
+                      .map((preset) => {
+                        const current = variants.some(
+                          (variant) =>
+                            variant.id === activeVariantId &&
+                            variant.presetId === preset.id,
+                        );
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            aria-current={current ? "true" : undefined}
+                            className="flex min-h-14 w-full cursor-pointer items-center justify-between gap-3 px-2 py-2 text-left transition-colors duration-150 hover:bg-muted/70 active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
+                            onClick={() => {
+                              onPreset(preset);
+                              onClose();
+                            }}
+                          >
+                            <span className="font-semibold">
+                              {preset.displayName}
+                            </span>
+                            <span className="flex items-center gap-2 font-mono text-xs text-text-muted">
+                              {preset.width} × {preset.height}
+                              {current ? (
+                                <Check
+                                  aria-hidden="true"
+                                  className="size-4 text-brand"
+                                />
+                              ) : null}
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </section>
+                <section>
+                  <h3 className="sb-inspector-heading">Custom size</h3>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <label>
+                      <span className="text-xs font-semibold text-text-secondary">
+                        Width
+                      </span>
+                      <input
+                        aria-label="Custom width"
+                        className="sb-control"
+                        inputMode="numeric"
+                        value={custom.width}
+                        onChange={(event) =>
+                          setCustom((value) => ({
+                            ...value,
+                            width: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span className="text-xs font-semibold text-text-secondary">
+                        Height
+                      </span>
+                      <input
+                        aria-label="Custom height"
+                        className="sb-control"
+                        inputMode="numeric"
+                        value={custom.height}
+                        onChange={(event) =>
+                          setCustom((value) => ({
+                            ...value,
+                            height: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                  <Button
+                    className="mt-3"
+                    variant="outline"
+                    onClick={commitCustom}
+                  >
+                    Use custom size
+                  </Button>
+                </section>
               </div>
-            </div>
-            <div>
-              <p className="sb-label">Custom dimensions</p>
-              <div className="grid grid-cols-2 gap-2">
-                <label>
-                  <span className="text-xs text-text-secondary">Width</span>
-                  <input
-                    aria-label="Custom width"
-                    className="sb-control"
-                    inputMode="numeric"
-                    value={custom.width}
-                    onChange={(event) =>
-                      setCustom((value) => ({
-                        ...value,
-                        width: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span className="text-xs text-text-secondary">Height</span>
-                  <input
-                    aria-label="Custom height"
-                    className="sb-control"
-                    inputMode="numeric"
-                    value={custom.height}
-                    onChange={(event) =>
-                      setCustom((value) => ({
-                        ...value,
-                        height: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
+
+              <section className="border-t border-border pt-4">
+                <p className="text-sm font-semibold">Or match a screen</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  Read exact dimensions from a screenshot without uploading it.
+                </p>
+                <Button
+                  className="mt-3"
+                  variant="outline"
+                  onClick={() => setMatchMode(true)}
+                >
+                  <ImageUp aria-hidden="true" />
+                  Match My Screen
+                </Button>
+              </section>
+            </>
+          ) : (
+            <section className="space-y-4 py-5">
+              <div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setMatchMode(false)}
+                >
+                  Back to device types
+                </Button>
+                <h3 className="mt-3 font-semibold">
+                  Use a screenshot from your device
+                </h3>
+                <p className="mt-1 text-sm text-text-secondary">
+                  PNG, JPG, or WebP. Your screenshot stays on this device.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  id="screen-guide-file"
+                  aria-label="Screen screenshot"
+                  className="sr-only"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void inspect(file);
+                  }}
+                />
+                {!image ? (
+                  <Button
+                    className="mt-3"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageUp aria-hidden="true" className="size-4" />
+                    Upload screenshot
+                  </Button>
+                ) : null}
               </div>
-              <Button className="mt-3" variant="outline" onClick={commitCustom}>
-                Create custom {section}
-              </Button>
-            </div>
-          </div>
-        )}
-        {error ? (
-          <p
-            role="alert"
-            className="border-t border-warning/40 pt-3 text-sm text-warning"
-          >
-            {error}
-          </p>
-        ) : null}
-      </section>
-    </div>
+
+              {image ? (
+                <div className="border-y border-border py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">
+                        {image.filename ?? "Screen screenshot"}
+                      </p>
+                      <p className="mt-1 font-mono text-xs text-text-muted">
+                        {image.width} × {image.height}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Replace
+                      </Button>
+                      <Button
+                        aria-label="Remove screenshot"
+                        size="icon-lg"
+                        variant="ghost"
+                        onClick={clearImage}
+                      >
+                        <Trash2 aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </div>
+                  <label className="sb-setting-row mt-3 px-0 hover:bg-transparent">
+                    <span>
+                      <span className="block font-semibold">
+                        Use as preview guide
+                      </span>
+                      <span className="mt-0.5 block text-xs font-normal text-text-muted">
+                        Never included in exports.
+                      </span>
+                    </span>
+                    <Switch
+                      aria-label="Use as preview guide"
+                      checked={saveGuide}
+                      onChange={(event) => setSaveGuide(event.target.checked)}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {image ? (
+                <>
+                  <label>
+                    <span className="sb-label">Screen type</span>
+                    <select
+                      aria-label="Screen category"
+                      className="sb-control"
+                      value={matchCategory}
+                      onChange={(event) =>
+                        setMatchCategory(event.target.value as DeviceCategory)
+                      }
+                    >
+                      {deviceCategoryRegistry.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Button
+                    onClick={() =>
+                      void onMatched(image, matchCategory, saveGuide).then(
+                        onClose,
+                      )
+                    }
+                  >
+                    Use screenshot dimensions
+                  </Button>
+                </>
+              ) : null}
+            </section>
+          )}
+
+          {error ? (
+            <p
+              role="alert"
+              className="mt-4 border-t border-warning/40 pt-3 text-sm text-warning"
+            >
+              {error}
+            </p>
+          ) : null}
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

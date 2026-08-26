@@ -167,13 +167,26 @@ body {
   input,
   select,
   textarea {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:ring-offset-1 focus-visible:ring-offset-background;
+  }
+  button:not(:disabled),
+  a[href],
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="range"]:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
   }
 }
 
 @layer components {
   .sb-control {
-    @apply min-h-10 w-full rounded-md border border-input bg-surface-elevated px-3 text-sm text-foreground shadow-none transition-colors placeholder:text-text-muted hover:border-border focus:border-brand disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground;
+    @apply min-h-10 w-full cursor-text rounded-md border border-input bg-surface-elevated px-3 text-sm text-foreground shadow-none transition-colors duration-150 placeholder:text-text-muted hover:border-text-muted/55 focus-visible:border-brand/55 focus-visible:ring-brand/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground motion-reduce:transition-none;
   }
   .sb-label {
     @apply mb-1.5 block text-sm font-semibold text-foreground;
@@ -186,5 +199,23 @@ body {
   }
   .sb-section-title {
     @apply font-heading text-lg font-bold tracking-[-0.01em] text-foreground;
+  }
+  .sb-inspector-major-section {
+    @apply border-t border-border-muted pt-4 pb-3 last:pb-0;
+  }
+  .sb-inspector-heading {
+    @apply font-heading text-sm font-bold tracking-[-0.005em] text-foreground;
+  }
+  .sb-inspector-children {
+    @apply mt-3 ml-3;
+  }
+  .sb-inspector-field-label {
+    @apply mb-1.5 block text-xs font-semibold text-text-secondary;
+  }
+  .sb-setting-row {
+    @apply flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-sm px-2 py-2 text-sm transition-colors duration-150 hover:bg-muted/70 focus-within:bg-muted/70 motion-reduce:transition-none;
+  }
+  .sb-check {
+    @apply size-4 shrink-0 cursor-pointer accent-[var(--brand)] focus-visible:ring-brand/30 focus-visible:ring-offset-1;
   }
 }

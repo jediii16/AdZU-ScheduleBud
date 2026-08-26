@@ -258,6 +258,32 @@ describe("design and device slices", () => {
       schedulePosition: { x: 0.25, y: 0.75 },
     });
   });
+
+  it("changes orientation only for Phone and Tablet variants", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    const phone = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    const desktop = store.getState().createDeviceVariant({
+      category: "desktop",
+      dimensions: { width: 1920, height: 1080 },
+    })!;
+
+    store.getState().setDeviceOrientation(phone, "landscape");
+    store.getState().setDeviceOrientation(desktop, "portrait");
+
+    const variants = selectActiveProject(store.getState())!.deviceVariants;
+    expect(variants.find((variant) => variant.id === phone)).toMatchObject({
+      dimensions: { width: 2400, height: 1080 },
+      orientation: "landscape",
+    });
+    expect(variants.find((variant) => variant.id === desktop)).toMatchObject({
+      dimensions: { width: 1920, height: 1080 },
+      orientation: "landscape",
+    });
+  });
 });
 
 describe("autosave and history", () => {

@@ -99,6 +99,7 @@ export function StudioExperience() {
   );
   const initializedProject = useRef<string | null>(null);
   const exportStageRef = useRef<Konva.Stage | null>(null);
+  const targetPickerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const exportCoordinator = useRef(new PngExportCoordinator());
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [exportError, setExportError] = useState<string | null>(null);
@@ -269,7 +270,7 @@ export function StudioExperience() {
         role="status"
         className="flex min-h-screen items-center justify-center text-sm text-text-muted"
       >
-        Preparing device targets…
+        Preparing devices…
       </div>
     );
 
@@ -361,13 +362,21 @@ export function StudioExperience() {
       compositionId: `cards-${category}`,
     });
   };
-  const createPresetTarget = (preset: DevicePreset) =>
+  const createPresetTarget = (preset: DevicePreset) => {
+    const existing = project.deviceVariants.find(
+      (variant) => variant.presetId === preset.id,
+    );
+    if (existing) {
+      switchTarget(existing.id);
+      return;
+    }
     createTarget(
       preset.category,
       { width: preset.width, height: preset.height },
       "preset",
       preset.id,
     );
+  };
   const createMatchedTarget = async (
     image: InspectedImage,
     category: DeviceCategory,
@@ -418,7 +427,7 @@ export function StudioExperience() {
       console.error("ScheduleBud PNG export failed", error);
       setExportStatus("error");
       setExportError(
-        "We couldn't create this PNG on this device. Your project is safe; try again or choose a smaller target if memory is limited.",
+        "We couldn't create this PNG on this device. Your project is safe; try again or choose a smaller device size if memory is limited.",
       );
     });
   };
@@ -429,6 +438,7 @@ export function StudioExperience() {
       <DeviceStudioPanel
         targetLabel={target.label}
         variant={activeVariant}
+        targetTriggerRef={targetPickerTriggerRef}
         onChangeTarget={() => setTargetPickerOpen(true)}
         onPosition={(position) =>
           store.getState().setSchedulePosition(activeVariant.id, position)
@@ -593,7 +603,7 @@ export function StudioExperience() {
               key={id}
               type="button"
               aria-current={editor.activeSection === id ? "page" : undefined}
-              className={`mx-2 flex min-h-16 flex-col items-center justify-center gap-1 rounded-md text-xs font-semibold transition-colors ${editor.activeSection === id ? "bg-accent text-brand" : "text-text-secondary hover:bg-muted"}`}
+              className={`mx-2 flex min-h-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-md text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none ${editor.activeSection === id ? "bg-accent text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground active:bg-accent"}`}
               onClick={() => setSection(id)}
             >
               <Icon aria-hidden="true" className="size-4" />
@@ -713,7 +723,7 @@ export function StudioExperience() {
               key={id}
               type="button"
               aria-current={editor.activeSection === id ? "page" : undefined}
-              className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-semibold ${editor.activeSection === id ? "text-brand" : "text-text-secondary"}`}
+              className={`flex min-h-16 cursor-pointer flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none ${editor.activeSection === id ? "bg-accent/55 text-brand" : "text-text-secondary active:bg-muted"}`}
               onClick={() => setSection(id)}
             >
               <Icon aria-hidden="true" className="size-4" />
@@ -725,8 +735,9 @@ export function StudioExperience() {
       <DeviceTargetPicker
         open={targetPickerOpen}
         variants={project.deviceVariants}
+        activeVariantId={activeVariant.id}
+        returnFocusRef={targetPickerTriggerRef}
         onClose={() => setTargetPickerOpen(false)}
-        onSwitch={switchTarget}
         onPreset={createPresetTarget}
         onCustom={(category, width, height) =>
           createTarget(category, { width, height }, "custom")
