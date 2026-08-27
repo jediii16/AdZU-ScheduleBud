@@ -176,10 +176,12 @@ describe("design and device slices", () => {
     const historyBefore = store.getState().history.past.length;
     store.getState().setTheme("adzu-classic");
     store.getState().setTheme("midnight");
+    store.getState().setTheme("matcha-study");
+    store.getState().setTheme("girlfriends-choice");
     const themed = selectActiveProject(store.getState())!;
 
-    expect(themed.design.themeId).toBe("midnight");
-    expect(store.getState().history.past).toHaveLength(historyBefore + 2);
+    expect(themed.design.themeId).toBe("girlfriends-choice");
+    expect(store.getState().history.past).toHaveLength(historyBefore + 4);
     expect({
       ...themed,
       design: { ...themed.design, themeId: "clean-slate" },
@@ -191,15 +193,15 @@ describe("design and device slices", () => {
     await store.getState().flushAutosave();
     const saved = await projects.read(themed.id);
     expect(saved.status === "found" ? saved.project.design.themeId : null).toBe(
-      "midnight",
+      "girlfriends-choice",
     );
     store.getState().undo();
     expect(selectActiveProject(store.getState())?.design.themeId).toBe(
-      "adzu-classic",
+      "matcha-study",
     );
     store.getState().redo();
     expect(selectActiveProject(store.getState())?.design.themeId).toBe(
-      "midnight",
+      "girlfriends-choice",
     );
     store.getState().setTheme("clean-slate");
     const restored = selectActiveProject(store.getState())!;

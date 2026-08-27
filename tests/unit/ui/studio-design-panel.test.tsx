@@ -25,18 +25,134 @@ describe("layout design inspector", () => {
       />,
     );
 
-    expect(screen.getByRole("radio", { name: /Clean Slate/ })).toHaveAttribute(
+    expect(screen.getByRole("radio", { name: "Clean Slate" })).toHaveAttribute(
       "aria-checked",
       "true",
     );
     const adzu = screen.getByRole("radio", { name: /AdZU Classic/ });
     const midnight = screen.getByRole("radio", { name: /Midnight/ });
+    const siteao = screen.getByRole("radio", { name: "SITEAO" });
+    const laao = screen.getByRole("radio", { name: "LAAO" });
+    const eao = screen.getByRole("radio", { name: "EAO" });
+    const mao = screen.getByRole("radio", { name: "MAO" });
+    const aao = screen.getByRole("radio", { name: "AAO" });
+    const nao = screen.getByRole("radio", { name: "NAO" });
+    const matcha = screen.getByRole("radio", { name: "Matcha Study" });
+    const girlfriendsChoice = screen.getByRole("radio", {
+      name: "Girlfriend's Choice",
+    });
     expect(adzu).toHaveAttribute("aria-checked", "false");
     expect(midnight).toHaveAttribute("aria-checked", "false");
-    fireEvent.click(midnight);
+    expect(siteao).toHaveAttribute("aria-checked", "false");
+    expect(laao).toHaveAttribute("aria-checked", "false");
+    expect(eao).toHaveAttribute("aria-checked", "false");
+    expect(mao).toHaveAttribute("aria-checked", "false");
+    expect(aao).toHaveAttribute("aria-checked", "false");
+    expect(nao).toHaveAttribute("aria-checked", "false");
+    expect(matcha).toHaveAttribute("aria-checked", "false");
+    expect(girlfriendsChoice).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(girlfriendsChoice);
     expect(onTheme).toHaveBeenCalledOnce();
-    expect(onTheme).toHaveBeenCalledWith("midnight");
-    expect(screen.getByText("Quiet, neutral, typography-first.")).toBeVisible();
+    expect(onTheme).toHaveBeenCalledWith("girlfriends-choice");
+    expect(screen.getByText("Malinis")).toBeVisible();
+  });
+
+  it("keeps the Girlfriend's Choice subject palette visible only for Cards and Grid", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const props = {
+      design: { ...project.design, themeId: "girlfriends-choice" as const },
+      visibleFields: project.design.visibleFields,
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+    };
+    const { rerender } = render(
+      <DesignStudioPanel
+        {...props}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText("Girlfriend's Choice subject palette"),
+    ).toBeVisible();
+    rerender(
+      <DesignStudioPanel
+        {...props}
+        activeLayout="grid"
+        detailCapabilities={resolveLayoutDetailCapabilities("grid", variant)}
+      />,
+    );
+    expect(
+      screen.getByLabelText("Girlfriend's Choice subject palette"),
+    ).toBeVisible();
+
+    for (const layoutId of ["minimal", "planner", "photo"] as const) {
+      rerender(
+        <DesignStudioPanel
+          {...props}
+          activeLayout={layoutId}
+          detailCapabilities={resolveLayoutDetailCapabilities(
+            layoutId,
+            variant,
+          )}
+        />,
+      );
+      expect(
+        screen.queryByLabelText("Girlfriend's Choice subject palette"),
+      ).toBeNull();
+    }
+  });
+
+  it("keeps the Matcha subject palette visible only for Cards and Grid", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const props = {
+      design: { ...project.design, themeId: "matcha-study" as const },
+      visibleFields: project.design.visibleFields,
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+    };
+    const { rerender } = render(
+      <DesignStudioPanel
+        {...props}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+      />,
+    );
+
+    expect(screen.getByLabelText("Matcha Study subject palette")).toBeVisible();
+    rerender(
+      <DesignStudioPanel
+        {...props}
+        activeLayout="grid"
+        detailCapabilities={resolveLayoutDetailCapabilities("grid", variant)}
+      />,
+    );
+    expect(screen.getByLabelText("Matcha Study subject palette")).toBeVisible();
+
+    for (const layoutId of ["minimal", "planner", "photo"] as const) {
+      rerender(
+        <DesignStudioPanel
+          {...props}
+          activeLayout={layoutId}
+          detailCapabilities={resolveLayoutDetailCapabilities(
+            layoutId,
+            variant,
+          )}
+        />,
+      );
+      expect(
+        screen.queryByLabelText("Matcha Study subject palette"),
+      ).toBeNull();
+    }
   });
 
   it("keeps Midnight Subject Palette visibility layout-dependent", () => {

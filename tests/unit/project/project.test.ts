@@ -66,6 +66,110 @@ describe("ScheduleProject", () => {
     expect(serialized).not.toContain("Blob");
   });
 
+  it("round-trips SITEAO through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "siteao-orange" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("siteao-orange");
+  });
+
+  it("round-trips LAAO through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "laao-green" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("laao-green");
+  });
+
+  it("round-trips EAO through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "eao-blue" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("eao-blue");
+  });
+
+  it("round-trips MAO through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "mao-red" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("mao-red");
+  });
+
+  it("round-trips AAO through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "aao-yellow" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("aao-yellow");
+  });
+
+  it("round-trips NAO through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "nao-white" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("nao-white");
+  });
+
+  it("round-trips Matcha Study through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "matcha-study" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("matcha-study");
+  });
+
+  it("round-trips Girlfriend's Choice through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "girlfriends-choice" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("girlfriends-choice");
+  });
+
   it("rejects a dangling active device variant", () => {
     const project = createBlankProject({ id: "project-1", now: NOW });
     expect(
