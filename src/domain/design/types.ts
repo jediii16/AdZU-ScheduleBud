@@ -19,13 +19,20 @@ export type DayVisibility = z.infer<typeof dayVisibilitySchema>;
 
 export const fontIdSchema = z.enum(FONT_IDS);
 
+export const themeIdSchema = z.enum([
+  "clean-slate",
+  "adzu-classic",
+  "midnight",
+]);
+export type ThemeId = z.infer<typeof themeIdSchema>;
+
 export const themeDefinitionSchema = z.object({
-  id: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  id: themeIdSchema,
   name: z.string().min(1),
-  status: z.enum(["available", "planned"]),
+  description: z.string().min(1),
   fontId: fontIdSchema,
   headingFontId: fontIdSchema,
-  palette: z.object({
+  previewColors: z.object({
     background: z.string(),
     foreground: z.string(),
     accent: z.string(),

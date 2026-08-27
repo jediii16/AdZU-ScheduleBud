@@ -29,10 +29,8 @@ import {
   resolveLayoutVisibleFields,
   type LayoutDetailCapabilities,
 } from "./layout-capabilities";
-import {
-  CLEAN_SLATE_RENDER_THEME,
-  type CleanSlateRenderTheme,
-} from "./themes/clean-slate";
+import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
+import type { WallpaperThemeTokens } from "./themes/types";
 import type {
   Rect,
   RenderModel,
@@ -291,11 +289,11 @@ function metricsFor(
       radius: 8,
     },
     square: {
-      margin: 52,
+      margin: 32,
       timeAxisWidth: 80,
-      titleGap: 18,
-      dayHeaderHeight: 54,
-      bandGap: 40,
+      titleGap: 12,
+      dayHeaderHeight: 44,
+      bandGap: 24,
       preferredPixelsPerHour: 52,
       maxDayWidth: dayCount <= 1 ? 600 : 290,
       blockInset: 4,
@@ -306,13 +304,15 @@ function metricsFor(
   return {
     ...base[family],
     titleHeight: titleVisible
-      ? family === "phonePortrait"
-        ? 104
-        : family === "tabletPortrait"
-          ? 116
-          : family === "desktopLandscape"
-            ? 78
-            : 92
+      ? family === "square"
+        ? 66
+        : family === "phonePortrait"
+          ? 104
+          : family === "tabletPortrait"
+            ? 116
+            : family === "desktopLandscape"
+              ? 78
+              : 92
       : 0,
   };
 }
@@ -421,7 +421,7 @@ function subjectFill(
   project: ScheduleProject,
   subjectId: string,
   index: number,
-  theme: CleanSlateRenderTheme,
+  theme: WallpaperThemeTokens,
 ): string {
   const colors = project.design.subjectColors;
   if (colors.mode === "single" && colors.singleColor) return colors.singleColor;
@@ -642,7 +642,7 @@ function drawBlock(
     family: TargetCompositionFamily;
     typography: GridTypography;
     metrics: GridMetrics;
-    theme: CleanSlateRenderTheme;
+    theme: WallpaperThemeTokens;
     fill: string;
   },
 ) {
@@ -781,7 +781,7 @@ function drawBlock(
         family === "phonePortrait" || (tier !== "roomy" && tier !== "medium"),
       ),
       typography.time,
-      theme.foreground,
+      theme.gridTime,
       600,
       family !== "phonePortrait",
     );
@@ -832,7 +832,7 @@ function drawBlock(
 export function buildGridRenderModel(
   project: ScheduleProject,
   variant: DeviceVariant,
-  theme: CleanSlateRenderTheme = CLEAN_SLATE_RENDER_THEME,
+  theme: WallpaperThemeTokens = CLEAN_SLATE_RENDER_THEME,
 ): GridRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
@@ -1019,7 +1019,7 @@ export function buildGridRenderModel(
             lineY - typography.timeAxis * 0.62,
             metrics.timeAxisWidth - 12,
             typography.timeAxis,
-            theme.gridSupport,
+            theme.gridAxis,
             {
               align: "right",
               height: typography.timeAxis * 1.25,
@@ -1137,7 +1137,7 @@ export function buildGridRenderModel(
       id: "background",
       nodes: [
         {
-          id: "clean-slate-background",
+          id: "wallpaper-background",
           kind: "rect",
           geometry: { x: 0, y: 0, width, height },
           fill: theme.background,

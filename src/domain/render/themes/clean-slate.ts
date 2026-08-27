@@ -1,3 +1,5 @@
+import type { WallpaperThemeTokens } from "./types";
+
 export const CLEAN_SLATE_RENDER_THEME = {
   id: "clean-slate",
   background: "#F7F8FA",
@@ -5,7 +7,11 @@ export const CLEAN_SLATE_RENDER_THEME = {
   foreground: "#172033",
   secondary: "#526075",
   muted: "#7A8798",
+  cardsTime: "#172033",
+  cardsMetadata: "#7A8798",
+  minimalTime: "#172033",
   minimalSupport: "#66758A",
+  minimalProfessor: "#66758A",
   minimalRule: "#AAB3BE",
   plannerSurface: "#FCFDFE",
   plannerBorder: "#D8DEE7",
@@ -17,7 +23,9 @@ export const CLEAN_SLATE_RENDER_THEME = {
   polaroidPaper: "#FFFDF8",
   polaroidCaption: "#465166",
   polaroidShadow: "#172033",
+  gridTime: "#172033",
   gridSupport: "#5F6E82",
+  gridAxis: "#5F6E82",
   gridGuide: "#D9E2EB",
   gridDivider: "#E8EDF2",
   border: "#DDE3EA",
@@ -30,6 +38,4 @@ export const CLEAN_SLATE_RENDER_THEME = {
     "#F1E5E8",
     "#E3EDF0",
   ],
-} as const;
-
-export type CleanSlateRenderTheme = typeof CLEAN_SLATE_RENDER_THEME;
+} as const satisfies WallpaperThemeTokens;

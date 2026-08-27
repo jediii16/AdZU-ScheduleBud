@@ -70,7 +70,7 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
   };
   return {
     setTheme(value) {
-      if (themeById.get(value)?.status !== "available") return;
+      if (!themeById.has(value)) return;
       edit("Change theme", "themeId", value);
     },
     setThemeVariant: (value) =>
@@ -175,7 +175,7 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
       });
     },
     applyTemplateMetadata(templateId, design) {
-      if (themeById.get(design.themeId)?.status !== "available") return;
+      if (!themeById.has(design.themeId)) return;
       context.commit("Apply template", (project) => ({
         ...project,
         design: {

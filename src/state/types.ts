@@ -1,4 +1,4 @@
-import type { LayoutId } from "@/domain/design/types";
+import type { LayoutId, ThemeId } from "@/domain/design/types";
 import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
 import type {
   Density,
@@ -123,7 +123,7 @@ export interface ScheduleSlice {
 }
 
 export interface DesignSlice {
-  setTheme(themeId: string): void;
+  setTheme(themeId: ThemeId): void;
   setThemeVariant(themeVariantId: string | null): void;
   setLayout(layoutId: LayoutId): void;
   setPrimaryPhoto(assetId: string | null): void;

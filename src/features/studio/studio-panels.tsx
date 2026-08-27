@@ -4,8 +4,10 @@ import { useRef, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { availableLayouts } from "@/data/layouts/registry";
-import type { LayoutId } from "@/domain/design/types";
+import { availableThemes } from "@/data/themes/registry";
+import type { LayoutId, ThemeId } from "@/domain/design/types";
 import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
+import { resolveWallpaperTheme } from "@/domain/render/themes/registry";
 import {
   supportsOrientationSwitch,
   type DeviceVariant,
@@ -389,6 +391,7 @@ export function DesignStudioPanel({
   visibleFields,
   activeLayout,
   detailCapabilities,
+  onTheme,
   onLayout,
   onTitleVisible,
   onTitleText,
@@ -415,6 +418,7 @@ export function DesignStudioPanel({
   visibleFields: VisibleFields;
   activeLayout: LayoutId;
   detailCapabilities: LayoutDetailCapabilities;
+  onTheme?(value: ThemeId): void;
   onLayout(value: LayoutId): void;
   onTitleVisible(value: boolean): void;
   onTitleText(value: string): void;
@@ -437,19 +441,60 @@ export function DesignStudioPanel({
   onPhotoMove?(assetId: string, direction: "up" | "down"): void;
   onPhotoCaption?(assetId: string, caption: string): void;
 }) {
+  const subjectPalette = resolveWallpaperTheme(
+    design.themeId,
+    activeLayout,
+  ).subjectPalette;
+  const activeTheme = availableThemes.find(
+    (theme) => theme.id === design.themeId,
+  );
   return (
     <section aria-labelledby="studio-design-heading">
       <div className="pb-3">
         <h2 id="studio-design-heading" className="sb-section-title">
           Design
         </h2>
-        <dl className="mt-3">
-          <div>
-            <dt className="text-xs font-semibold text-text-muted">Theme</dt>
-            <dd className="mt-1 text-sm font-semibold">Clean Slate</dd>
-          </div>
-        </dl>
       </div>
+      <section className="sb-inspector-major-section">
+        <h3 className="sb-inspector-heading">Theme</h3>
+        <div
+          role="radiogroup"
+          aria-label="Wallpaper theme"
+          className="sb-inspector-children grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
+        >
+          {availableThemes.map((theme) => (
+            <button
+              key={theme.id}
+              type="button"
+              role="radio"
+              aria-checked={design.themeId === theme.id}
+              title={theme.description}
+              className={`min-h-12 min-w-0 cursor-pointer rounded-sm px-2 py-1.5 text-left text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${design.themeId === theme.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
+              onClick={() => onTheme?.(theme.id)}
+            >
+              <span className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="flex size-5 shrink-0 overflow-hidden rounded-full border border-border"
+                >
+                  <span
+                    className="h-full flex-1"
+                    style={{ backgroundColor: theme.previewColors.foreground }}
+                  />
+                  <span
+                    className="h-full flex-1"
+                    style={{ backgroundColor: theme.previewColors.accent }}
+                  />
+                </span>
+                <span>{theme.name}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="sb-inspector-children mt-2 text-xs leading-5 text-text-muted">
+          {activeTheme?.description}
+        </p>
+      </section>
       <section className="sb-inspector-major-section">
         <h3 className="sb-inspector-heading">Layout</h3>
         <div
@@ -578,17 +623,10 @@ export function DesignStudioPanel({
         <div className="sb-inspector-major-section">
           <p className="sb-inspector-heading">Subject palette</p>
           <div
-            aria-label="Clean Slate subject palette"
+            aria-label={`${activeTheme?.name ?? "Clean Slate"} subject palette`}
             className="sb-inspector-children flex gap-2"
           >
-            {[
-              "#DCEAF5",
-              "#E4EEE8",
-              "#F3E8DD",
-              "#E9E4F2",
-              "#F1E5E8",
-              "#E3EDF0",
-            ].map((color) => (
+            {subjectPalette.map((color) => (
               <span
                 key={color}
                 className="size-7 rounded-sm border border-border"

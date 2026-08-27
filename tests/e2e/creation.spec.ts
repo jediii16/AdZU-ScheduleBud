@@ -1211,6 +1211,153 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   ).toBe(true);
 });
 
+test("Square Grid keeps class details when the title is visible", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createGridStudioClasses(page, [
+    {
+      code: "WEBPROG",
+      days: ["Mon", "Thu"],
+      start: "14:00",
+      end: "15:20",
+      room: "ADV LAB",
+      professor: "Tan, Cristel Jade DS.",
+      section: "A",
+    },
+    {
+      code: "MATMOD",
+      days: ["Mon", "Thu"],
+      start: "15:30",
+      end: "16:50",
+      room: "S402",
+      professor: "Fajardo, Erborne G.",
+      section: "M",
+    },
+    {
+      code: "FFP.1n",
+      days: ["Tue", "Fri"],
+      start: "09:30",
+      end: "10:50",
+      room: "S402",
+      professor: "Baguio, Joey James",
+      section: "U",
+    },
+    {
+      code: "COMPROG1",
+      days: ["Tue", "Fri"],
+      start: "12:30",
+      end: "13:50",
+      room: "S401",
+      professor: "Cañedo, Fe Grace T.",
+      section: "A",
+    },
+    {
+      code: "COMPINTRO",
+      days: ["Tue", "Fri"],
+      start: "17:00",
+      end: "18:20",
+      room: "BC405",
+      professor: "Galvez, Ylman Nayr A.",
+      section: "A",
+    },
+    {
+      code: "PATHFIT1n",
+      days: ["Wed"],
+      start: "08:00",
+      end: "10:00",
+      room: "MPCC",
+      professor: "Francisco, Noldan King S.",
+      section: "U",
+    },
+  ]);
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await choosePreset(page, "Square", /Square 1080/);
+
+  const target = await exportedPng(page);
+  expect(pngBufferDimensions(target)).toEqual({ width: 1080, height: 1080 });
+  expect(target).toMatchSnapshot("square-grid-title-details-target.png");
+});
+
+test("Square Planner keeps dense titled panels inside the export", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createGridStudioClasses(page, [
+    {
+      code: "WEBPROG",
+      days: ["Mon", "Thu"],
+      start: "14:00",
+      end: "15:20",
+      room: "ADV LAB",
+      professor: "Tan, Cristel Jade DS.",
+      section: "A",
+    },
+    {
+      code: "MATMOD",
+      days: ["Mon", "Thu"],
+      start: "15:30",
+      end: "16:50",
+      room: "S402",
+      professor: "Fajardo, Erborne G.",
+      section: "M",
+    },
+    {
+      code: "FFP.1n",
+      days: ["Tue", "Fri"],
+      start: "09:30",
+      end: "10:50",
+      room: "S402",
+      professor: "Baguio, Joey James",
+      section: "U",
+    },
+    {
+      code: "COMPROG1",
+      days: ["Tue", "Wed", "Fri"],
+      start: "12:30",
+      end: "13:50",
+      room: "S401",
+      professor: "Cañedo, Fe Grace T.",
+      section: "A",
+    },
+    {
+      code: "COMPINTRO",
+      days: ["Tue", "Fri"],
+      start: "17:00",
+      end: "18:20",
+      room: "BC405",
+      professor: "Galvez, Ylman Nayr A.",
+      section: "A",
+    },
+    {
+      code: "PATHFIT1n",
+      days: ["Wed"],
+      start: "08:00",
+      end: "10:00",
+      room: "MPCC",
+      professor: "Francisco, Noldan King S.",
+      section: "U",
+    },
+    {
+      code: "NSTP2",
+      days: ["Tue", "Fri"],
+      start: "19:00",
+      end: "20:20",
+      room: "FWS",
+      professor: "Santos, Maria L.",
+      section: "B",
+    },
+  ]);
+  await page.getByRole("radio", { name: "Planner", exact: true }).click();
+  await page.getByRole("radio", { name: /Midnight/ }).click();
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await choosePreset(page, "Square", /Square 1080/);
+
+  const target = await exportedPng(page);
+  expect(pngBufferDimensions(target)).toEqual({ width: 1080, height: 1080 });
+  expect(target).toMatchSnapshot("square-planner-dense-title-target.png");
+});
+
 test("Grid visual baselines cover target families, temporal range, and overlaps", async ({
   page,
 }) => {

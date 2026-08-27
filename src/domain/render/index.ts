@@ -12,3 +12,7 @@ export * from "./text-fit";
 export * from "./alignment-guides";
 export * from "./layout-capabilities";
 export * from "./themes/clean-slate";
+export * from "./themes/adzu-classic";
+export * from "./themes/midnight";
+export * from "./themes/registry";
+export * from "./themes/types";

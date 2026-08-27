@@ -24,10 +24,8 @@ import {
 } from "./photo-layout";
 import { clampPhotoTransform, photoTransformFor } from "./photo-crop";
 import { fitText } from "./text-fit";
-import {
-  CLEAN_SLATE_RENDER_THEME,
-  type CleanSlateRenderTheme,
-} from "./themes/clean-slate";
+import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
+import type { WallpaperThemeTokens } from "./themes/types";
 import type {
   Rect,
   RenderModel,
@@ -262,7 +260,7 @@ function resolveDayPlans(
 export function buildPhotoSplitRenderModel(
   project: ScheduleProject,
   variant: DeviceVariant,
-  theme: CleanSlateRenderTheme = CLEAN_SLATE_RENDER_THEME,
+  theme: WallpaperThemeTokens = CLEAN_SLATE_RENDER_THEME,
 ): PhotoSplitRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
@@ -585,7 +583,7 @@ export function buildPhotoSplitRenderModel(
       id: "background",
       nodes: [
         {
-          id: "clean-slate-background",
+          id: "wallpaper-background",
           kind: "rect",
           geometry: { x: 0, y: 0, width, height },
           fill: theme.background,

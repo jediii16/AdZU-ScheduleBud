@@ -142,6 +142,76 @@ describe("design and device slices", () => {
     );
   });
 
+  it("switches themes as one undoable, redoable autosaved change without touching composition state", async () => {
+    const { store, projects } = createTestStore();
+    store.getState().createProject();
+    const variantId = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    store.getState().setLayout("photo");
+    store.getState().setPhotoComposition("split");
+    store.getState().addPhoto("photo-one");
+    store.getState().addPhoto("photo-two");
+    store.getState().setPhotoCaption("photo-one", "Keep this caption");
+    store.getState().setPhotoTransform(variantId, "hero", "photo-one", {
+      position: { x: 0.2, y: 0.3 },
+      scale: 1.2,
+      rotation: 0,
+    });
+    store.getState().setPhotoTransform(variantId, "split", "photo-one", {
+      position: { x: 0.4, y: 0.5 },
+      scale: 1.3,
+      rotation: 0,
+    });
+    store.getState().setPhotoTransform(variantId, "polaroid", "photo-one", {
+      position: { x: 0.6, y: 0.7 },
+      scale: 1.1,
+      rotation: 0,
+    });
+    store.getState().setSchedulePosition(variantId, { x: 0.31, y: 0.67 });
+    await store.getState().flushAutosave();
+
+    const before = structuredClone(selectActiveProject(store.getState())!);
+    const historyBefore = store.getState().history.past.length;
+    store.getState().setTheme("adzu-classic");
+    store.getState().setTheme("midnight");
+    const themed = selectActiveProject(store.getState())!;
+
+    expect(themed.design.themeId).toBe("midnight");
+    expect(store.getState().history.past).toHaveLength(historyBefore + 2);
+    expect({
+      ...themed,
+      design: { ...themed.design, themeId: "clean-slate" },
+    }).toEqual({
+      ...before,
+      updatedAt: themed.updatedAt,
+    });
+
+    await store.getState().flushAutosave();
+    const saved = await projects.read(themed.id);
+    expect(saved.status === "found" ? saved.project.design.themeId : null).toBe(
+      "midnight",
+    );
+    store.getState().undo();
+    expect(selectActiveProject(store.getState())?.design.themeId).toBe(
+      "adzu-classic",
+    );
+    store.getState().redo();
+    expect(selectActiveProject(store.getState())?.design.themeId).toBe(
+      "midnight",
+    );
+    store.getState().setTheme("clean-slate");
+    const restored = selectActiveProject(store.getState())!;
+    expect({
+      ...restored,
+      design: { ...restored.design, themeId: "clean-slate" },
+    }).toEqual({
+      ...before,
+      updatedAt: restored.updatedAt,
+    });
+  });
+
   it("preserves template provenance and marks controlled edits as modified", () => {
     const { store } = createTestStore();
     store.getState().createProject();
@@ -177,10 +247,6 @@ describe("design and device slices", () => {
       wallpaperTitle: { visible: false, text: "" },
       labels: { semester: { visible: true, text: "First Semester" } },
     });
-    store.getState().setTheme("cat-cafe");
-    expect(selectActiveProject(store.getState())?.design.themeId).toBe(
-      "clean-slate",
-    );
   });
 
   it("stores visibility only for optional class details", () => {

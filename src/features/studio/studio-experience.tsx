@@ -682,6 +682,7 @@ export function StudioExperience() {
         visibleFields={visibleFields}
         activeLayout={activeLayout}
         detailCapabilities={detailCapabilities}
+        onTheme={(themeId) => store.getState().setTheme(themeId)}
         onLayout={(layoutId) => {
           if (layoutId !== "photo") setPhotoAdjusting(false);
           store.getState().setLayout(layoutId);

@@ -131,6 +131,23 @@ describe("Clean Slate Planner RenderModel", () => {
       align: "left",
     });
 
+    const square = variant(project, {
+      category: "square",
+      dimensions: { width: 1080, height: 1080 },
+      orientation: "square",
+    });
+    const squareResult = buildPlannerRenderModel(project, square);
+    const squareTime = squareResult.model.layers[3].nodes.find(
+      (node) => node.kind === "text" && node.id.startsWith("planner-time-"),
+    );
+    expect(squareResult.classLayout[0]!.headerMode).toBe("stacked");
+    expect(squareTime).toMatchObject({
+      kind: "text",
+      text: "11:00 AM–12:20 PM",
+      wrap: "none",
+      align: "left",
+    });
+
     const tabletPortraitProject = plannerProject([
       "Mon",
       "Tue",
@@ -338,4 +355,55 @@ describe("Clean Slate Planner RenderModel", () => {
       expect(result.model.height).toBe(target.dimensions.height);
     }
   });
+
+  it.each([3, 4, 5])(
+    "fits titled five-day Square Planner panels with up to %s classes per busy day",
+    (meetingCount) => {
+      const project = plannerProject(["Mon", "Tue", "Wed", "Thu", "Fri"], {
+        Mon: meetingCount,
+        Tue: meetingCount,
+        Wed: Math.max(1, meetingCount - 1),
+        Thu: meetingCount,
+        Fri: meetingCount,
+      });
+      project.design.wallpaperTitle.visible = true;
+      const square = variant(project, {
+        category: "square",
+        dimensions: { width: 1080, height: 1080 },
+        orientation: "square",
+      });
+
+      const result = buildPlannerRenderModel(project, square);
+      const scheduleNodes = result.model.layers[3].nodes;
+
+      expect(rowCounts(result)).toEqual([3, 2]);
+      expect(result.scheduleBounds.y).toBeGreaterThanOrEqual(0);
+      expect(
+        result.scheduleBounds.y + result.scheduleBounds.height,
+      ).toBeLessThanOrEqual(1080);
+      expect(
+        result.dayLayout.every(
+          (day) => day.bounds.y + day.bounds.height <= 1080,
+        ),
+      ).toBe(true);
+      expect(
+        result.classLayout.every(
+          (item) =>
+            item.bounds.y + item.bounds.height <= 1080 &&
+            Object.values(item.shownFields).every(Boolean),
+        ),
+      ).toBe(true);
+      expect(
+        scheduleNodes.every((node) => {
+          if (node.kind === "rect" || node.kind === "image")
+            return node.geometry.y + node.geometry.height <= 1080;
+          if (node.kind === "text")
+            return (
+              node.position.y + (node.height ?? node.fontSize * 1.25) <= 1080
+            );
+          return Math.max(...node.points.map((point) => point.y)) <= 1080;
+        }),
+      ).toBe(true);
+    },
+  );
 });

@@ -3,49 +3,51 @@ import {
   type ThemeDefinition,
 } from "@/domain/design/types";
 
-const plannedThemeNames = [
-  ["adzu-classic", "AdZU Classic"],
-  ["midnight", "Midnight"],
-  ["pink-diary", "Pink Diary"],
-  ["matcha-study", "Matcha Study"],
-  ["capybara-study-buddy", "Capybara Study Buddy"],
-  ["cat-cafe", "Cat Café"],
-  ["puppy-club", "Puppy Club"],
-  ["stargazer", "Stargazer"],
-  ["pixel-grove", "Pixel Grove"],
-] as const;
-
-const cleanSlate: ThemeDefinition = {
-  id: "clean-slate",
-  name: "Clean Slate",
-  status: "available",
-  fontId: "body-sans",
-  headingFontId: "heading-sans",
-  palette: { background: "#F8FAFC", foreground: "#172033", accent: "#136F8A" },
-  assets: { "background-pattern": "/themes/clean-slate/background.svg" },
-};
-
 const rawThemes: ThemeDefinition[] = [
-  cleanSlate,
-  ...plannedThemeNames.map(([id, name]) => ({
-    id,
-    name,
-    status: "planned" as const,
-    fontId: "body-sans" as const,
-    headingFontId:
-      id === "pixel-grove"
-        ? ("pixel-heading" as const)
-        : ("heading-sans" as const),
-    palette: {
-      background: "#F4F4F5",
-      foreground: "#27272A",
-      accent: "#71717A",
+  {
+    id: "clean-slate",
+    name: "Clean Slate",
+    description: "Quiet, neutral, typography-first.",
+    fontId: "body-sans",
+    headingFontId: "heading-sans",
+    previewColors: {
+      background: "#F7F8FA",
+      foreground: "#172033",
+      accent: "#145F9B",
     },
-    assets: { "background-pattern": "/themes/_shared/placeholder-pattern.svg" },
-  })),
+    assets: { "background-pattern": "/themes/clean-slate/background.svg" },
+  },
+  {
+    id: "adzu-classic",
+    name: "AdZU Classic",
+    description: "Academic navy with layered collegiate blues.",
+    fontId: "body-sans",
+    headingFontId: "heading-sans",
+    previewColors: {
+      background: "#F7F9FC",
+      foreground: "#102A43",
+      accent: "#1F5F9B",
+    },
+    assets: {},
+  },
+  {
+    id: "midnight",
+    name: "Midnight",
+    description: "Deep navy tones for late-night studying.",
+    fontId: "body-sans",
+    headingFontId: "heading-sans",
+    previewColors: {
+      background: "#0F1623",
+      foreground: "#F2F5F9",
+      accent: "#7DA6D8",
+    },
+    assets: {},
+  },
 ];
 
 export const themeRegistry = themeDefinitionSchema.array().parse(rawThemes);
 export const themeById = new Map(
   themeRegistry.map((theme) => [theme.id, theme]),
 );
+
+export const availableThemes = themeRegistry;

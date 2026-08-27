@@ -11,10 +11,8 @@ import {
 import type { ScheduleDay, Subject } from "@/domain/schedule/types";
 import { resolveLayoutVisibleFields } from "./layout-capabilities";
 import { fitText, type FittedText } from "./text-fit";
-import {
-  CLEAN_SLATE_RENDER_THEME,
-  type CleanSlateRenderTheme,
-} from "./themes/clean-slate";
+import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
+import type { WallpaperThemeTokens } from "./themes/types";
 import type {
   Rect,
   RenderModel,
@@ -123,24 +121,61 @@ function textNode(
   };
 }
 
-function translateNode(node: RenderNode, x: number, y: number): RenderNode {
-  if (node.kind === "rect" || node.kind === "image")
+function placeNode(
+  node: RenderNode,
+  x: number,
+  y: number,
+  verticalScale: number,
+): RenderNode {
+  if (node.kind === "rect")
     return {
       ...node,
       geometry: {
-        ...node.geometry,
-        x: node.geometry.x + x,
-        y: node.geometry.y + y,
+        x: x + node.geometry.x,
+        y: y + node.geometry.y * verticalScale,
+        width: node.geometry.width,
+        height: node.geometry.height * verticalScale,
+      },
+      ...(node.strokeWidth === undefined
+        ? {}
+        : { strokeWidth: node.strokeWidth * verticalScale }),
+      ...(node.cornerRadius === undefined
+        ? {}
+        : { cornerRadius: node.cornerRadius * verticalScale }),
+    };
+  if (node.kind === "image")
+    return {
+      ...node,
+      geometry: {
+        x: x + node.geometry.x,
+        y: y + node.geometry.y * verticalScale,
+        width: node.geometry.width,
+        height: node.geometry.height * verticalScale,
       },
     };
   if (node.kind === "text")
     return {
       ...node,
-      position: { x: node.position.x + x, y: node.position.y + y },
+      position: {
+        x: x + node.position.x,
+        y: y + node.position.y * verticalScale,
+      },
+      width: node.width,
+      ...(node.height === undefined
+        ? {}
+        : { height: node.height * verticalScale }),
+      fontSize: node.fontSize * verticalScale,
     };
   return {
     ...node,
-    points: node.points.map((point) => ({ x: point.x + x, y: point.y + y })),
+    points: node.points.map((point) => ({
+      x: x + point.x,
+      y: y + point.y * verticalScale,
+    })),
+    strokeWidth: node.strokeWidth * verticalScale,
+    ...(node.dash === undefined
+      ? {}
+      : { dash: node.dash.map((value) => value * verticalScale) }),
   };
 }
 
@@ -394,6 +429,7 @@ function makeClassPlan(
   const headerGap = Math.max(18, typography.time);
   const inline =
     family !== "phonePortrait" &&
+    family !== "square" &&
     Boolean(time) &&
     width >= preferredCodeWidth + timeWidth + headerGap;
   const codeWidth = inline ? Math.max(1, width - timeWidth - headerGap) : width;
@@ -445,7 +481,7 @@ function drawClass(
   width: number,
   typography: PlannerTypography,
   metrics: PlannerMetrics,
-  theme: CleanSlateRenderTheme,
+  theme: WallpaperThemeTokens,
 ) {
   const id = `${day}-${plan.occurrence.id}`;
   const timeWidth = plan.time
@@ -531,7 +567,7 @@ function drawClass(
 export function buildPlannerRenderModel(
   project: ScheduleProject,
   variant: DeviceVariant,
-  theme: CleanSlateRenderTheme = CLEAN_SLATE_RENDER_THEME,
+  theme: WallpaperThemeTokens = CLEAN_SLATE_RENDER_THEME,
 ): PlannerRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
@@ -653,8 +689,16 @@ export function buildPlannerRenderModel(
       rowHeights.reduce((sum, value) => sum + value, 0) +
       Math.max(0, rowCount - 1) * metrics.rowGap,
   );
-  const movableX = Math.max(0, width - metrics.margin * 2 - groupWidth);
-  const movableY = Math.max(0, height - metrics.margin * 2 - groupHeight);
+  const availableHeight = Math.max(1, height - metrics.margin * 2);
+  const layoutScale =
+    family === "square" ? Math.min(1, availableHeight / groupHeight) : 1;
+  const renderedGroupWidth = groupWidth;
+  const renderedGroupHeight = groupHeight * layoutScale;
+  const movableX = Math.max(0, width - metrics.margin * 2 - renderedGroupWidth);
+  const movableY = Math.max(
+    0,
+    height - metrics.margin * 2 - renderedGroupHeight,
+  );
   const originX = metrics.margin + movableX * variant.schedulePosition.x;
   const originY = metrics.margin + movableY * variant.schedulePosition.y;
   const nodes: RenderNode[] = [];
@@ -761,9 +805,9 @@ export function buildPlannerRenderModel(
         day: plan.day,
         bounds: {
           x: originX + contentX,
-          y: originY + classY,
+          y: originY + classY * layoutScale,
           width: contentWidth,
-          height: item.height,
+          height: item.height * layoutScale,
         },
         headerMode: item.headerMode,
         codeText: item.code.text,
@@ -794,9 +838,9 @@ export function buildPlannerRenderModel(
       day: plan.day,
       bounds: {
         x: originX + x,
-        y: originY + y,
+        y: originY + y * layoutScale,
         width: panelWidth,
-        height: panelHeight,
+        height: panelHeight * layoutScale,
       },
       row: plan.row,
       column: plan.column,
@@ -806,15 +850,15 @@ export function buildPlannerRenderModel(
   const scheduleBounds: Rect = {
     x: originX,
     y: originY,
-    width: groupWidth,
-    height: groupHeight,
+    width: renderedGroupWidth,
+    height: renderedGroupHeight,
   };
   const layers: RenderModel["layers"] = [
     {
       id: "background",
       nodes: [
         {
-          id: "clean-slate-background",
+          id: "wallpaper-background",
           kind: "rect",
           geometry: { x: 0, y: 0, width, height },
           fill: theme.background,
@@ -825,7 +869,9 @@ export function buildPlannerRenderModel(
     { id: "photos", nodes: [] },
     {
       id: "schedule",
-      nodes: nodes.map((node) => translateNode(node, originX, originY)),
+      nodes: nodes.map((node) =>
+        placeNode(node, originX, originY, layoutScale),
+      ),
     },
     { id: "foreground", nodes: [] },
   ];
@@ -840,7 +886,12 @@ export function buildPlannerRenderModel(
       maxY: metrics.margin + movableY,
     },
     compositionFamily: family,
-    typography,
+    typography: Object.fromEntries(
+      Object.entries(typography).map(([key, value]) => [
+        key,
+        value * layoutScale,
+      ]),
+    ) as PlannerTypography,
     columns,
     dayLayout,
     classLayout,

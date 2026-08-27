@@ -707,6 +707,56 @@ describe("Clean Slate Grid RenderModel", () => {
     }
   });
 
+  it("keeps a detail line visible in long-range Square Grid exports with a title", () => {
+    const project = gridProject([
+      { code: "WEBPROG-M", day: "Mon", start: "14:00", end: "15:20" },
+      { code: "MATMOD-M", day: "Mon", start: "15:30", end: "16:50" },
+      { code: "FFP-T", day: "Tue", start: "09:30", end: "10:50" },
+      { code: "COMPROG1-T", day: "Tue", start: "12:30", end: "13:50" },
+      { code: "COMPINTRO-T", day: "Tue", start: "17:00", end: "18:20" },
+      { code: "PATHFIT1N", day: "Wed", start: "08:00", end: "10:00" },
+      { code: "WEBPROG-H", day: "Thu", start: "14:00", end: "15:20" },
+      { code: "MATMOD-H", day: "Thu", start: "15:30", end: "16:50" },
+      { code: "FFP-F", day: "Fri", start: "09:30", end: "10:50" },
+      { code: "COMPROG1-F", day: "Fri", start: "12:30", end: "13:50" },
+      { code: "COMPINTRO-F", day: "Fri", start: "17:00", end: "18:20" },
+    ]);
+    const square = variant(project, {
+      category: "square",
+      dimensions: { width: 1080, height: 1080 },
+      orientation: "square",
+    });
+    project.design.wallpaperTitle.visible = true;
+    project.design.visibleFields = {
+      time: true,
+      room: true,
+      section: true,
+      professor: true,
+    };
+
+    const result = buildGridRenderModel(project, square);
+    const shortBlocks = result.blockLayout.filter(
+      (block) => block.day !== "Wed",
+    );
+    const pathfit = result.blockLayout.find((block) => block.day === "Wed");
+
+    expect(result.bandLayout.map((band) => band.days.length)).toEqual([3, 2]);
+    expect(shortBlocks).toHaveLength(10);
+    expect(
+      shortBlocks.every((block) =>
+        Object.values(block.shownFields).some(Boolean),
+      ),
+    ).toBe(true);
+    expect(pathfit?.shownFields).toMatchObject({
+      time: true,
+      room: true,
+      section: true,
+    });
+    expect(
+      result.scheduleBounds.y + result.scheduleBounds.height,
+    ).toBeLessThanOrEqual(1080);
+  });
+
   it("keeps every preview-only overlay out of the Grid export model", () => {
     const project = daysProject(["Mon"]);
     const target = {

@@ -87,6 +87,16 @@ describe("ScheduleProject", () => {
     expect(migrateProject({ schemaVersion: 1 }).status).toBe("invalid");
   });
 
+  it("defaults schema-1 projects without a theme to Clean Slate", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const { themeId: _themeId, ...legacyDesign } = project.design;
+    void _themeId;
+    const migrated = migrateProject({ ...project, design: legacyDesign });
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("clean-slate");
+  });
+
   it("strips legacy subject-name fields from saved schema-1 projects", () => {
     const project = createBlankProject({ id: "project-1", now: NOW });
     const subject = normalizeSubject(

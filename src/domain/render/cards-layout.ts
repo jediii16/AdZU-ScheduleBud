@@ -18,10 +18,8 @@ import type {
   TextRenderNode,
 } from "./types";
 import { fitText } from "./text-fit";
-import {
-  CLEAN_SLATE_RENDER_THEME,
-  type CleanSlateRenderTheme,
-} from "./themes/clean-slate";
+import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
+import type { WallpaperThemeTokens } from "./themes/types";
 
 const DAYS: readonly ScheduleDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_NAMES: Record<ScheduleDay, string> = {
@@ -114,7 +112,7 @@ function colorForSubject(
   project: ScheduleProject,
   subjectId: string,
   index: number,
-  theme: CleanSlateRenderTheme,
+  theme: WallpaperThemeTokens,
 ): string {
   const colors = project.design.subjectColors;
   if (colors.mode === "single" && colors.singleColor) return colors.singleColor;
@@ -363,7 +361,7 @@ function drawCard(
   fields: VisibleFields,
   geometry: CardsGeometry,
   typography: CardsTypography,
-  theme: CleanSlateRenderTheme,
+  theme: WallpaperThemeTokens,
   color: string,
   day: ScheduleDay,
 ) {
@@ -415,7 +413,7 @@ function drawCard(
         cursor,
         textWidth,
         typography.time,
-        theme.foreground,
+        theme.cardsTime,
         { height: geometry.timeHeight, fontWeight: 700 },
       ),
     );
@@ -437,7 +435,7 @@ function drawCard(
         cursor,
         textWidth,
         fit.fontSize,
-        theme.muted,
+        theme.cardsMetadata,
         { height: geometry.supportHeight, fontWeight: 600 },
       ),
     );
@@ -459,7 +457,7 @@ function drawCard(
         cursor,
         textWidth,
         fit.fontSize,
-        theme.muted,
+        theme.cardsMetadata,
         { height: geometry.professorHeight },
       ),
     );
@@ -469,7 +467,7 @@ function drawCard(
 export function buildCardsRenderModel(
   project: ScheduleProject,
   variant: DeviceVariant,
-  theme: CleanSlateRenderTheme = CLEAN_SLATE_RENDER_THEME,
+  theme: WallpaperThemeTokens = CLEAN_SLATE_RENDER_THEME,
 ): CardsRenderResult {
   const { width, height } = variant.dimensions;
   const compositionFamily = resolveTargetComposition(variant);
@@ -715,7 +713,7 @@ export function buildCardsRenderModel(
     id: "background",
     nodes: [
       {
-        id: "clean-slate-background",
+        id: "wallpaper-background",
         kind: "rect",
         geometry: { x: 0, y: 0, width, height },
         fill: theme.background,

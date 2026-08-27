@@ -17,10 +17,8 @@ import type {
   ScheduleRenderResult,
   TextRenderNode,
 } from "./types";
-import {
-  CLEAN_SLATE_RENDER_THEME,
-  type CleanSlateRenderTheme,
-} from "./themes/clean-slate";
+import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
+import type { WallpaperThemeTokens } from "./themes/types";
 
 const DAYS: readonly ScheduleDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_NAMES: Record<ScheduleDay, string> = {
@@ -407,7 +405,7 @@ function drawClass(
   width: number,
   typography: MinimalTypography,
   metrics: MinimalMetrics,
-  theme: CleanSlateRenderTheme,
+  theme: WallpaperThemeTokens,
 ) {
   const id = `${day}-${plan.occurrence.id}`;
   const textX = x;
@@ -440,7 +438,7 @@ function drawClass(
         cursor,
         textWidth,
         typography.time,
-        theme.foreground,
+        theme.minimalTime,
         { fontWeight: 600, height: metrics.timeHeight, wrap: "none" },
       ),
     );
@@ -477,7 +475,7 @@ function drawClass(
         cursor,
         textWidth,
         plan.professor.fontSize,
-        theme.minimalSupport,
+        theme.minimalProfessor,
         { height: metrics.professorHeight, wrap: "none" },
       ),
     );
@@ -487,7 +485,7 @@ function drawClass(
 export function buildMinimalRenderModel(
   project: ScheduleProject,
   variant: DeviceVariant,
-  theme: CleanSlateRenderTheme = CLEAN_SLATE_RENDER_THEME,
+  theme: WallpaperThemeTokens = CLEAN_SLATE_RENDER_THEME,
 ): MinimalRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
@@ -768,7 +766,7 @@ export function buildMinimalRenderModel(
       id: "background",
       nodes: [
         {
-          id: "clean-slate-background",
+          id: "wallpaper-background",
           kind: "rect",
           geometry: { x: 0, y: 0, width, height },
           fill: theme.background,

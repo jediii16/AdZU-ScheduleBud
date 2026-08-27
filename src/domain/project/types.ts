@@ -5,6 +5,7 @@ import {
   layoutIdSchema,
   photoCompositionSchema,
   scheduleTitleSchema,
+  themeIdSchema,
 } from "@/domain/design/types";
 import {
   densitySchema,
@@ -49,7 +50,7 @@ export const wallpaperLabelsSchema = z.object({
 export const projectDesignSchema = z.object({
   baseTemplateId: z.string().min(1).nullable(),
   templateModified: z.boolean(),
-  themeId: z.string().min(1),
+  themeId: themeIdSchema.default("clean-slate"),
   themeVariantId: z.string().min(1).nullable(),
   layoutId: layoutIdSchema,
   photoComposition: photoCompositionSchema.nullable(),

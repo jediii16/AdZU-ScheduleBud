@@ -12,10 +12,8 @@ import type { ScheduleDay, Subject } from "@/domain/schedule/types";
 import { resolveLayoutVisibleFields } from "./layout-capabilities";
 import { clampPhotoTransform, photoTransformFor } from "./photo-crop";
 import { fitText, type FittedText } from "./text-fit";
-import {
-  CLEAN_SLATE_RENDER_THEME,
-  type CleanSlateRenderTheme,
-} from "./themes/clean-slate";
+import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
+import type { WallpaperThemeTokens } from "./themes/types";
 import type {
   Rect,
   RenderModel,
@@ -490,7 +488,7 @@ export function drawPhotoClass(
   width: number,
   typography: PhotoTypography,
   metrics: PhotoMetrics,
-  theme: CleanSlateRenderTheme,
+  theme: WallpaperThemeTokens,
 ) {
   const id = `${day}-${item.occurrence.id}`;
   nodes.push(
@@ -545,7 +543,7 @@ export function drawPhotoClass(
 export function buildPhotoHeroRenderModel(
   project: ScheduleProject,
   variant: DeviceVariant,
-  theme: CleanSlateRenderTheme = CLEAN_SLATE_RENDER_THEME,
+  theme: WallpaperThemeTokens = CLEAN_SLATE_RENDER_THEME,
 ): PhotoHeroRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
@@ -863,7 +861,7 @@ export function buildPhotoHeroRenderModel(
       id: "background",
       nodes: [
         {
-          id: "clean-slate-background",
+          id: "wallpaper-background",
           kind: "rect",
           geometry: { x: 0, y: 0, width, height },
           fill: theme.background,

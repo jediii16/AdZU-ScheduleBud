@@ -6,6 +6,67 @@ import { resolveLayoutDetailCapabilities } from "@/domain/render";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("layout design inspector", () => {
+  it("offers all production themes in a compact immediate selector", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onTheme = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={project.design}
+        visibleFields={project.design.visibleFields}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+        onTheme={onTheme}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: /Clean Slate/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    const adzu = screen.getByRole("radio", { name: /AdZU Classic/ });
+    const midnight = screen.getByRole("radio", { name: /Midnight/ });
+    expect(adzu).toHaveAttribute("aria-checked", "false");
+    expect(midnight).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(midnight);
+    expect(onTheme).toHaveBeenCalledOnce();
+    expect(onTheme).toHaveBeenCalledWith("midnight");
+    expect(screen.getByText("Quiet, neutral, typography-first.")).toBeVisible();
+  });
+
+  it("keeps Midnight Subject Palette visibility layout-dependent", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const props = {
+      design: { ...project.design, themeId: "midnight" as const },
+      visibleFields: project.design.visibleFields,
+      detailCapabilities: resolveLayoutDetailCapabilities("cards", variant),
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+    };
+    const { rerender } = render(
+      <DesignStudioPanel {...props} activeLayout="cards" />,
+    );
+
+    expect(screen.getByLabelText("Midnight subject palette")).toBeVisible();
+    rerender(
+      <DesignStudioPanel
+        {...props}
+        activeLayout="minimal"
+        detailCapabilities={resolveLayoutDetailCapabilities("minimal", variant)}
+      />,
+    );
+    expect(screen.queryByLabelText("Midnight subject palette")).toBeNull();
+  });
+
   it("keeps Planner in the compact selector and hides Subject Palette", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;

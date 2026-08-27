@@ -59,6 +59,8 @@ Square, and only the constrained custom-tablet fallback, use these split-band ru
 - two days: 2 centered;
 - one day: centered.
 
+Square uses compact outer, title, header, and band spacing so enabling the title does not consume the metadata line of ordinary class blocks.
+
 Tablet Landscape preserves one full band when the actual target leaves at least 250 target pixels per day after margins and the time axis. Its existing deterministic fallback remains for unusually narrow custom landscape targets. Laptop/Desktop use one full band. Sparse wide schedules cap each day at 320 target pixels and center the whole temporal composition instead of stretching a few columns across the canvas.
 
 Band height is derived from target space, band count, and the resolved time span. All bands use the same pixels-per-minute value. Compact ranges remain composed rather than filling the entire wallpaper, while long ranges clamp inside the available target height.
