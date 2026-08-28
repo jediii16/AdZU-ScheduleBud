@@ -1,10 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, type RefObject } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { Copy, Layers, RotateCcw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  emojiCategories,
+  type EmojiCategoryId,
+} from "@/data/emojis/catalog";
 import { availableLayouts } from "@/data/layouts/registry";
 import { availableThemes } from "@/data/themes/registry";
 import {
@@ -88,12 +92,12 @@ function StickerThumbnail({
         unoptimized
         src={sticker.src}
         alt=""
-        width={1920}
-        height={1080}
+        width={sticker.intrinsic.width}
+        height={sticker.intrinsic.height}
         className="absolute max-w-none"
         style={{
-          width: 1920 * scale,
-          height: 1080 * scale,
+          width: sticker.intrinsic.width * scale,
+          height: sticker.intrinsic.height * scale,
           left:
             (size - sticker.crop.width * scale) / 2 - sticker.crop.x * scale,
           top:
@@ -128,17 +132,32 @@ function StickerInspectorSection({
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(stickerCategories[0] ?? "");
+  const [emojiCategory, setEmojiCategory] = useState<EmojiCategoryId>(
+    emojiCategories[0]?.id ?? "",
+  );
+  const [visibleLimit, setVisibleLimit] = useState(60);
   const selected = stickers.find((item) => item.instanceId === selectedId);
   const normalizedQuery = query.trim().toLowerCase();
-  const filtered = stickerCatalog.filter(
-    (item) =>
-      item.category === category &&
-      (!normalizedQuery ||
-        [item.label, item.category, ...(item.keywords ?? [])]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery)),
+  const filtered = useMemo(
+    () =>
+      stickerCatalog.filter(
+        (item) =>
+          item.category === category &&
+          (category !== "Emojis" || item.subcategory === emojiCategory) &&
+          (!normalizedQuery ||
+            [
+              item.label,
+              item.category,
+              item.subcategory ?? "",
+              ...(item.keywords ?? []),
+            ]
+              .join(" ")
+              .toLowerCase()
+              .includes(normalizedQuery)),
+      ),
+    [category, emojiCategory, normalizedQuery],
   );
+  const visibleStickers = filtered.slice(0, visibleLimit);
   return (
     <section
       className="sb-inspector-major-section"
@@ -170,7 +189,10 @@ function StickerInspectorSection({
                 className="sb-control pl-8"
                 value={query}
                 placeholder="Search stickers"
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setVisibleLimit(60);
+                }}
               />
             </label>
             <div
@@ -186,14 +208,41 @@ function StickerInspectorSection({
                   variant={category === item ? "default" : "ghost"}
                   role="tab"
                   aria-selected={category === item}
-                  onClick={() => setCategory(item)}
+                  onClick={() => {
+                    setCategory(item);
+                    setVisibleLimit(60);
+                  }}
                 >
                   {item}
                 </Button>
               ))}
             </div>
+            {category === "Emojis" ? (
+              <div
+                className="mt-2 flex flex-wrap gap-1 border-t border-border pt-2"
+                role="tablist"
+                aria-label="Emoji category"
+              >
+                {emojiCategories.map((item) => (
+                  <Button
+                    key={item.id}
+                    type="button"
+                    size="sm"
+                    variant={emojiCategory === item.id ? "secondary" : "ghost"}
+                    role="tab"
+                    aria-selected={emojiCategory === item.id}
+                    onClick={() => {
+                      setEmojiCategory(item.id);
+                      setVisibleLimit(60);
+                    }}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
             <div className="mt-3 grid grid-cols-3 gap-2">
-              {filtered.map((definition) => (
+              {visibleStickers.map((definition) => (
                 <button
                   key={definition.id}
                   type="button"
@@ -208,6 +257,17 @@ function StickerInspectorSection({
                 </button>
               ))}
             </div>
+            {visibleLimit < filtered.length ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="mt-3 w-full"
+                onClick={() => setVisibleLimit((limit) => limit + 60)}
+              >
+                Show more ({filtered.length - visibleLimit} remaining)
+              </Button>
+            ) : null}
           </div>
         ) : null}
         {stickers.length === 0 ? (

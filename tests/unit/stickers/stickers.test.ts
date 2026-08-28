@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { stickerCatalog, stickerCategories } from "@/data/stickers/catalog";
+import { emojiCatalog, emojiCategories } from "@/data/emojis/catalog";
 import { deviceVariantSchema } from "@/domain/device/types";
 import { buildScheduleRenderModel } from "@/domain/render";
 import {
@@ -15,8 +16,28 @@ import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("built-in sticker system", () => {
   it("catalogs only real assets and non-empty categories", () => {
-    expect(stickerCatalog).toHaveLength(15);
-    expect(stickerCategories).toEqual(["Capybara"]);
+    expect(emojiCatalog).toHaveLength(755);
+    expect(stickerCatalog).toHaveLength(770);
+    expect(stickerCategories).toEqual(["Capybara", "Emojis"]);
+    expect(emojiCategories.map((category) => category.label)).toEqual([
+      "Emojis & People",
+      "Animals & Nature",
+      "Flags",
+      "Food & Drinks",
+      "Others",
+    ]);
+    expect(
+      emojiCategories.map((category) => [
+        category.id,
+        emojiCatalog.filter((emoji) => emoji.category === category.id).length,
+      ]),
+    ).toEqual([
+      ["emojis-people", 206],
+      ["animals-nature", 175],
+      ["flags", 162],
+      ["food-drinks", 58],
+      ["others", 154],
+    ]);
     for (const sticker of stickerCatalog) {
       expect(sticker.label).not.toMatch(/\.svg$/i);
       expect(existsSync(join(process.cwd(), "public", sticker.src))).toBe(true);
@@ -24,6 +45,16 @@ describe("built-in sticker system", () => {
         stickerCatalog.some((item) => item.category === sticker.category),
       ).toBe(true);
     }
+    expect(
+      emojiCatalog.every((emoji) => !emoji.src.includes("source-assets")),
+    ).toBe(true);
+    expect(emojiCatalog.every((emoji) => emoji.intrinsicWidth === 871)).toBe(
+      true,
+    );
+    expect(emojiCatalog.every((emoji) => !/ Emoji$/.test(emoji.label))).toBe(
+      true,
+    );
+    expect(emojiCatalog[0]).not.toHaveProperty("defaultWidthRatio");
   });
 
   it("defaults legacy variants to an empty sticker composition", () => {
@@ -82,29 +113,23 @@ describe("built-in sticker system", () => {
     const projects = new MemoryProjectRepository();
     const { store } = createTestStore({ projects });
     store.getState().createProject();
-    const phone = store
-      .getState()
-      .createDeviceVariant({
-        category: "phone",
-        dimensions: { width: 1080, height: 2400 },
-      })!;
-    const desktop = store
-      .getState()
-      .createDeviceVariant({
-        category: "desktop",
-        dimensions: { width: 1920, height: 1080 },
-      })!;
+    const phone = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    const desktop = store.getState().createDeviceVariant({
+      category: "desktop",
+      dimensions: { width: 1920, height: 1080 },
+    })!;
     store.getState().setActiveDeviceVariant(phone);
     const first = store.getState().addSticker(phone, "capy-reading")!;
     store.getState().beginHistoryTransaction("Move sticker");
-    store
-      .getState()
-      .updateSticker(phone, first, {
-        xRatio: 0.7,
-        yRatio: 0.3,
-        widthRatio: 0.35,
-        rotation: 30,
-      });
+    store.getState().updateSticker(phone, first, {
+      xRatio: 0.7,
+      yRatio: 0.3,
+      widthRatio: 0.35,
+      rotation: 30,
+    });
     store.getState().updateSticker(phone, first, { xRatio: 0.75 });
     store.getState().commitHistoryTransaction();
     const duplicate = store.getState().duplicateSticker(phone, first)!;
@@ -177,12 +202,10 @@ describe("built-in sticker system", () => {
   it("never creates stickers when a color theme changes", () => {
     const { store } = createTestStore();
     store.getState().createProject();
-    const variantId = store
-      .getState()
-      .createDeviceVariant({
-        category: "phone",
-        dimensions: { width: 1080, height: 2400 },
-      })!;
+    const variantId = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
     store.getState().setTheme("matcha-study");
     expect(
       store

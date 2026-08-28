@@ -41,6 +41,28 @@ describe("layout design inspector", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Add sticker" }));
     expect(screen.getByRole("tab", { name: "Capybara" })).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "Emojis" }));
+    expect(screen.getByRole("tab", { name: "Emojis & People" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "Animals & Nature" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Flags" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Food & Drinks" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Others" })).toBeVisible();
+    expect(
+      screen.getAllByRole("button", { name: /^Add (?!sticker$)/ }),
+    ).toHaveLength(60);
+    fireEvent.click(screen.getByRole("button", { name: /Show more/ }));
+    expect(
+      screen.getAllByRole("button", { name: /^Add (?!sticker$)/ }),
+    ).toHaveLength(120);
+    fireEvent.click(screen.getByRole("tab", { name: "Food & Drinks" }));
+    expect(
+      screen.getAllByRole("button", { name: /^Add (?!sticker$)/ }),
+    ).toHaveLength(58);
+    expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Capybara" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Add Reading Capybara" }),
     );

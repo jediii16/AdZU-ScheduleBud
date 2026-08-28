@@ -19,9 +19,11 @@ export type StickerDefinition = {
   id: string;
   label: string;
   category: string;
+  subcategory?: string;
   src: string;
   keywords?: readonly string[];
   /** The visible artwork within the source SVG canvas. */
   crop: { x: number; y: number; width: number; height: number };
+  intrinsic: { width: number; height: number };
   defaultWidthRatio?: number;
 };

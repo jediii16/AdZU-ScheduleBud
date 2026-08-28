@@ -1,4 +1,5 @@
 import type { StickerDefinition } from "@/domain/stickers/types";
+import { emojiCatalog } from "@/data/emojis/catalog";
 
 const capybara = (
   id: string,
@@ -12,11 +13,12 @@ const capybara = (
   category: "Capybara",
   src: `/themes/capybara-study-buddy/${filename}`,
   crop,
+  intrinsic: { width: 1920, height: 1080 },
   keywords,
   defaultWidthRatio: 0.22,
 });
 
-export const stickerCatalog = [
+export const capybaraStickerCatalog = [
   capybara(
     "capy-books-resting",
     "Resting on Books",
@@ -123,6 +125,32 @@ export const stickerCatalog = [
     ["presenting", "school"],
   ),
 ] as const satisfies readonly StickerDefinition[];
+
+export const emojiStickerCatalog: readonly StickerDefinition[] =
+  emojiCatalog.map((emoji) => ({
+    id: emoji.id,
+    label: emoji.label,
+    category: "Emojis",
+    subcategory: emoji.category,
+    src: emoji.src,
+    keywords: emoji.keywords,
+    crop: {
+      x: 0,
+      y: 0,
+      width: emoji.intrinsicWidth,
+      height: emoji.intrinsicHeight,
+    },
+    intrinsic: {
+      width: emoji.intrinsicWidth,
+      height: emoji.intrinsicHeight,
+    },
+    defaultWidthRatio: 0.16,
+  }));
+
+export const stickerCatalog: readonly StickerDefinition[] = [
+  ...capybaraStickerCatalog,
+  ...emojiStickerCatalog,
+];
 
 export const stickerById = new Map(
   stickerCatalog.map((item) => [item.id, item]),
