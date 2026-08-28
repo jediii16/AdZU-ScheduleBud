@@ -9,6 +9,7 @@ import { LAAO_GREEN_THEME } from "./laao-green";
 import { MAO_RED_THEME } from "./mao-red";
 import { MATCHA_STUDY_THEME } from "./matcha-study";
 import { NAO_WHITE_THEME } from "./nao-white";
+import { PINK_DIARY_THEME } from "./pink-diary";
 import { SITEAO_ORANGE_THEME } from "./siteao-orange";
 import type { WallpaperThemeDefinition, WallpaperThemeTokens } from "./types";
 
@@ -24,13 +25,20 @@ const WALLPAPER_THEMES: Record<ThemeId, WallpaperThemeDefinition> = {
   "nao-white": NAO_WHITE_THEME,
   "matcha-study": MATCHA_STUDY_THEME,
   "girlfriends-choice": GIRLFRIENDS_CHOICE_THEME,
+  "pink-diary": PINK_DIARY_THEME,
 };
+
+export function resolveWallpaperThemeDefinition(
+  themeId: ThemeId | null | undefined,
+): WallpaperThemeDefinition {
+  return WALLPAPER_THEMES[themeId ?? "clean-slate"];
+}
 
 export function resolveWallpaperTheme(
   themeId: ThemeId | null | undefined,
   layoutId: LayoutId,
 ): WallpaperThemeTokens {
-  const definition = WALLPAPER_THEMES[themeId ?? "clean-slate"];
+  const definition = resolveWallpaperThemeDefinition(themeId);
   return {
     ...definition.tokens,
     ...definition.layoutTokens?.[layoutId],

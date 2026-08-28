@@ -14,6 +14,10 @@ import {
   PolaroidPlaceholderOverlay,
 } from "./editor-overlay/photo-overlay";
 import { ScheduleEditorOverlay } from "./editor-overlay/schedule-overlay";
+import {
+  StickerEditorOverlay,
+  type StickerEditorInteraction,
+} from "./editor-overlay/sticker-overlay";
 import { ScheduleScene, type RenderAssetImages } from "./schedule-scene";
 
 type PhotoEditorInteraction = {
@@ -41,6 +45,7 @@ export function ScheduleArtboard({
   guideOpacity,
   assetImages,
   photoEditor,
+  stickerEditor,
 }: {
   result: ScheduleRenderResult;
   zoom: number;
@@ -56,6 +61,7 @@ export function ScheduleArtboard({
   guideOpacity: number;
   assetImages?: RenderAssetImages | undefined;
   photoEditor?: PhotoEditorInteraction | undefined;
+  stickerEditor?: StickerEditorInteraction | undefined;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [space, setSpace] = useState({ width: 720, height: 720 });
@@ -182,6 +188,18 @@ export function ScheduleArtboard({
           height={result.model.height * scale}
           scaleX={scale}
           scaleY={scale}
+          onMouseDown={(event) => {
+            if (event.target === event.target.getStage()) {
+              setScheduleSelected(false);
+              stickerEditor?.onSelect(null);
+            }
+          }}
+          onTouchStart={(event) => {
+            if (event.target === event.target.getStage()) {
+              setScheduleSelected(false);
+              stickerEditor?.onSelect(null);
+            }
+          }}
         >
           <ScheduleScene model={result.model} assets={assetImages} />
           <PreviewEnvironmentOverlay
@@ -220,10 +238,28 @@ export function ScheduleArtboard({
               selected={scheduleSelected}
               hovered={scheduleHovered}
               onHover={setScheduleHovered}
-              onSelect={() => setScheduleSelected(true)}
+              onSelect={() => {
+                setScheduleSelected(true);
+                stickerEditor?.onSelect(null);
+              }}
               onDragStart={onDragStart}
               onDragMove={(x, y) => onDragMove(x, y, scale)}
               onDragEnd={(x, y) => onDragEnd(x, y, scale)}
+            />
+          ) : null}
+          {!photoEditor?.adjusting && stickerEditor ? (
+            <StickerEditorOverlay
+              variant={variant}
+              previewScale={scale}
+              dragging={dragging}
+              guides={guides}
+              interaction={{
+                ...stickerEditor,
+                onSelect(instanceId) {
+                  if (instanceId) setScheduleSelected(false);
+                  stickerEditor.onSelect(instanceId);
+                },
+              }}
             />
           ) : null}
         </Stage>

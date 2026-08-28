@@ -5,6 +5,11 @@ import {
   type DeviceVariant,
 } from "@/domain/device/types";
 import { clampPhotoTransform } from "@/domain/render/photo-crop";
+import { stickerById } from "@/data/stickers/catalog";
+import {
+  MAX_STICKERS_PER_VARIANT,
+  clampStickerInstance,
+} from "@/domain/stickers/geometry";
 import type { DeviceSlice, StoreContext } from "../types";
 
 function updateVariant(
@@ -55,6 +60,7 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         densityOverride: null,
         visibleFieldsOverride: null,
         photoTransforms: { hero: {}, split: {}, polaroid: {} },
+        stickers: [],
         preview: {
           mode: "clean",
           showSafeAreas: false,
@@ -277,5 +283,171 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
           },
         };
       }),
+    addSticker(id, stickerId) {
+      const definition = stickerById.get(stickerId);
+      const current = context
+        .get()
+        .projectsById[context.get().activeProjectId ?? ""]?.deviceVariants.find(
+          (variant) => variant.id === id,
+        );
+      if (
+        !definition ||
+        !current ||
+        current.stickers.length >= MAX_STICKERS_PER_VARIANT
+      )
+        return null;
+      const instanceId = context.dependencies.idFactory!("sticker-instance");
+      const order = current.stickers
+        .filter((item) => item.layer === "in-front")
+        .reduce((maximum, item) => Math.max(maximum, item.order + 1), 0);
+      const result = context.commit("Add sticker", (project) =>
+        updateVariant(project, id, (variant) => ({
+          ...variant,
+          stickers: [
+            ...variant.stickers,
+            clampStickerInstance(
+              {
+                instanceId,
+                stickerId,
+                xRatio: 0.5,
+                yRatio: 0.5,
+                widthRatio: definition.defaultWidthRatio ?? 0.22,
+                rotation: 0,
+                layer: "in-front",
+                order,
+              },
+              variant.dimensions,
+            ),
+          ],
+        })),
+      );
+      return result ? instanceId : null;
+    },
+    updateSticker(id, instanceId, updates) {
+      edit("Transform sticker", id, (variant) => ({
+        ...variant,
+        stickers: variant.stickers.map((item) =>
+          item.instanceId === instanceId
+            ? clampStickerInstance({ ...item, ...updates }, variant.dimensions)
+            : item,
+        ),
+      }));
+    },
+    deleteSticker(id, instanceId) {
+      edit("Delete sticker", id, (variant) => ({
+        ...variant,
+        stickers: variant.stickers.filter(
+          (item) => item.instanceId !== instanceId,
+        ),
+      }));
+    },
+    duplicateSticker(id, instanceId) {
+      const current = context
+        .get()
+        .projectsById[context.get().activeProjectId ?? ""]?.deviceVariants.find(
+          (variant) => variant.id === id,
+        );
+      const source = current?.stickers.find(
+        (item) => item.instanceId === instanceId,
+      );
+      if (
+        !current ||
+        !source ||
+        current.stickers.length >= MAX_STICKERS_PER_VARIANT
+      )
+        return null;
+      const duplicateId = context.dependencies.idFactory!("sticker-instance");
+      const order = current.stickers
+        .filter((item) => item.layer === source.layer)
+        .reduce((maximum, item) => Math.max(maximum, item.order + 1), 0);
+      const result = context.commit("Duplicate sticker", (project) =>
+        updateVariant(project, id, (variant) => ({
+          ...variant,
+          stickers: [
+            ...variant.stickers,
+            clampStickerInstance(
+              {
+                ...source,
+                instanceId: duplicateId,
+                xRatio: source.xRatio + 0.035,
+                yRatio: source.yRatio + 0.035,
+                order,
+              },
+              variant.dimensions,
+            ),
+          ],
+        })),
+      );
+      return result ? duplicateId : null;
+    },
+    resetStickerTransform(id, instanceId) {
+      edit("Reset sticker transform", id, (variant) => ({
+        ...variant,
+        stickers: variant.stickers.map((item) => {
+          if (item.instanceId !== instanceId) return item;
+          const definition = stickerById.get(item.stickerId);
+          return clampStickerInstance(
+            {
+              ...item,
+              xRatio: 0.5,
+              yRatio: 0.5,
+              widthRatio: definition?.defaultWidthRatio ?? 0.22,
+              rotation: 0,
+            },
+            variant.dimensions,
+          );
+        }),
+      }));
+    },
+    setStickerLayer(id, instanceId, layer) {
+      edit("Change sticker layer", id, (variant) => {
+        const source = variant.stickers.find(
+          (item) => item.instanceId === instanceId,
+        );
+        if (!source || source.layer === layer) return variant;
+        const order = variant.stickers
+          .filter((item) => item.layer === layer)
+          .reduce((maximum, item) => Math.max(maximum, item.order + 1), 0);
+        return {
+          ...variant,
+          stickers: variant.stickers.map((item) =>
+            item.instanceId === instanceId ? { ...item, layer, order } : item,
+          ),
+        };
+      });
+    },
+    moveStickerInStack(id, instanceId, direction) {
+      edit(
+        direction === "forward"
+          ? "Bring sticker forward"
+          : "Send sticker backward",
+        id,
+        (variant) => {
+          const source = variant.stickers.find(
+            (item) => item.instanceId === instanceId,
+          );
+          if (!source) return variant;
+          const band = variant.stickers
+            .filter((item) => item.layer === source.layer)
+            .sort((left, right) => left.order - right.order);
+          const index = band.findIndex(
+            (item) => item.instanceId === instanceId,
+          );
+          const swapIndex = direction === "forward" ? index + 1 : index - 1;
+          const swap = band[swapIndex];
+          if (!swap) return variant;
+          return {
+            ...variant,
+            stickers: variant.stickers.map((item) =>
+              item.instanceId === source.instanceId
+                ? { ...item, order: swap.order }
+                : item.instanceId === swap.instanceId
+                  ? { ...item, order: source.order }
+                  : item,
+            ),
+          };
+        },
+      );
+    },
   };
 }

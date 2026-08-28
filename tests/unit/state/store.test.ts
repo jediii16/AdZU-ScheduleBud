@@ -178,10 +178,11 @@ describe("design and device slices", () => {
     store.getState().setTheme("midnight");
     store.getState().setTheme("matcha-study");
     store.getState().setTheme("girlfriends-choice");
+    store.getState().setTheme("pink-diary");
     const themed = selectActiveProject(store.getState())!;
 
-    expect(themed.design.themeId).toBe("girlfriends-choice");
-    expect(store.getState().history.past).toHaveLength(historyBefore + 4);
+    expect(themed.design.themeId).toBe("pink-diary");
+    expect(store.getState().history.past).toHaveLength(historyBefore + 5);
     expect({
       ...themed,
       design: { ...themed.design, themeId: "clean-slate" },
@@ -193,15 +194,15 @@ describe("design and device slices", () => {
     await store.getState().flushAutosave();
     const saved = await projects.read(themed.id);
     expect(saved.status === "found" ? saved.project.design.themeId : null).toBe(
-      "girlfriends-choice",
+      "pink-diary",
     );
     store.getState().undo();
     expect(selectActiveProject(store.getState())?.design.themeId).toBe(
-      "matcha-study",
+      "girlfriends-choice",
     );
     store.getState().redo();
     expect(selectActiveProject(store.getState())?.design.themeId).toBe(
-      "girlfriends-choice",
+      "pink-diary",
     );
     store.getState().setTheme("clean-slate");
     const restored = selectActiveProject(store.getState())!;

@@ -6,6 +6,50 @@ import { resolveLayoutDetailCapabilities } from "@/domain/render";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("layout design inspector", () => {
+  it("browses built-in stickers and exposes compact selected-instance controls", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onAdd = vi.fn();
+    const onDelete = vi.fn();
+    const instance = {
+      instanceId: "sticker-one",
+      stickerId: "capy-reading",
+      xRatio: 0.5,
+      yRatio: 0.5,
+      widthRatio: 0.22,
+      rotation: 0,
+      layer: "in-front" as const,
+      order: 0,
+    };
+    render(
+      <DesignStudioPanel
+        design={project.design}
+        visibleFields={project.design.visibleFields}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+        stickers={[instance]}
+        selectedStickerId={instance.instanceId}
+        onStickerAdd={onAdd}
+        onStickerDelete={onDelete}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add sticker" }));
+    expect(screen.getByRole("tab", { name: "Capybara" })).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add Reading Capybara" }),
+    );
+    expect(onAdd).toHaveBeenCalledWith("capy-reading");
+    expect(screen.getAllByText("In front")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: /Delete sticker/ }));
+    expect(onDelete).toHaveBeenCalledWith(instance.instanceId);
+  });
+
   it("offers all production themes in a compact immediate selector", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
@@ -41,6 +85,7 @@ describe("layout design inspector", () => {
     const girlfriendsChoice = screen.getByRole("radio", {
       name: "Girlfriend's Choice",
     });
+    const pinkDiary = screen.getByRole("radio", { name: "Pink Diary" });
     expect(adzu).toHaveAttribute("aria-checked", "false");
     expect(midnight).toHaveAttribute("aria-checked", "false");
     expect(siteao).toHaveAttribute("aria-checked", "false");
@@ -51,10 +96,56 @@ describe("layout design inspector", () => {
     expect(nao).toHaveAttribute("aria-checked", "false");
     expect(matcha).toHaveAttribute("aria-checked", "false");
     expect(girlfriendsChoice).toHaveAttribute("aria-checked", "false");
-    fireEvent.click(girlfriendsChoice);
+    expect(pinkDiary).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(pinkDiary);
     expect(onTheme).toHaveBeenCalledOnce();
-    expect(onTheme).toHaveBeenCalledWith("girlfriends-choice");
+    expect(onTheme).toHaveBeenCalledWith("pink-diary");
     expect(screen.getByText("Malinis")).toBeVisible();
+  });
+
+  it("keeps the Pink Diary subject palette visible only for Cards and Grid", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const props = {
+      design: { ...project.design, themeId: "pink-diary" as const },
+      visibleFields: project.design.visibleFields,
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+    };
+    const { rerender } = render(
+      <DesignStudioPanel
+        {...props}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+      />,
+    );
+
+    expect(screen.getByLabelText("Pink Diary subject palette")).toBeVisible();
+    rerender(
+      <DesignStudioPanel
+        {...props}
+        activeLayout="grid"
+        detailCapabilities={resolveLayoutDetailCapabilities("grid", variant)}
+      />,
+    );
+    expect(screen.getByLabelText("Pink Diary subject palette")).toBeVisible();
+
+    for (const layoutId of ["minimal", "planner", "photo"] as const) {
+      rerender(
+        <DesignStudioPanel
+          {...props}
+          activeLayout={layoutId}
+          detailCapabilities={resolveLayoutDetailCapabilities(
+            layoutId,
+            variant,
+          )}
+        />,
+      );
+      expect(screen.queryByLabelText("Pink Diary subject palette")).toBeNull();
+    }
   });
 
   it("keeps the Girlfriend's Choice subject palette visible only for Cards and Grid", () => {

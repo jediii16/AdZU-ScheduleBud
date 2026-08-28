@@ -53,6 +53,9 @@ export type ImageRenderNode = BaseRenderNode & {
   kind: "image";
   geometry: Rect;
   assetId: string;
+  /** Public application asset source. User photos continue to resolve by assetId. */
+  source?: string;
+  rotationOrigin?: "center";
   fit: "cover" | "contain" | "stretch";
   crop?: Rect;
   focalPoint?: Point;

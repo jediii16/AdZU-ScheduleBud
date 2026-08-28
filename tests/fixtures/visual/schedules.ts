@@ -15,6 +15,7 @@ const phone: DeviceVariant = {
   densityOverride: null,
   visibleFieldsOverride: null,
   photoTransforms: { hero: {}, split: {}, polaroid: {} },
+  stickers: [],
   preview: {
     mode: "clean",
     showSafeAreas: false,

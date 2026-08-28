@@ -2,6 +2,8 @@ import { layoutById } from "@/data/layouts/registry";
 import type { LayoutId } from "@/domain/design/types";
 import type { DeviceVariant } from "@/domain/device/types";
 import type { ScheduleProject } from "@/domain/project";
+import type { ScheduleRenderResult } from "./types";
+import { applyStickers } from "./stickers";
 import { buildCardsRenderModel } from "./cards-layout";
 import { buildMinimalRenderModel } from "./minimal-layout";
 import { buildGridRenderModel } from "./grid-layout";
@@ -28,20 +30,25 @@ export function buildScheduleRenderModel(
 ) {
   const layout = resolveProjectLayout(project, variant);
   const theme = resolveWallpaperTheme(project.design.themeId, layout);
+  const composition =
+    layout === "photo"
+      ? resolveAvailablePhotoComposition(project.design.photoComposition)
+      : undefined;
+  const finish = <T extends ScheduleRenderResult>(result: T): T => {
+    return applyStickers(result, variant);
+  };
   if (layout === "minimal")
-    return buildMinimalRenderModel(project, variant, theme);
-  if (layout === "grid") return buildGridRenderModel(project, variant, theme);
+    return finish(buildMinimalRenderModel(project, variant, theme));
+  if (layout === "grid")
+    return finish(buildGridRenderModel(project, variant, theme));
   if (layout === "planner")
-    return buildPlannerRenderModel(project, variant, theme);
+    return finish(buildPlannerRenderModel(project, variant, theme));
   if (layout === "photo") {
-    const composition = resolveAvailablePhotoComposition(
-      project.design.photoComposition,
-    );
     if (composition === "polaroid")
-      return buildPhotoPolaroidRenderModel(project, variant, theme);
+      return finish(buildPhotoPolaroidRenderModel(project, variant, theme));
     if (composition === "split")
-      return buildPhotoSplitRenderModel(project, variant, theme);
-    return buildPhotoHeroRenderModel(project, variant, theme);
+      return finish(buildPhotoSplitRenderModel(project, variant, theme));
+    return finish(buildPhotoHeroRenderModel(project, variant, theme));
   }
-  return buildCardsRenderModel(project, variant, theme);
+  return finish(buildCardsRenderModel(project, variant, theme));
 }

@@ -31,6 +31,7 @@ export const themeIdSchema = z.enum([
   "nao-white",
   "matcha-study",
   "girlfriends-choice",
+  "pink-diary",
 ]);
 export type ThemeId = z.infer<typeof themeIdSchema>;
 

@@ -170,6 +170,29 @@ describe("ScheduleProject", () => {
     expect(migrated.project.design.themeId).toBe("girlfriends-choice");
   });
 
+  it("round-trips Pink Diary through project serialization", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify({
+      ...project,
+      design: { ...project.design, themeId: "pink-diary" },
+    });
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.themeId).toBe("pink-diary");
+  });
+
+  it("loads existing device variants without sticker state as empty", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const serialized = JSON.stringify(project);
+    const migrated = migrateProject(JSON.parse(serialized));
+
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.deviceVariants).toEqual([]);
+  });
+
   it("rejects a dangling active device variant", () => {
     const project = createBlankProject({ id: "project-1", now: NOW });
     expect(

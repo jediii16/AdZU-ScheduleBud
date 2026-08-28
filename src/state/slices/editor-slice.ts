@@ -4,6 +4,7 @@ export const initialEditorState: EditorSlice["editor"] = {
   activeSection: null,
   selectedSubjectId: null,
   selectedMeetingId: null,
+  selectedStickerId: null,
   inspectorOpen: false,
   previewZoom: 1,
   previewPan: { x: 0, y: 0 },
@@ -26,6 +27,11 @@ export function createEditorSlice(context: StoreContext): EditorSlice {
           selectedSubjectId: subjectId,
           selectedMeetingId: meetingId,
         },
+      }));
+    },
+    setSelectedSticker(selectedStickerId) {
+      context.set((state) => ({
+        editor: { ...state.editor, selectedStickerId },
       }));
     },
     setPreviewViewport(previewZoom, previewPan) {

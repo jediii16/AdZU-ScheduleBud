@@ -116,7 +116,16 @@ function SceneNode({
       return (
         <KonvaImage
           {...common}
-          {...node.geometry}
+          {...(node.rotationOrigin === "center"
+            ? {
+                x: node.geometry.x + node.geometry.width / 2,
+                y: node.geometry.y + node.geometry.height / 2,
+                width: node.geometry.width,
+                height: node.geometry.height,
+                offsetX: node.geometry.width / 2,
+                offsetY: node.geometry.height / 2,
+              }
+            : node.geometry)}
           image={image}
           {...(crop
             ? {

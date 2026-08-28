@@ -147,6 +147,19 @@ const rawThemes: ThemeDefinition[] = [
     },
     assets: {},
   },
+  {
+    id: "pink-diary",
+    name: "Pink Diary",
+    description: "For schedules that deserve a little main-character energy.",
+    fontId: "body-sans",
+    headingFontId: "heading-sans",
+    previewColors: {
+      background: "#FFF6F8",
+      foreground: "#5C2238",
+      accent: "#C95F86",
+    },
+    assets: {},
+  },
 ];
 
 export const themeRegistry = themeDefinitionSchema.array().parse(rawThemes);

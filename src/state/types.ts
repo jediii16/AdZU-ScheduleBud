@@ -12,6 +12,7 @@ import type {
   VisibleFields,
 } from "@/domain/device/types";
 import type { AlignmentGuides } from "@/domain/render";
+import type { StickerInstance, StickerLayer } from "@/domain/stickers/types";
 import type {
   ProjectDesign,
   ScheduleProject,
@@ -30,7 +31,12 @@ import type {
 } from "@/storage/types";
 
 export type IdKind =
-  "project" | "subject" | "meeting" | "device-variant" | "asset";
+  | "project"
+  | "subject"
+  | "meeting"
+  | "device-variant"
+  | "asset"
+  | "sticker-instance";
 export type StoreDependencies = {
   projects: ProjectRepository;
   assets: AssetRepository;
@@ -67,6 +73,7 @@ export type EditorState = {
   activeSection: "classes" | "design" | "device" | null;
   selectedSubjectId: string | null;
   selectedMeetingId: string | null;
+  selectedStickerId: string | null;
   inspectorOpen: boolean;
   previewZoom: number;
   previewPan: { x: number; y: number };
@@ -202,12 +209,34 @@ export interface DeviceSlice {
     composition: AvailablePhotoComposition,
     assetId: string,
   ): void;
+  addSticker(variantId: string, stickerId: string): string | null;
+  updateSticker(
+    variantId: string,
+    instanceId: string,
+    updates: Partial<
+      Pick<StickerInstance, "xRatio" | "yRatio" | "widthRatio" | "rotation">
+    >,
+  ): void;
+  deleteSticker(variantId: string, instanceId: string): void;
+  duplicateSticker(variantId: string, instanceId: string): string | null;
+  resetStickerTransform(variantId: string, instanceId: string): void;
+  setStickerLayer(
+    variantId: string,
+    instanceId: string,
+    layer: StickerLayer,
+  ): void;
+  moveStickerInStack(
+    variantId: string,
+    instanceId: string,
+    direction: "forward" | "backward",
+  ): void;
 }
 
 export interface EditorSlice {
   editor: EditorState;
   setActiveEditorSection(section: EditorState["activeSection"]): void;
   setEditorSelection(subjectId: string | null, meetingId?: string | null): void;
+  setSelectedSticker(instanceId: string | null): void;
   setPreviewViewport(zoom: number, pan: { x: number; y: number }): void;
   setInspectorOpen(open: boolean): void;
   setDragging(dragging: boolean): void;

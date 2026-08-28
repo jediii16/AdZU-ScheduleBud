@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { layoutIdSchema } from "@/domain/design/types";
+import { stickerInstanceSchema } from "@/domain/stickers/types";
 
 export const deviceCategorySchema = z.enum([
   "phone",
@@ -139,6 +140,7 @@ export const deviceVariantSchema = z
     visibleFieldsOverride: visibleFieldsSchema.partial().nullable(),
     layoutVisibleFieldsOverride: layoutVisibleFieldsOverrideSchema.optional(),
     photoTransforms: photoTransformsSchema,
+    stickers: z.array(stickerInstanceSchema).max(50).default([]),
     preview: previewPreferencesSchema,
   })
   .superRefine((variant, context) => {

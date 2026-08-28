@@ -1,10 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState, type RefObject } from "react";
+import { Copy, Layers, RotateCcw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { availableLayouts } from "@/data/layouts/registry";
 import { availableThemes } from "@/data/themes/registry";
+import {
+  stickerById,
+  stickerCatalog,
+  stickerCategories,
+} from "@/data/stickers/catalog";
 import type { LayoutId, ThemeId } from "@/domain/design/types";
 import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
 import { resolveWallpaperTheme } from "@/domain/render/themes/registry";
@@ -14,6 +21,7 @@ import {
   type VisibleFields,
 } from "@/domain/device/types";
 import type { ProjectDesign } from "@/domain/project";
+import type { StickerInstance, StickerLayer } from "@/domain/stickers/types";
 import type { LayoutDetailCapabilities } from "@/domain/render";
 import { StoreSubjectList } from "@/features/classes/class-editor";
 
@@ -59,6 +67,267 @@ const PHOTO_COMPOSITIONS: readonly AvailablePhotoComposition[] = [
   "split",
   "polaroid",
 ];
+
+function StickerThumbnail({
+  stickerId,
+  size = 48,
+}: {
+  stickerId: string;
+  size?: number;
+}) {
+  const sticker = stickerById.get(stickerId);
+  if (!sticker) return <span className="size-10 bg-muted" />;
+  const scale = Math.min(size / sticker.crop.width, size / sticker.crop.height);
+  return (
+    <span
+      aria-hidden="true"
+      className="relative block shrink-0 overflow-hidden rounded-sm bg-muted/50"
+      style={{ width: size, height: size }}
+    >
+      <Image
+        unoptimized
+        src={sticker.src}
+        alt=""
+        width={1920}
+        height={1080}
+        className="absolute max-w-none"
+        style={{
+          width: 1920 * scale,
+          height: 1080 * scale,
+          left:
+            (size - sticker.crop.width * scale) / 2 - sticker.crop.x * scale,
+          top:
+            (size - sticker.crop.height * scale) / 2 - sticker.crop.y * scale,
+        }}
+      />
+    </span>
+  );
+}
+
+function StickerInspectorSection({
+  stickers,
+  selectedId,
+  onAdd,
+  onSelect,
+  onDelete,
+  onDuplicate,
+  onReset,
+  onLayer,
+  onStack,
+}: {
+  stickers: readonly StickerInstance[];
+  selectedId: string | null;
+  onAdd(stickerId: string): void;
+  onSelect(instanceId: string): void;
+  onDelete(instanceId: string): void;
+  onDuplicate(instanceId: string): void;
+  onReset(instanceId: string): void;
+  onLayer(instanceId: string, layer: StickerLayer): void;
+  onStack(instanceId: string, direction: "forward" | "backward"): void;
+}) {
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState(stickerCategories[0] ?? "");
+  const selected = stickers.find((item) => item.instanceId === selectedId);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = stickerCatalog.filter(
+    (item) =>
+      item.category === category &&
+      (!normalizedQuery ||
+        [item.label, item.category, ...(item.keywords ?? [])]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedQuery)),
+  );
+  return (
+    <section
+      className="sb-inspector-major-section"
+      aria-labelledby="stickers-heading"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h3 id="stickers-heading" className="sb-inspector-heading">
+          Stickers
+        </h3>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setLibraryOpen((open) => !open)}
+        >
+          {libraryOpen ? "Close" : "Add sticker"}
+        </Button>
+      </div>
+      <div className="sb-inspector-children">
+        {libraryOpen ? (
+          <div className="mb-4 border-b border-border pb-4">
+            <label className="relative block">
+              <Search
+                aria-hidden="true"
+                className="absolute top-2.5 left-2.5 size-4 text-text-muted"
+              />
+              <span className="sr-only">Search stickers</span>
+              <input
+                className="sb-control pl-8"
+                value={query}
+                placeholder="Search stickers"
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            <div
+              className="mt-2 flex flex-wrap gap-1"
+              role="tablist"
+              aria-label="Sticker category"
+            >
+              {stickerCategories.map((item) => (
+                <Button
+                  key={item}
+                  type="button"
+                  size="sm"
+                  variant={category === item ? "default" : "ghost"}
+                  role="tab"
+                  aria-selected={category === item}
+                  onClick={() => setCategory(item)}
+                >
+                  {item}
+                </Button>
+              ))}
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {filtered.map((definition) => (
+                <button
+                  key={definition.id}
+                  type="button"
+                  className="min-w-0 rounded-sm border border-border p-2 text-center text-[11px] font-medium text-text-secondary transition-colors hover:border-brand/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                  aria-label={`Add ${definition.label}`}
+                  onClick={() => onAdd(definition.id)}
+                >
+                  <span className="mx-auto mb-1 block w-fit">
+                    <StickerThumbnail stickerId={definition.id} />
+                  </span>
+                  <span className="line-clamp-2">{definition.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {stickers.length === 0 ? (
+          <p className="text-xs leading-5 text-text-muted">
+            No stickers on this device yet.
+          </p>
+        ) : (
+          <ol className="space-y-1" aria-label="Stickers on this device">
+            {[...stickers]
+              .sort((left, right) => right.order - left.order)
+              .map((instance) => {
+                const definition = stickerById.get(instance.stickerId);
+                const isSelected = instance.instanceId === selectedId;
+                return (
+                  <li key={instance.instanceId}>
+                    <button
+                      type="button"
+                      aria-pressed={isSelected}
+                      className={`flex w-full items-center gap-2 rounded-sm border px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${isSelected ? "border-brand/40 bg-accent" : "border-transparent hover:bg-muted"}`}
+                      onClick={() => onSelect(instance.instanceId)}
+                    >
+                      <StickerThumbnail
+                        stickerId={instance.stickerId}
+                        size={36}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-semibold">
+                          {definition?.label ?? "Unknown sticker"}
+                        </span>
+                        <span className="block text-[11px] text-text-muted">
+                          {instance.layer === "in-front"
+                            ? "In front"
+                            : "Behind schedule"}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+          </ol>
+        )}
+        {selected ? (
+          <div className="mt-4 space-y-3 border-t border-border pt-4">
+            <div
+              role="radiogroup"
+              aria-label="Sticker layer"
+              className="grid grid-cols-2 rounded-sm border border-border bg-muted/40 p-1"
+            >
+              {(
+                [
+                  ["behind-schedule", "Behind schedule"],
+                  ["in-front", "In front"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected.layer === value}
+                  className={`min-h-9 rounded-sm px-2 text-xs font-semibold ${selected.layer === value ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface"}`}
+                  onClick={() => onLayer(selected.instanceId, value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onStack(selected.instanceId, "forward")}
+              >
+                <Layers aria-hidden="true" />
+                Bring forward
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onStack(selected.instanceId, "backward")}
+              >
+                <Layers aria-hidden="true" />
+                Send backward
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => onDuplicate(selected.instanceId)}
+              >
+                <Copy aria-hidden="true" />
+                Duplicate
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => onReset(selected.instanceId)}
+              >
+                <RotateCcw aria-hidden="true" />
+                Reset
+              </Button>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              onClick={() => onDelete(selected.instanceId)}
+            >
+              <Trash2 aria-hidden="true" />
+              Delete sticker
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
 
 function PhotoCompositionControl({
   composition,
@@ -413,6 +682,15 @@ export function DesignStudioPanel({
   onPhotoDone = () => {},
   onPhotoMove = () => {},
   onPhotoCaption = () => {},
+  stickers = [],
+  selectedStickerId = null,
+  onStickerAdd = () => {},
+  onStickerSelect = () => {},
+  onStickerDelete = () => {},
+  onStickerDuplicate = () => {},
+  onStickerReset = () => {},
+  onStickerLayer = () => {},
+  onStickerStack = () => {},
 }: {
   design: ProjectDesign;
   visibleFields: VisibleFields;
@@ -440,6 +718,15 @@ export function DesignStudioPanel({
   onPhotoDone?(): void;
   onPhotoMove?(assetId: string, direction: "up" | "down"): void;
   onPhotoCaption?(assetId: string, caption: string): void;
+  stickers?: readonly StickerInstance[];
+  selectedStickerId?: string | null;
+  onStickerAdd?(stickerId: string): void;
+  onStickerSelect?(instanceId: string): void;
+  onStickerDelete?(instanceId: string): void;
+  onStickerDuplicate?(instanceId: string): void;
+  onStickerReset?(instanceId: string): void;
+  onStickerLayer?(instanceId: string, layer: StickerLayer): void;
+  onStickerStack?(instanceId: string, direction: "forward" | "backward"): void;
 }) {
   const subjectPalette = resolveWallpaperTheme(
     design.themeId,
@@ -516,6 +803,17 @@ export function DesignStudioPanel({
           ))}
         </div>
       </section>
+      <StickerInspectorSection
+        stickers={stickers}
+        selectedId={selectedStickerId}
+        onAdd={onStickerAdd}
+        onSelect={onStickerSelect}
+        onDelete={onStickerDelete}
+        onDuplicate={onStickerDuplicate}
+        onReset={onStickerReset}
+        onLayer={onStickerLayer}
+        onStack={onStickerStack}
+      />
       {activeLayout === "photo" ? (
         <PhotoInspectorSection
           photos={photos}

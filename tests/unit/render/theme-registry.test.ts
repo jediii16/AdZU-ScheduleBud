@@ -11,6 +11,7 @@ import {
   MATCHA_STUDY_THEME,
   MIDNIGHT_THEME,
   NAO_WHITE_THEME,
+  PINK_DIARY_THEME,
   SITEAO_ORANGE_THEME,
   buildScheduleRenderModel,
   resolveWallpaperTheme,
@@ -316,6 +317,143 @@ describe("wallpaper theme registry", () => {
     expect(
       nodes.find((node) => node.id === "polaroid-caption-photo-one"),
     ).toMatchObject({ kind: "text", fill: "#4A414D" });
+    expect(
+      nodes.find((node) => node.id === "polaroid-image-photo-one"),
+    ).toMatchObject({ kind: "image", assetId: "photo-one" });
+  });
+
+  it("registers Pink Diary with warm blush tokens and cohesive subject fills", () => {
+    const cards = resolveWallpaperTheme("pink-diary", "cards");
+    const grid = resolveWallpaperTheme("pink-diary", "grid");
+    const subjectPalette = [
+      "#F5D7E2",
+      "#EFD0DB",
+      "#F3D8D2",
+      "#E7D5E5",
+      "#F1DFE8",
+      "#EAD8D1",
+    ];
+
+    expect(
+      availableThemes.find((theme) => theme.id === "pink-diary"),
+    ).toMatchObject({
+      name: "Pink Diary",
+      description: "For schedules that deserve a little main-character energy.",
+      previewColors: {
+        background: "#FFF6F8",
+        foreground: "#5C2238",
+        accent: "#C95F86",
+      },
+      assets: {},
+    });
+    expect(cards).toMatchObject({
+      background: "#FFF6F8",
+      surface: "#FFFDFB",
+      foreground: "#5C2238",
+      secondary: "#80636F",
+      cardsTime: "#7A304D",
+      cardsMetadata: "#70545F",
+      muted: "#7C626C",
+      border: "#DFB8C7",
+      dayAccent: "#7A304D",
+      subjectPalette,
+    });
+    expect(grid).toMatchObject({
+      gridTime: "#80636F",
+      gridSupport: "#70545F",
+      gridGuide: "#DFB8C7",
+      gridDivider: "#E8C7D3",
+      subjectPalette,
+    });
+    expect(PINK_DIARY_THEME.tokens.subjectPalette).toEqual(subjectPalette);
+    expect(resolveWallpaperTheme("pink-diary", "minimal")).toMatchObject({
+      minimalTime: "#80636F",
+      minimalSupport: "#80636F",
+      minimalProfessor: "#7C626C",
+      minimalRule: "#D993AA",
+    });
+    expect(resolveWallpaperTheme("pink-diary", "planner")).toMatchObject({
+      plannerSurface: "#FFFDFB",
+      plannerBorder: "#DFB8C7",
+      plannerRule: "#D993AA",
+      plannerSupport: "#80636F",
+    });
+  });
+
+  it("uses Pink Diary in shared preview/export without changing geometry", () => {
+    const base = visualScheduleProject();
+    const variant = base.deviceVariants[0]!;
+    const cases = [
+      { layoutId: "cards" as const, photoComposition: null },
+      { layoutId: "minimal" as const, photoComposition: null },
+      { layoutId: "grid" as const, photoComposition: null },
+      { layoutId: "planner" as const, photoComposition: null },
+      { layoutId: "photo" as const, photoComposition: "hero" as const },
+      { layoutId: "photo" as const, photoComposition: "split" as const },
+      { layoutId: "photo" as const, photoComposition: "polaroid" as const },
+    ];
+
+    for (const designCase of cases) {
+      const cleanProject = {
+        ...base,
+        design: {
+          ...base.design,
+          ...designCase,
+          themeId: "clean-slate" as const,
+        },
+      };
+      const pinkProject = {
+        ...cleanProject,
+        design: { ...cleanProject.design, themeId: "pink-diary" as const },
+      };
+      const clean = buildScheduleRenderModel(cleanProject, variant);
+      const pink = buildScheduleRenderModel(pinkProject, variant);
+
+      expect(pink.model.layers[0].nodes[0]).toMatchObject({
+        kind: "rect",
+        fill: "#FFF6F8",
+      });
+      expect(pink.scheduleBounds).toEqual(clean.scheduleBounds);
+      expect(pink.positionRange).toEqual(clean.positionRange);
+      expect(pink.photoFrame).toEqual(clean.photoFrame);
+      expect(pink.photoFrames).toEqual(clean.photoFrames);
+      expect(pink.photoPlaceholders).toEqual(clean.photoPlaceholders);
+      expect(pink.model).toMatchObject({
+        width: clean.model.width,
+        height: clean.model.height,
+      });
+    }
+  });
+
+  it("keeps Pink Diary Polaroids near-white and photos untreated", () => {
+    const base = visualScheduleProject();
+    const project = {
+      ...base,
+      design: {
+        ...base.design,
+        themeId: "pink-diary" as const,
+        layoutId: "photo" as const,
+        photoComposition: "polaroid" as const,
+        photoCaptions: { "photo-one": "Dear diary" },
+      },
+      assetReferences: {
+        ...base.assetReferences,
+        photoAssetIds: ["photo-one"],
+      },
+    };
+    const result = buildScheduleRenderModel(project, base.deviceVariants[0]!);
+    const nodes = result.model.layers[2].nodes;
+
+    expect(
+      nodes.find((node) => node.id === "polaroid-paper-photo-one"),
+    ).toMatchObject({
+      kind: "rect",
+      fill: "#FFFDFB",
+      shadowColor: "#4A3F42",
+    });
+    expect(
+      nodes.find((node) => node.id === "polaroid-caption-photo-one"),
+    ).toMatchObject({ kind: "text", fill: "#51454A" });
     expect(
       nodes.find((node) => node.id === "polaroid-image-photo-one"),
     ).toMatchObject({ kind: "image", assetId: "photo-one" });

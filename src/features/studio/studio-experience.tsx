@@ -58,6 +58,11 @@ import {
   type ExportStatus,
 } from "@/features/export/png-export";
 import { ScheduleArtboard } from "@/renderer/konva/artboard";
+import {
+  loadRenderAssetSources,
+  renderAssetLoadSignature,
+  type RenderAssetSourceEntry,
+} from "@/renderer/konva/theme-asset-loading";
 import { createPersistence } from "@/storage/persistence";
 import {
   inspectTemporaryImage,
@@ -129,6 +134,10 @@ export function StudioExperience() {
   const [loadedPhotos, setLoadedPhotos] = useState<
     ReadonlyMap<string, { image: HTMLImageElement; asset: StoredAsset }>
   >(() => new Map());
+  const [loadedStaticAssets, setLoadedStaticAssets] = useState<{
+    signature: string;
+    images: ReadonlyMap<string, HTMLImageElement>;
+  }>(() => ({ signature: "[]", images: new Map() }));
   const photoPanStart = useRef<PhotoTransform | null>(null);
 
   useEffect(() => {
@@ -197,9 +206,40 @@ export function StudioExperience() {
   const activeVariant = project?.deviceVariants.find(
     (variant) => variant.id === project.activeDeviceVariantId,
   );
-  const target = activeVariant
-    ? studioTargetForVariant(activeVariant)
-    : undefined;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      )
+        return;
+      const state = store.getState();
+      const variantId =
+        state.projectsById[state.activeProjectId ?? ""]?.activeDeviceVariantId;
+      if (!variantId || !state.editor.selectedStickerId) return;
+      event.preventDefault();
+      state.deleteSticker(variantId, state.editor.selectedStickerId);
+      state.setSelectedSticker(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [store]);
+  useEffect(() => {
+    if (
+      editor.selectedStickerId &&
+      !activeVariant?.stickers.some(
+        (item) => item.instanceId === editor.selectedStickerId,
+      )
+    )
+      store.getState().setSelectedSticker(null);
+  }, [activeVariant, editor.selectedStickerId, store]);
+  const target = useMemo(
+    () => (activeVariant ? studioTargetForVariant(activeVariant) : undefined),
+    [activeVariant],
+  );
   const photoAssetIds =
     project?.assetReferences.photoAssetIds ?? EMPTY_PHOTO_ASSET_IDS;
   const photoAssetId = photoAssetIds[0] ?? null;
@@ -273,6 +313,37 @@ export function StudioExperience() {
         : null,
     [activeVariant, project, target],
   );
+  const staticAssetSignature = renderResult
+    ? renderAssetLoadSignature(renderResult.model)
+    : "[]";
+  const staticAssetSources = useMemo<readonly RenderAssetSourceEntry[]>(
+    () => JSON.parse(staticAssetSignature) as RenderAssetSourceEntry[],
+    [staticAssetSignature],
+  );
+  useEffect(() => {
+    if (staticAssetSources.length === 0) return;
+    let active = true;
+    void loadRenderAssetSources(staticAssetSources).then((images) => {
+      if (active)
+        setLoadedStaticAssets({ signature: staticAssetSignature, images });
+    });
+    return () => {
+      active = false;
+    };
+  }, [staticAssetSignature, staticAssetSources]);
+  const renderAssetImages = useMemo(
+    () =>
+      new Map([
+        ...photoImages,
+        ...(loadedStaticAssets.signature === staticAssetSignature
+          ? loadedStaticAssets.images
+          : []),
+      ]),
+    [loadedStaticAssets, photoImages, staticAssetSignature],
+  );
+  const staticAssetsReady =
+    staticAssetSources.length === 0 ||
+    loadedStaticAssets.signature === staticAssetSignature;
   const issueCount = useMemo(() => {
     if (!project) return 0;
     const incomplete = project.schedule.reduce(
@@ -591,6 +662,12 @@ export function StudioExperience() {
       setExportError(photoExportIssue);
       return;
     }
+    if (!staticAssetsReady) {
+      setExportError(
+        "Your sticker artwork is still preparing. Try exporting again in a moment.",
+      );
+      return;
+    }
     if (
       activeLayout === "photo" &&
       photoAssetIds.some((assetId) => !loadedPhotos.has(assetId))
@@ -723,6 +800,7 @@ export function StudioExperience() {
           store.getState().setPhotoComposition(composition);
         }}
         onPhotoAdjust={(assetId) => {
+          store.getState().setSelectedSticker(null);
           setSelectedPhotoId(assetId);
           setPhotoAdjusting(true);
         }}
@@ -756,6 +834,40 @@ export function StudioExperience() {
         }
         onPhotoCaption={(assetId, caption) =>
           store.getState().setPhotoCaption(assetId, caption)
+        }
+        stickers={activeVariant.stickers}
+        selectedStickerId={editor.selectedStickerId}
+        onStickerAdd={(stickerId) => {
+          setPhotoAdjusting(false);
+          const instanceId = store
+            .getState()
+            .addSticker(activeVariant.id, stickerId);
+          if (instanceId) store.getState().setSelectedSticker(instanceId);
+        }}
+        onStickerSelect={(instanceId) => {
+          setPhotoAdjusting(false);
+          store.getState().setSelectedSticker(instanceId);
+        }}
+        onStickerDelete={(instanceId) => {
+          store.getState().deleteSticker(activeVariant.id, instanceId);
+          store.getState().setSelectedSticker(null);
+        }}
+        onStickerDuplicate={(instanceId) => {
+          const duplicateId = store
+            .getState()
+            .duplicateSticker(activeVariant.id, instanceId);
+          if (duplicateId) store.getState().setSelectedSticker(duplicateId);
+        }}
+        onStickerReset={(instanceId) =>
+          store.getState().resetStickerTransform(activeVariant.id, instanceId)
+        }
+        onStickerLayer={(instanceId, layer) =>
+          store.getState().setStickerLayer(activeVariant.id, instanceId, layer)
+        }
+        onStickerStack={(instanceId, direction) =>
+          store
+            .getState()
+            .moveStickerInStack(activeVariant.id, instanceId, direction)
         }
       />
     );
@@ -884,7 +996,7 @@ export function StudioExperience() {
             safeAreas={safeAreas}
             guideImage={guideImage}
             guideOpacity={guideOpacity}
-            assetImages={photoImages}
+            assetImages={renderAssetImages}
             photoEditor={
               activeLayout === "photo" && activePhotoFrame
                 ? {
@@ -899,6 +1011,63 @@ export function StudioExperience() {
                   }
                 : undefined
             }
+            stickerEditor={{
+              selectedId: editor.selectedStickerId,
+              onSelect: (instanceId) =>
+                store.getState().setSelectedSticker(instanceId),
+              onTransformStart: (label) => {
+                if (!store.getState().history.transaction)
+                  store.getState().beginHistoryTransaction(label);
+                store.getState().setDragging(true);
+                store.getState().setAlignmentGuides({
+                  verticalCenter: false,
+                  horizontalCenter: false,
+                });
+              },
+              onMove: (instanceId, center, previewScale) => {
+                const threshold = 8 / previewScale;
+                const xCenter = renderResult.model.width / 2;
+                const yCenter = renderResult.model.height / 2;
+                const verticalCenter =
+                  activeVariant.preview.enableSnapping &&
+                  Math.abs(center.x - xCenter) <= threshold;
+                const horizontalCenter =
+                  activeVariant.preview.enableSnapping &&
+                  Math.abs(center.y - yCenter) <= threshold;
+                store.getState().updateSticker(activeVariant.id, instanceId, {
+                  xRatio:
+                    (verticalCenter ? xCenter : center.x) /
+                    renderResult.model.width,
+                  yRatio:
+                    (horizontalCenter ? yCenter : center.y) /
+                    renderResult.model.height,
+                });
+                store
+                  .getState()
+                  .setAlignmentGuides({ verticalCenter, horizontalCenter });
+              },
+              onResize: (instanceId, width) =>
+                store.getState().updateSticker(activeVariant.id, instanceId, {
+                  widthRatio: width / renderResult.model.width,
+                }),
+              onRotate: (instanceId, rotation) => {
+                const snapAngles = [-90, -45, -30, -15, 0, 15, 30, 45, 90];
+                const snapped = snapAngles.find(
+                  (angle) => Math.abs(angle - rotation) <= 3,
+                );
+                store.getState().updateSticker(activeVariant.id, instanceId, {
+                  rotation: snapped ?? rotation,
+                });
+              },
+              onTransformEnd: () => {
+                store.getState().setDragging(false);
+                store.getState().setAlignmentGuides({
+                  verticalCenter: false,
+                  horizontalCenter: false,
+                });
+                store.getState().commitHistoryTransaction();
+              },
+            }}
             onDragStart={beginMove}
             onDragMove={setPositionFromOrigin}
             onDragEnd={(x, y, previewScale) => {
