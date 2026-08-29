@@ -53,6 +53,7 @@ export async function exportStagePng(
   filename: string,
 ): Promise<void> {
   await ensureRenderModelFonts(model);
+  stage.batchDraw();
   if (stage.width() !== model.width || stage.height() !== model.height)
     throw new Error(
       "The export stage does not match the selected target size.",

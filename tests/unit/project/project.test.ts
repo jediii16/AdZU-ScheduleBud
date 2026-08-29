@@ -24,7 +24,9 @@ describe("ScheduleProject", () => {
       schedule: [],
       design: {
         themeId: "clean-slate",
+        customPalette: null,
         layoutId: "cards",
+        background: { mode: "palette" },
         wallpaperTitle: { visible: true, text: "Weekly Schedule" },
       },
       deviceVariants: [],
@@ -33,6 +35,29 @@ describe("ScheduleProject", () => {
       updatedAt: NOW,
     });
     expect(scheduleProjectSchema.parse(project)).toEqual(project);
+  });
+
+  it("migrates missing and legacy theme background state to Palette", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const missing = JSON.parse(JSON.stringify(project));
+    delete missing.design.background;
+    const missingResult = migrateProject(missing);
+    expect(missingResult.status).toBe("success");
+    if (missingResult.status === "success")
+      expect(missingResult.project.design.background).toEqual({
+        mode: "palette",
+      });
+
+    const legacy = {
+      ...project,
+      design: { ...project.design, background: { kind: "theme" } },
+    };
+    const legacyResult = migrateProject(legacy);
+    expect(legacyResult.status).toBe("success");
+    if (legacyResult.status === "success")
+      expect(legacyResult.project.design.background).toEqual({
+        mode: "palette",
+      });
   });
 
   it("keeps the project title separate from wallpaper title and supports blank wallpaper text", () => {
@@ -222,6 +247,53 @@ describe("ScheduleProject", () => {
     expect(migrated.status).toBe("success");
     if (migrated.status !== "success") return;
     expect(migrated.project.design.themeId).toBe("clean-slate");
+  });
+
+  it("loads existing schema-1 theme selections without creating Custom data", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const { customPalette: _customPalette, ...legacyDesign } = project.design;
+    void _customPalette;
+    const migrated = migrateProject({
+      ...project,
+      design: { ...legacyDesign, themeId: "pink-diary" },
+    });
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design).toMatchObject({
+      themeId: "pink-diary",
+      customPalette: null,
+    });
+  });
+
+  it("normalizes and round-trips opaque Custom palette colors", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const migrated = migrateProject({
+      ...project,
+      design: {
+        ...project.design,
+        themeId: "custom",
+        customPalette: {
+          basedOnPaletteId: "matcha-study",
+          canvas: "#abcdef",
+          primary: "#123456",
+          secondary: "#234567",
+          accent: "#345678",
+          surface: "#456789",
+          border: "#56789a",
+        },
+      },
+    });
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.customPalette).toEqual({
+      basedOnPaletteId: "matcha-study",
+      canvas: "#ABCDEF",
+      primary: "#123456",
+      secondary: "#234567",
+      accent: "#345678",
+      surface: "#456789",
+      border: "#56789A",
+    });
   });
 
   it("loads schema-1 projects without styles using visual baseline defaults", () => {

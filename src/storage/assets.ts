@@ -8,8 +8,8 @@ export function collectReferencedAssetIds(
     ...project.assetReferences.photoAssetIds,
     ...project.assetReferences.screenGuideAssetIds,
   ]);
-  if (project.design.background.kind === "asset")
-    ids.add(project.design.background.assetId);
+  if (project.design.background.image?.assetId)
+    ids.add(project.design.background.image.assetId);
   for (const variant of project.deviceVariants) {
     if (variant.preview.guideAssetId) ids.add(variant.preview.guideAssetId);
     for (const transforms of Object.values(variant.photoTransforms))
@@ -122,6 +122,25 @@ export async function savePhoto(
     id: input.id,
     projectId: input.projectId,
     kind: "photo",
+    blob: input.blob,
+    mimeType: input.mimeType,
+    width: input.width,
+    height: input.height,
+    createdAt: input.createdAt,
+    ...(input.filename ? { filename: input.filename } : {}),
+  };
+  await repository.write(asset);
+  return asset;
+}
+
+export async function saveBackgroundImage(
+  repository: AssetRepository,
+  input: InspectedImage & { id: string; projectId: string; createdAt: string },
+): Promise<StoredAsset> {
+  const asset: StoredAsset = {
+    id: input.id,
+    projectId: input.projectId,
+    kind: "background-image",
     blob: input.blob,
     mimeType: input.mimeType,
     width: input.width,

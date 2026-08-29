@@ -14,6 +14,8 @@ import { buildPhotoPolaroidRenderModel } from "./photo-polaroid-layout";
 import { resolveAvailablePhotoComposition } from "./photo-crop";
 import { resolveWallpaperTheme } from "./themes/registry";
 import { applyLayoutStyle, resolveLayoutStyle } from "./layout-style";
+import { applyTypographyPreset } from "./typography";
+import { applyBackground } from "./background";
 
 export function resolveProjectLayout(
   project: ScheduleProject,
@@ -30,7 +32,11 @@ export function buildScheduleRenderModel(
   variant: DeviceVariant,
 ) {
   const layout = resolveProjectLayout(project, variant);
-  const theme = resolveWallpaperTheme(project.design.themeId, layout);
+  const theme = resolveWallpaperTheme(
+    project.design.themeId,
+    layout,
+    project.design.customPalette,
+  );
   const composition =
     layout === "photo"
       ? resolveAvailablePhotoComposition(project.design.photoComposition)
@@ -46,7 +52,14 @@ export function buildScheduleRenderModel(
     return applyStickers(
       {
         ...result,
-        model: applyLayoutStyle(result.model, style.tokens, theme),
+        model: applyTypographyPreset(
+          applyLayoutStyle(
+            applyBackground(result, project, variant, theme).model,
+            style.tokens,
+            theme,
+          ),
+          project.design.typography.presetId,
+        ),
         resolvedStyle: style.tokens,
       },
       variant,

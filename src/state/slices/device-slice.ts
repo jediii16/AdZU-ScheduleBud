@@ -60,6 +60,10 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         densityOverride: null,
         visibleFieldsOverride: null,
         photoTransforms: { hero: {}, split: {}, polaroid: {} },
+        backgroundImageTransform: {
+          position: { x: 0.5, y: 0.5 },
+          scale: 1,
+        },
         stickers: [],
         preview: {
           mode: "clean",
@@ -283,6 +287,22 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
           },
         };
       }),
+    setBackgroundImageTransform: (id, transform) =>
+      edit("Adjust background image", id, (variant) => ({
+        ...variant,
+        backgroundImageTransform: {
+          position: clampNormalizedPoint(transform.position),
+          scale: Math.min(10, Math.max(1, transform.scale)),
+        },
+      })),
+    resetBackgroundImageTransform: (id) =>
+      edit("Reset background image", id, (variant) => ({
+        ...variant,
+        backgroundImageTransform: {
+          position: { x: 0.5, y: 0.5 },
+          scale: 1,
+        },
+      })),
     addSticker(id, stickerId) {
       const definition = stickerById.get(stickerId);
       const current = context

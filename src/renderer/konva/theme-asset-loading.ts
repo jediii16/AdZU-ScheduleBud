@@ -16,6 +16,8 @@ export function renderAssetSourceEntries(
     for (const node of layer.nodes) {
       if (node.kind === "image" && node.source)
         entries.set(node.assetId, node.source);
+      if (node.kind === "rect" && node.emojiAssetId && node.emojiSource)
+        entries.set(node.emojiAssetId, node.emojiSource);
     }
   }
   return [...entries.entries()];

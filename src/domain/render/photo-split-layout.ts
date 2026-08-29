@@ -266,10 +266,7 @@ export function buildPhotoSplitRenderModel(
   const family = resolveTargetComposition(variant);
   const portrait = family === "phonePortrait" || family === "tabletPortrait";
   const baseMetrics = photoMetricsFor(family);
-  const baseTypography = photoTypographyFor(
-    family,
-    project.design.typography.scale,
-  );
+  const baseTypography = photoTypographyFor(family, 1);
   const photoAssetIds = project.assetReferences.photoAssetIds.slice(0, 4);
   const photoAssetId = photoAssetIds[0] ?? null;
   const titleVisible =
@@ -463,7 +460,7 @@ export function buildPhotoSplitRenderModel(
         titleFit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 700,
           height: fit.metrics.titleHeight,
           verticalAlign: "middle",
@@ -505,7 +502,7 @@ export function buildPhotoSplitRenderModel(
         dayFit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 600,
           height: fit.metrics.dayHeaderHeight,
           wrap: "none",

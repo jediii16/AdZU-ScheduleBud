@@ -482,7 +482,7 @@ export function buildCardsRenderModel(
     project.design.wallpaperTitle.text.trim().length > 0;
   const typography = typographyFor(
     composition,
-    project.design.typography.scale,
+    1,
     compositionFamily,
     titleVisible,
   );
@@ -624,7 +624,7 @@ export function buildCardsRenderModel(
         fit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 800,
           height: geometry.titleTextHeight,
           verticalAlign: "middle",
@@ -663,7 +663,7 @@ export function buildCardsRenderModel(
         typography.day,
         theme.dayAccent,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 800,
           height: geometry.dayTextHeight,
         },

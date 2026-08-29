@@ -1,7 +1,14 @@
 "use client";
 
 import { Fragment } from "react";
-import { Image as KonvaImage, Layer, Line, Rect, Text } from "react-konva";
+import {
+  Image as KonvaImage,
+  Layer,
+  Line,
+  Rect,
+  Shape,
+  Text,
+} from "react-konva";
 
 import type { RenderModel, RenderNode } from "@/domain/render";
 import {
@@ -26,34 +33,153 @@ function SceneNode({
     listening: false,
   };
   switch (node.kind) {
-    case "rect":
+    case "rect": {
+      const pattern = node.pattern;
+      if (!pattern)
+        return (
+          <Rect
+            {...common}
+            {...node.geometry}
+            {...(node.fill ? { fill: node.fill } : {})}
+            {...(node.linearGradient
+              ? {
+                  fillLinearGradientStartPoint: node.linearGradient.start,
+                  fillLinearGradientEndPoint: node.linearGradient.end,
+                  fillLinearGradientColorStops: [
+                    ...node.linearGradient.colorStops,
+                  ],
+                }
+              : {})}
+            {...(node.stroke ? { stroke: node.stroke } : {})}
+            {...(node.strokeWidth === undefined
+              ? {}
+              : { strokeWidth: node.strokeWidth })}
+            {...(node.cornerRadius === undefined
+              ? {}
+              : { cornerRadius: node.cornerRadius })}
+            {...(node.shadowColor ? { shadowColor: node.shadowColor } : {})}
+            {...(node.shadowBlur === undefined
+              ? {}
+              : { shadowBlur: node.shadowBlur })}
+            {...(node.shadowOffset
+              ? {
+                  shadowOffsetX: node.shadowOffset.x,
+                  shadowOffsetY: node.shadowOffset.y,
+                }
+              : {})}
+            {...(node.shadowOpacity === undefined
+              ? {}
+              : { shadowOpacity: node.shadowOpacity })}
+          />
+        );
+      const emojiImage = node.emojiAssetId
+        ? assets?.get(node.emojiAssetId)
+        : undefined;
       return (
-        <Rect
+        <Shape
           {...common}
           {...node.geometry}
-          {...(node.fill ? { fill: node.fill } : {})}
-          {...(node.stroke ? { stroke: node.stroke } : {})}
-          {...(node.strokeWidth === undefined
-            ? {}
-            : { strokeWidth: node.strokeWidth })}
-          {...(node.cornerRadius === undefined
-            ? {}
-            : { cornerRadius: node.cornerRadius })}
-          {...(node.shadowColor ? { shadowColor: node.shadowColor } : {})}
-          {...(node.shadowBlur === undefined
-            ? {}
-            : { shadowBlur: node.shadowBlur })}
-          {...(node.shadowOffset
-            ? {
-                shadowOffsetX: node.shadowOffset.x,
-                shadowOffsetY: node.shadowOffset.y,
+          sceneFunc={(context) => {
+            const { width, height } = node.geometry;
+            const edge = Math.min(width, height);
+            context.save();
+            context.beginPath();
+            context.rect(0, 0, width, height);
+            context.clip();
+            context.fillStyle = pattern.backgroundColor;
+            context.fillRect(0, 0, width, height);
+            context.globalAlpha = pattern.opacity;
+            if (pattern.type === "dots") {
+              const step = Math.max(12, pattern.spacing * edge);
+              const radius = Math.max(1.5, (pattern.size * edge) / 2);
+              context.fillStyle = pattern.color;
+              for (let row = 0, y = 0; y <= height + step; row++, y += step)
+                for (
+                  let x = pattern.offset && row % 2 ? -step / 2 : 0;
+                  x <= width + step;
+                  x += step
+                ) {
+                  context.beginPath();
+                  context.arc(x, y, radius, 0, Math.PI * 2);
+                  context.fill();
+                }
+            } else if (pattern.type === "grid") {
+              const step = Math.max(12, pattern.spacing * edge);
+              context.strokeStyle = pattern.color;
+              context.lineWidth = Math.max(1, pattern.lineWeight * edge);
+              for (let x = 0; x <= width; x += step) {
+                context.beginPath();
+                context.moveTo(x, 0);
+                context.lineTo(x, height);
+                context.stroke();
               }
-            : {})}
-          {...(node.shadowOpacity === undefined
-            ? {}
-            : { shadowOpacity: node.shadowOpacity })}
+              for (let y = 0; y <= height; y += step) {
+                context.beginPath();
+                context.moveTo(0, y);
+                context.lineTo(width, y);
+                context.stroke();
+              }
+            } else if (pattern.type === "checker") {
+              const size = Math.max(10, pattern.cellSize * edge);
+              context.fillStyle = pattern.color;
+              for (let row = 0, y = 0; y < height; row++, y += size)
+                for (
+                  let column = row % 2, x = column * size;
+                  x < width;
+                  x += size * 2
+                )
+                  context.fillRect(x, y, size, size);
+            } else if (pattern.type === "diagonal") {
+              const step = Math.max(14, pattern.spacing * edge);
+              context.strokeStyle = pattern.color;
+              context.lineWidth = Math.max(2, pattern.stripeWidth * edge);
+              for (
+                let offset = -height;
+                offset <= width + height;
+                offset += step
+              ) {
+                context.beginPath();
+                context.moveTo(offset, pattern.angle === 45 ? height : 0);
+                context.lineTo(
+                  offset + height,
+                  pattern.angle === 45 ? 0 : height,
+                );
+                context.stroke();
+              }
+            } else if (emojiImage) {
+              const size = Math.max(18, pattern.size * edge);
+              const step = Math.max(size * 1.1, pattern.spacing * edge);
+              const radians = (pattern.rotation * Math.PI) / 180;
+              for (
+                let row = 0, y = step / 2;
+                y < height + step;
+                row++, y += step
+              )
+                for (
+                  let x =
+                    step / 2 +
+                    (pattern.layout === "offset" && row % 2 ? step / 2 : 0);
+                  x < width + step;
+                  x += step
+                ) {
+                  context.save();
+                  context.translate(x, y);
+                  context.rotate(radians);
+                  context.drawImage(
+                    emojiImage,
+                    -size / 2,
+                    -size / 2,
+                    size,
+                    size,
+                  );
+                  context.restore();
+                }
+            }
+            context.restore();
+          }}
         />
       );
+    }
     case "text":
       return (
         <Text
@@ -71,6 +197,9 @@ function SceneNode({
           {...(node.lineHeight === undefined
             ? {}
             : { lineHeight: node.lineHeight })}
+          {...(node.letterSpacing === undefined
+            ? {}
+            : { letterSpacing: node.letterSpacing })}
           wrap={
             node.wrap === "character"
               ? "char"

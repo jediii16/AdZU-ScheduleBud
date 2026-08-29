@@ -1,5 +1,6 @@
 import type { FontId } from "@/lib/font-registry";
 import type { ResolvedLayoutStyleTokens } from "./layout-style";
+import type { BackgroundPattern } from "@/domain/project";
 
 export const EXPORT_LAYER_IDS = [
   "background",
@@ -24,6 +25,14 @@ export type RectRenderNode = BaseRenderNode & {
   kind: "rect";
   geometry: Rect;
   fill?: string;
+  linearGradient?: {
+    start: Point;
+    end: Point;
+    colorStops: readonly [number, string, number, string];
+  };
+  pattern?: BackgroundPattern;
+  emojiAssetId?: string;
+  emojiSource?: string;
   stroke?: string;
   strokeWidth?: number;
   cornerRadius?: number;
@@ -46,6 +55,7 @@ export type TextRenderNode = BaseRenderNode & {
   align?: "left" | "center" | "right";
   verticalAlign?: "top" | "middle" | "bottom";
   lineHeight?: number;
+  letterSpacing?: number;
   wrap?: "none" | "word" | "character";
   fill: string;
 };

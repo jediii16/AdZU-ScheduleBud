@@ -65,7 +65,7 @@ export type DayVisibility = z.infer<typeof dayVisibilitySchema>;
 
 export const fontIdSchema = z.enum(FONT_IDS);
 
-export const themeIdSchema = z.enum([
+export const builtInThemeIdSchema = z.enum([
   "clean-slate",
   "adzu-classic",
   "midnight",
@@ -79,10 +79,16 @@ export const themeIdSchema = z.enum([
   "girlfriends-choice",
   "pink-diary",
 ]);
+export type BuiltInThemeId = z.infer<typeof builtInThemeIdSchema>;
+
+export const themeIdSchema = z.enum([
+  ...builtInThemeIdSchema.options,
+  "custom",
+]);
 export type ThemeId = z.infer<typeof themeIdSchema>;
 
 export const themeDefinitionSchema = z.object({
-  id: themeIdSchema,
+  id: builtInThemeIdSchema,
   name: z.string().min(1),
   description: z.string().min(1),
   fontId: fontIdSchema,

@@ -22,6 +22,7 @@ export function createBlankProject({
       baseTemplateId: null,
       templateModified: false,
       themeId: "clean-slate",
+      customPalette: null,
       themeVariantId: null,
       layoutId: "cards",
       layoutStyles: {
@@ -44,11 +45,9 @@ export function createBlankProject({
         section: true,
       },
       subjectColors: { mode: "automatic", singleColor: null, bySubjectId: {} },
-      background: { kind: "theme" },
+      background: { mode: "palette" },
       typography: {
-        bodyFontId: "body-sans",
-        headingFontId: "heading-sans",
-        scale: 1,
+        presetId: "schedulebud",
       },
       decorationIntensity: 0.5,
       wallpaperTitle: { visible: true, text: "Weekly Schedule" },

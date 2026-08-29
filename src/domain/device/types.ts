@@ -107,6 +107,14 @@ export const photoTransformSchema = z.object({
 });
 export type PhotoTransform = z.infer<typeof photoTransformSchema>;
 
+export const backgroundImageTransformSchema = z.object({
+  position: normalizedPointSchema,
+  scale: z.number().finite().min(1).max(10),
+});
+export type BackgroundImageTransform = z.infer<
+  typeof backgroundImageTransformSchema
+>;
+
 const photoTransformsByCompositionSchema = z.object({
   hero: z.record(z.string(), photoTransformSchema),
   split: z.record(z.string(), photoTransformSchema),
@@ -140,6 +148,10 @@ export const deviceVariantSchema = z
     visibleFieldsOverride: visibleFieldsSchema.partial().nullable(),
     layoutVisibleFieldsOverride: layoutVisibleFieldsOverrideSchema.optional(),
     photoTransforms: photoTransformsSchema,
+    backgroundImageTransform: backgroundImageTransformSchema.default({
+      position: { x: 0.5, y: 0.5 },
+      scale: 1,
+    }),
     stickers: z.array(stickerInstanceSchema).max(50).default([]),
     preview: previewPreferencesSchema,
   })

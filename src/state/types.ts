@@ -1,7 +1,9 @@
 import type { LayoutId, LayoutStyleId, ThemeId } from "@/domain/design/types";
+import type { TypographyPresetId } from "@/data/typography/registry";
 import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
 import type {
   Density,
+  BackgroundImageTransform,
   DeviceCategory,
   DeviceDimensions,
   DeviceVariant,
@@ -14,6 +16,8 @@ import type {
 import type { AlignmentGuides } from "@/domain/render";
 import type { StickerInstance, StickerLayer } from "@/domain/stickers/types";
 import type {
+  BackgroundDesign,
+  CustomPaletteColorRole,
   ProjectDesign,
   ScheduleProject,
   WallpaperLabels,
@@ -131,6 +135,8 @@ export interface ScheduleSlice {
 
 export interface DesignSlice {
   setTheme(themeId: ThemeId): void;
+  setCustomPaletteColor(role: CustomPaletteColorRole, color: string): void;
+  resetCustomPalette(): void;
   setThemeVariant(themeVariantId: string | null): void;
   setLayout(layoutId: LayoutId): void;
   setLayoutStyle(styleId: LayoutStyleId): void;
@@ -150,7 +156,9 @@ export interface DesignSlice {
   setSubjectColorMode(mode: ProjectDesign["subjectColors"]["mode"]): void;
   setSubjectColor(subjectId: string, color: string | null): void;
   setBackground(background: ProjectDesign["background"]): void;
-  setTypography(typography: ProjectDesign["typography"]): void;
+  setBackgroundMode(mode: BackgroundDesign["mode"]): void;
+  setBackgroundImage(assetId: string | null): void;
+  setTypography(typographyId: TypographyPresetId): void;
   setDecorationIntensity(intensity: number): void;
   setWallpaperTitle(text: string): void;
   setWallpaperTitleVisible(visible: boolean): void;
@@ -210,6 +218,11 @@ export interface DeviceSlice {
     composition: AvailablePhotoComposition,
     assetId: string,
   ): void;
+  setBackgroundImageTransform(
+    variantId: string,
+    transform: BackgroundImageTransform,
+  ): void;
+  resetBackgroundImageTransform(variantId: string): void;
   addSticker(variantId: string, stickerId: string): string | null;
   updateSticker(
     variantId: string,

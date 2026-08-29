@@ -240,10 +240,7 @@ function resolveScheduleFit(
     project.schedule.map((subject) => [subject.id, subject]),
   );
   const baseMetrics = photoMetricsFor(family);
-  const baseTypography = photoTypographyFor(
-    family,
-    project.design.typography.scale,
-  );
+  const baseTypography = photoTypographyFor(family, 1);
   const targetCandidates =
     family === "desktopLandscape"
       ? [
@@ -604,7 +601,7 @@ export function buildPhotoPolaroidRenderModel(
         titleFit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 700,
           height: scheduleFit.metrics.titleHeight,
           verticalAlign: "middle",
@@ -653,7 +650,7 @@ export function buildPhotoPolaroidRenderModel(
         dayFit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 600,
           height: scheduleFit.metrics.dayHeaderHeight,
           wrap: "none",

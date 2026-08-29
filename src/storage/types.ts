@@ -1,6 +1,6 @@
 import type { ScheduleProject } from "@/domain/project";
 
-export type StoredAssetKind = "photo" | "screen-guide";
+export type StoredAssetKind = "photo" | "background-image" | "screen-guide";
 
 export type StoredAsset = {
   id: string;

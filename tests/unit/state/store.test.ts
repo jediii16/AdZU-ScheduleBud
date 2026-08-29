@@ -261,6 +261,168 @@ describe("design and device slices", () => {
     });
   });
 
+  it("creates, restores, resets, persists, and undoes one project-level Custom palette", async () => {
+    const { store, projects } = createTestStore();
+    store.getState().createProject();
+    store.getState().setTheme("matcha-study");
+    const before = structuredClone(selectActiveProject(store.getState())!);
+    const historyBefore = store.getState().history.past.length;
+
+    store.getState().setCustomPaletteColor("accent", "#8FA276");
+    expect(selectActiveProject(store.getState())?.design.themeId).toBe(
+      "matcha-study",
+    );
+    expect(store.getState().history.past).toHaveLength(historyBefore);
+
+    store.getState().setCustomPaletteColor("accent", "#123456");
+    const customized = selectActiveProject(store.getState())!;
+    expect(customized.design).toMatchObject({
+      themeId: "custom",
+      customPalette: {
+        basedOnPaletteId: "matcha-study",
+        accent: "#123456",
+      },
+    });
+    expect(store.getState().history.past).toHaveLength(historyBefore + 1);
+    expect({
+      ...customized,
+      design: {
+        ...customized.design,
+        themeId: before.design.themeId,
+        customPalette: before.design.customPalette,
+      },
+    }).toEqual({ ...before, updatedAt: customized.updatedAt });
+
+    store.getState().undo();
+    expect(selectActiveProject(store.getState())?.design).toMatchObject({
+      themeId: "matcha-study",
+      customPalette: null,
+    });
+    store.getState().redo();
+    expect(selectActiveProject(store.getState())?.design.themeId).toBe(
+      "custom",
+    );
+
+    store.getState().setTheme("midnight");
+    expect(selectActiveProject(store.getState())?.design.customPalette).toEqual(
+      customized.design.customPalette,
+    );
+    store.getState().setTheme("custom");
+    expect(selectActiveProject(store.getState())?.design.customPalette).toEqual(
+      customized.design.customPalette,
+    );
+    store.getState().resetCustomPalette();
+    expect(selectActiveProject(store.getState())?.design).toMatchObject({
+      themeId: "matcha-study",
+      customPalette: customized.design.customPalette,
+    });
+
+    await store.getState().flushAutosave();
+    const saved = await projects.read(store.getState().activeProjectId!);
+    expect(saved.status === "found" ? saved.project.design : null).toMatchObject(
+      {
+        themeId: "matcha-study",
+        customPalette: { basedOnPaletteId: "matcha-study", accent: "#123456" },
+      },
+    );
+  });
+
+  it("seeds first-time Custom from the active preset and coalesces picker edits", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    store.getState().setTheme("siteao-orange");
+    store.getState().setTheme("custom");
+    expect(selectActiveProject(store.getState())?.design).toMatchObject({
+      themeId: "custom",
+      customPalette: {
+        basedOnPaletteId: "siteao-orange",
+        canvas: "#FFF8F2",
+      },
+    });
+
+    const historyBefore = store.getState().history.past.length;
+    store.getState().beginHistoryTransaction("Customize color palette");
+    store.getState().setCustomPaletteColor("canvas", "#111111");
+    store.getState().setCustomPaletteColor("canvas", "#222222");
+    store.getState().setCustomPaletteColor("canvas", "#333333");
+    store.getState().commitHistoryTransaction();
+    expect(store.getState().history.past).toHaveLength(historyBefore + 1);
+    expect(
+      selectActiveProject(store.getState())?.design.customPalette?.canvas,
+    ).toBe("#333333");
+    store.getState().undo();
+    expect(
+      selectActiveProject(store.getState())?.design.customPalette?.canvas,
+    ).toBe("#FFF8F2");
+  });
+
+  it("keeps Custom shared across devices and independent from layout, style, typography, subjects, photos, and stickers", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    const phoneId = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    const desktopId = store.getState().createDeviceVariant({
+      category: "desktop",
+      dimensions: { width: 1920, height: 1080 },
+    })!;
+    const subjectId = store.getState().addSubject({ code: "CS.412" })!;
+    store.getState().setSubjectColor(subjectId, "#ABCDEF");
+    store.getState().addPhoto("photo-one");
+    store.getState().setPhotoTransform(phoneId, "hero", "photo-one", {
+      position: { x: 0.3, y: 0.7 },
+      scale: 1.25,
+      rotation: 0,
+    });
+    store.getState().addSticker(phoneId, "capy-reading");
+    store.getState().setLayoutStyle("cards-outline");
+    store.getState().setTypography("playfair-inter");
+    store.getState().setTheme("pink-diary");
+    const before = structuredClone(selectActiveProject(store.getState())!);
+
+    store.getState().setCustomPaletteColor("canvas", "#101112");
+    const customized = selectActiveProject(store.getState())!;
+    expect({
+      ...customized,
+      design: {
+        ...customized.design,
+        themeId: before.design.themeId,
+        customPalette: before.design.customPalette,
+      },
+    }).toEqual({ ...before, updatedAt: customized.updatedAt });
+
+    store.getState().setActiveDeviceVariant(desktopId);
+    store.getState().setLayout("planner");
+    expect(selectActiveProject(store.getState())?.design).toMatchObject({
+      themeId: "custom",
+      customPalette: {
+        basedOnPaletteId: "pink-diary",
+        canvas: "#101112",
+      },
+      typography: { presetId: "playfair-inter" },
+      subjectColors: { bySubjectId: { [subjectId]: "#ABCDEF" } },
+    });
+    expect(selectActiveProject(store.getState())?.deviceVariants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: phoneId,
+          stickers: expect.arrayContaining([
+            expect.objectContaining({ stickerId: "capy-reading" }),
+          ]),
+          photoTransforms: {
+            hero: {
+              "photo-one": expect.objectContaining({ scale: 1.25 }),
+            },
+            split: {},
+            polaroid: {},
+          },
+        }),
+        expect.objectContaining({ id: desktopId }),
+      ]),
+    );
+  });
+
   it("preserves template provenance and marks controlled edits as modified", () => {
     const { store } = createTestStore();
     store.getState().createProject();

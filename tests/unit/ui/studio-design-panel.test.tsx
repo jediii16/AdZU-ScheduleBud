@@ -6,6 +6,40 @@ import { resolveLayoutDetailCapabilities } from "@/domain/render";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("layout design inspector", () => {
+  it("selects a compact paired typography option with a non-color selected state", () => {
+    const project = visualScheduleProject();
+    const onTypography = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={project.design}
+        visibleFields={project.design.visibleFields}
+        activeLayout="minimal"
+        detailCapabilities={resolveLayoutDetailCapabilities(
+          "minimal",
+          project.deviceVariants[0]!,
+        )}
+        onTypography={onTypography}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    fireEvent.click(
+      screen.getByText("ScheduleBud", { selector: "summary span" }),
+    );
+    const option = screen.getByRole("radio", {
+      name: /Playfair Display \+ Inter/,
+    });
+    fireEvent.click(option);
+    expect(onTypography).toHaveBeenCalledWith("playfair-inter");
+    expect(screen.getByRole("radio", { name: /ScheduleBud/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
   it("shows only contextual styles and hides the one-option Polaroid control", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
@@ -27,9 +61,8 @@ describe("layout design inspector", () => {
         onStyle={onStyle}
       />,
     );
-    expect(
-      screen.getAllByRole("radio", { name: /Soft|Outline|Bold|Glass/ }),
-    ).toHaveLength(4);
+    for (const name of ["Soft", "Outline", "Bold", "Glass"])
+      expect(screen.getByRole("radio", { name })).toBeVisible();
     fireEvent.click(screen.getByRole("radio", { name: "Glass" }));
     expect(onStyle).toHaveBeenCalledWith("cards-glass");
 
@@ -175,6 +208,11 @@ describe("layout design inspector", () => {
       name: "Girlfriend's Choice",
     });
     const pinkDiary = screen.getByRole("radio", { name: "Pink Diary" });
+    const custom = screen.getByRole("radio", { name: "Custom" });
+    expect(
+      screen.getByRole("heading", { name: "Color Palette" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Theme" })).toBeNull();
     expect(adzu).toHaveAttribute("aria-checked", "false");
     expect(midnight).toHaveAttribute("aria-checked", "false");
     expect(siteao).toHaveAttribute("aria-checked", "false");
@@ -186,10 +224,121 @@ describe("layout design inspector", () => {
     expect(matcha).toHaveAttribute("aria-checked", "false");
     expect(girlfriendsChoice).toHaveAttribute("aria-checked", "false");
     expect(pinkDiary).toHaveAttribute("aria-checked", "false");
+    expect(custom).toHaveAttribute("aria-checked", "false");
     fireEvent.click(pinkDiary);
     expect(onTheme).toHaveBeenCalledOnce();
     expect(onTheme).toHaveBeenCalledWith("pink-diary");
     expect(screen.getByText("Malinis")).toBeVisible();
+  });
+
+  it("opens palette customization without selecting Custom and applies only valid HEX", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onTheme = vi.fn();
+    const onColor = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, themeId: "matcha-study" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="minimal"
+        detailCapabilities={resolveLayoutDetailCapabilities("minimal", variant)}
+        onTheme={onTheme}
+        onCustomPaletteColor={onColor}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Customize palette"));
+    expect(onTheme).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Canvas HEX")).toHaveValue("#F5F3E9");
+    expect(screen.getByLabelText("Accent HEX")).toHaveValue("#8FA276");
+    fireEvent.change(screen.getByLabelText("Accent HEX"), {
+      target: { value: "#12" },
+    });
+    expect(onColor).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Accent HEX"), {
+      target: { value: "#a1b2c3" },
+    });
+    expect(onColor).toHaveBeenCalledWith("accent", "#A1B2C3");
+  });
+
+  it("bounds picker preview updates and flushes the final dragged color", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onPreview = vi.fn();
+    const onStart = vi.fn();
+    const onEnd = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, themeId: "matcha-study" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="minimal"
+        detailCapabilities={resolveLayoutDetailCapabilities("minimal", variant)}
+        onCustomPalettePickerPreview={onPreview}
+        onCustomPalettePickerStart={onStart}
+        onCustomPalettePickerEnd={onEnd}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Customize palette"));
+    const picker = screen.getByLabelText("Accent color picker");
+    fireEvent.focus(picker);
+    fireEvent.input(picker, { target: { value: "#111111" } });
+    fireEvent.input(picker, { target: { value: "#222222" } });
+    fireEvent.input(picker, { target: { value: "#333333" } });
+    expect(onPreview).not.toHaveBeenCalled();
+    fireEvent.blur(picker);
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onEnd).toHaveBeenCalledOnce();
+    expect(onEnd).toHaveBeenCalledWith("accent", "#333333");
+  });
+
+  it("shows the Custom base, reset action, and base Subject palette", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onReset = vi.fn();
+    render(
+      <DesignStudioPanel
+        design={{
+          ...project.design,
+          themeId: "custom",
+          customPalette: {
+            basedOnPaletteId: "pink-diary",
+            canvas: "#111111",
+            primary: "#222222",
+            secondary: "#333333",
+            accent: "#444444",
+            surface: "#555555",
+            border: "#666666",
+          },
+        }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+        onResetCustomPalette={onReset}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Based on Pink Diary")).toBeVisible();
+    expect(screen.getByLabelText("Pink Diary subject palette")).toBeVisible();
+    fireEvent.click(screen.getByText("Customize palette"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset to Pink Diary" }),
+    );
+    expect(onReset).toHaveBeenCalledOnce();
   });
 
   it("keeps the Pink Diary subject palette visible only for Cards and Grid", () => {
@@ -613,5 +762,148 @@ describe("layout design inspector", () => {
     expect(screen.queryByLabelText("Caption (optional)")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Move photo 2 up" }));
     expect(onMove).toHaveBeenCalledWith("two", "up");
+  });
+
+  it("offers compact accessible Background modes and contextual controls", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onMode = vi.fn();
+    const onBackground = vi.fn();
+    const onImageCenter = vi.fn();
+    const onImageReset = vi.fn();
+    const common = {
+      visibleFields: project.design.visibleFields,
+      activeLayout: "cards" as const,
+      detailCapabilities: resolveLayoutDetailCapabilities("cards", variant),
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+      onBackgroundMode: onMode,
+      onBackground,
+      onBackgroundImageCenter: onImageCenter,
+      onBackgroundImageReset: onImageReset,
+    };
+    const { rerender } = render(
+      <DesignStudioPanel {...common} design={project.design} />,
+    );
+    for (const name of ["Palette", "Solid", "Gradient", "Pattern", "Image"])
+      expect(screen.getByRole("radio", { name })).toBeVisible();
+    fireEvent.click(screen.getByRole("radio", { name: "Solid" }));
+    expect(onMode).toHaveBeenCalledWith("solid");
+    expect(screen.getByText(/Uses Clean Slate canvas/)).toBeVisible();
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        design={{
+          ...project.design,
+          background: {
+            mode: "gradient",
+            gradient: {
+              color1: "#112233",
+              color2: "#AABBCC",
+              direction: 0,
+            },
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("radiogroup", { name: "Gradient direction" }),
+    ).toBeVisible();
+    expect(screen.getByText("To right")).toBeVisible();
+    const leftToRight = screen.getByRole("radio", {
+      name: "Left to right",
+    });
+    expect(leftToRight).toHaveAttribute("aria-checked", "true");
+    fireEvent.keyDown(leftToRight, { key: "ArrowRight" });
+    expect(onBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        gradient: expect.objectContaining({ direction: 45 }),
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset Gradient background" }),
+    );
+    expect(onBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        gradient: {
+          color1: "#F7F8FA",
+          color2: "#FFFFFF",
+          direction: 135,
+        },
+      }),
+    );
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        design={{
+          ...project.design,
+          background: {
+            mode: "pattern",
+            pattern: {
+              type: "emoji",
+              backgroundColor: "#FFFFFF",
+              emojiId: "fluent-1f600",
+              size: 0.05,
+              spacing: 0.1,
+              opacity: 0.7,
+              rotation: 0,
+              layout: "grid",
+            },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Emoji" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByLabelText("Size")).toBeVisible();
+    expect(
+      screen.getByRole("radiogroup", { name: "Emoji layout" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Dot color")).toBeNull();
+    for (const type of ["dots", "grid", "checker", "diagonal", "emoji"])
+      expect(screen.getByTestId(`pattern-preview-${type}`)).toBeVisible();
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        backgroundImageFilename="campus.png"
+        backgroundImageAdjusting
+        backgroundImageZoom={1.35}
+        design={{
+          ...project.design,
+          background: {
+            mode: "image",
+            image: {
+              assetId: "background-one",
+              overlay: "dark",
+              overlayIntensity: 0.35,
+            },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("Adjusting background")).toBeVisible();
+    expect(screen.getByText("135%")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Center image" }));
+    expect(onImageCenter).toHaveBeenCalledOnce();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset Image background" }),
+    );
+    expect(onImageReset).toHaveBeenCalledOnce();
+    expect(onBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        image: expect.objectContaining({
+          overlay: "none",
+          overlayIntensity: 0,
+        }),
+      }),
+    );
   });
 });

@@ -28,13 +28,15 @@ function rewriteAssetIds(
           caption,
         ]),
       ),
-      background:
-        project.design.background.kind === "asset"
-          ? {
-              ...project.design.background,
-              assetId: replace(project.design.background.assetId),
-            }
-          : project.design.background,
+      background: project.design.background.image
+        ? {
+            ...project.design.background,
+            image: {
+              ...project.design.background.image,
+              assetId: replace(project.design.background.image.assetId),
+            },
+          }
+        : project.design.background,
     },
     deviceVariants: project.deviceVariants.map((variant) => ({
       ...variant,

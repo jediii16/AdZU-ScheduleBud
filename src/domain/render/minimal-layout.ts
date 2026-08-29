@@ -492,7 +492,7 @@ export function buildMinimalRenderModel(
   const titleVisible =
     project.design.wallpaperTitle.visible &&
     project.design.wallpaperTitle.text.trim().length > 0;
-  const typography = scaledTypography(family, project.design.typography.scale);
+  const typography = scaledTypography(family, 1);
   const metrics = metricsFor(family, titleVisible);
   const fields = mergedFields(project, variant);
   const subjects = new Map(
@@ -640,7 +640,7 @@ export function buildMinimalRenderModel(
         fit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 700,
           height: metrics.titleTextHeight,
           verticalAlign: "middle",
@@ -674,9 +674,9 @@ export function buildMinimalRenderModel(
       family === "tabletLandscape" ||
       (family === "square" && plan.width >= 350);
     const estimatedDayLabelWidth =
-      DAY_NAMES[plan.day].length * typography.day * 0.58 + 10;
+      DAY_NAMES[plan.day].length * typography.day * 0.62 + 10;
     const labelWidth = Math.min(
-      plan.contentWidth * 0.62,
+      plan.contentWidth * 0.74,
       Math.max(typography.day * 4.4, estimatedDayLabelWidth),
     );
     const inlineRuleStart = contentX + labelWidth + 10;
@@ -695,7 +695,7 @@ export function buildMinimalRenderModel(
         typography.day,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 700,
           height: inlineHeading
             ? metrics.dayHeaderHeight - 12

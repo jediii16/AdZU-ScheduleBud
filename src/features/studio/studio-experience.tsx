@@ -14,7 +14,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandLockup } from "@/components/shared/brand-lockup";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -31,12 +31,14 @@ import {
 } from "@/domain/device/safe-areas";
 import {
   inferOrientation,
+  type BackgroundImageTransform,
   type DeviceCategory,
   type PhotoTransform,
 } from "@/domain/device/types";
 import {
   DEFAULT_PHOTO_TRANSFORM,
   buildScheduleRenderModel,
+  createCustomPalette,
   panPhotoTransform,
   photoTransformFor,
   resolveAvailablePhotoComposition,
@@ -45,6 +47,7 @@ import {
   resolveAlignmentSnap,
   resolveProjectLayout,
 } from "@/domain/render";
+import type { CustomPaletteColorRole } from "@/domain/project";
 import { detectConflicts } from "@/domain/schedule/conflicts";
 import { validateMeeting } from "@/domain/schedule/validation";
 import {
@@ -68,6 +71,7 @@ import {
   inspectTemporaryImage,
   removeScreenGuide,
   savePhoto,
+  saveBackgroundImage,
   saveScreenGuide,
   type InspectedImage,
 } from "@/storage/assets";
@@ -82,6 +86,7 @@ import {
   DeviceStudioPanel,
 } from "./studio-panels";
 import { DeviceTargetPicker } from "./device-target-picker";
+import { studioShortcutAction } from "./studio-shortcuts";
 
 const studioPersistence = createPersistence();
 
@@ -126,6 +131,11 @@ export function StudioExperience() {
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [guideOpacity, setGuideOpacity] = useState(0.35);
   const [photoAdjusting, setPhotoAdjusting] = useState(false);
+  const [backgroundAdjusting, setBackgroundAdjusting] = useState(false);
+  const [palettePreview, setPalettePreview] = useState<{
+    role: CustomPaletteColorRole;
+    color: string;
+  } | null>(null);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedGuide, setLoadedGuide] = useState<{
     id: string;
@@ -134,11 +144,17 @@ export function StudioExperience() {
   const [loadedPhotos, setLoadedPhotos] = useState<
     ReadonlyMap<string, { image: HTMLImageElement; asset: StoredAsset }>
   >(() => new Map());
+  const [loadedBackground, setLoadedBackground] = useState<{
+    id: string;
+    image: HTMLImageElement;
+    asset: StoredAsset;
+  } | null>(null);
   const [loadedStaticAssets, setLoadedStaticAssets] = useState<{
     signature: string;
     images: ReadonlyMap<string, HTMLImageElement>;
   }>(() => ({ signature: "[]", images: new Map() }));
   const photoPanStart = useRef<PhotoTransform | null>(null);
+  const backgroundPanStart = useRef<BackgroundImageTransform | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -208,25 +224,110 @@ export function StudioExperience() {
   );
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Delete" && event.key !== "Backspace") return;
-      const target = event.target;
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-      )
-        return;
+      const action = studioShortcutAction(event);
+      if (!action) return;
       const state = store.getState();
       const variantId =
         state.projectsById[state.activeProjectId ?? ""]?.activeDeviceVariantId;
-      if (!variantId || !state.editor.selectedStickerId) return;
+      const selectedStickerId = state.editor.selectedStickerId;
+
+      if (action === "undo") {
+        event.preventDefault();
+        state.undo();
+        return;
+      }
+      if (action === "redo") {
+        event.preventDefault();
+        state.redo();
+        return;
+      }
+      if (action === "save") {
+        event.preventDefault();
+        void state.flushAutosave();
+        return;
+      }
+      if (action === "zoom-in" || action === "zoom-out") {
+        event.preventDefault();
+        const direction = action === "zoom-in" ? 1 : -1;
+        state.setPreviewViewport(
+          Math.min(
+            2,
+            Math.max(0.5, state.editor.previewZoom + direction * 0.1),
+          ),
+          state.editor.previewPan,
+        );
+        return;
+      }
+      if (action === "zoom-fit") {
+        event.preventDefault();
+        state.setPreviewViewport(1, { x: 0, y: 0 });
+        return;
+      }
+      if (action === "duplicate-selection") {
+        event.preventDefault();
+        if (!variantId || !selectedStickerId) return;
+        const duplicateId = state.duplicateSticker(
+          variantId,
+          selectedStickerId,
+        );
+        if (duplicateId) state.setSelectedSticker(duplicateId);
+        return;
+      }
+      if (action === "delete-selection") {
+        if (!variantId || !selectedStickerId) return;
+        event.preventDefault();
+        state.deleteSticker(variantId, selectedStickerId);
+        state.setSelectedSticker(null);
+        return;
+      }
+      if (action.startsWith("nudge-")) {
+        if (!variantId || !selectedStickerId) return;
+        const variant = state.projectsById[
+          state.activeProjectId ?? ""
+        ]?.deviceVariants.find((item) => item.id === variantId);
+        const sticker = variant?.stickers.find(
+          (item) => item.instanceId === selectedStickerId,
+        );
+        if (!variant || !sticker) return;
+        event.preventDefault();
+        const distance = event.shiftKey ? 10 : 1;
+        const xDirection =
+          action === "nudge-left" ? -1 : action === "nudge-right" ? 1 : 0;
+        const yDirection =
+          action === "nudge-up" ? -1 : action === "nudge-down" ? 1 : 0;
+        state.updateSticker(variantId, selectedStickerId, {
+          xRatio:
+            sticker.xRatio + (xDirection * distance) / variant.dimensions.width,
+          yRatio:
+            sticker.yRatio +
+            (yDirection * distance) / variant.dimensions.height,
+        });
+        return;
+      }
+
+      const hasSelection =
+        Boolean(selectedStickerId) ||
+        Boolean(selectedPhotoId) ||
+        photoAdjusting ||
+        backgroundAdjusting ||
+        targetPickerOpen;
+      if (!hasSelection) return;
       event.preventDefault();
-      state.deleteSticker(variantId, state.editor.selectedStickerId);
       state.setSelectedSticker(null);
+      setSelectedPhotoId(null);
+      setPhotoAdjusting(false);
+      setBackgroundAdjusting(false);
+      setTargetPickerOpen(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [store]);
+  }, [
+    backgroundAdjusting,
+    photoAdjusting,
+    selectedPhotoId,
+    store,
+    targetPickerOpen,
+  ]);
   useEffect(() => {
     if (
       editor.selectedStickerId &&
@@ -243,6 +344,7 @@ export function StudioExperience() {
   const photoAssetIds =
     project?.assetReferences.photoAssetIds ?? EMPTY_PHOTO_ASSET_IDS;
   const photoAssetId = photoAssetIds[0] ?? null;
+  const backgroundAssetId = project?.design.background.image?.assetId ?? null;
   useEffect(() => {
     const guideId = activeVariant?.preview.guideAssetId;
     if (!guideId) return;
@@ -296,6 +398,33 @@ export function StudioExperience() {
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [photoAssetIds]);
+  useEffect(() => {
+    if (!backgroundAssetId) return;
+    let active = true;
+    let url: string | null = null;
+    void studioPersistence.assets.read(backgroundAssetId).then((asset) => {
+      if (
+        !active ||
+        !asset ||
+        (asset.kind !== "background-image" && asset.kind !== "photo")
+      )
+        return;
+      url = URL.createObjectURL(asset.blob);
+      const image = new Image();
+      image.onload = () => {
+        if (active)
+          setLoadedBackground({ id: backgroundAssetId, image, asset });
+      };
+      image.onerror = () => {
+        if (active) setLoadedBackground(null);
+      };
+      image.src = url;
+    });
+    return () => {
+      active = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [backgroundAssetId]);
   const photoImages = useMemo(
     () =>
       new Map(
@@ -306,12 +435,30 @@ export function StudioExperience() {
       ),
     [loadedPhotos, photoAssetIds],
   );
+  const previewProject = useMemo(() => {
+    if (!project || !palettePreview) return project;
+    const customPalette =
+      project.design.themeId === "custom"
+        ? (project.design.customPalette ?? createCustomPalette("clean-slate"))
+        : createCustomPalette(project.design.themeId);
+    return {
+      ...project,
+      design: {
+        ...project.design,
+        themeId: "custom" as const,
+        customPalette: {
+          ...customPalette,
+          [palettePreview.role]: palettePreview.color,
+        },
+      },
+    };
+  }, [palettePreview, project]);
   const renderResult = useMemo(
     () =>
-      project && activeVariant && target
-        ? buildScheduleRenderModel(project, activeVariant)
+      previewProject && activeVariant && target
+        ? buildScheduleRenderModel(previewProject, activeVariant)
         : null,
-    [activeVariant, project, target],
+    [activeVariant, previewProject, target],
   );
   const staticAssetSignature = renderResult
     ? renderAssetLoadSignature(renderResult.model)
@@ -335,11 +482,20 @@ export function StudioExperience() {
     () =>
       new Map([
         ...photoImages,
+        ...(loadedBackground?.id === backgroundAssetId
+          ? ([[loadedBackground.id, loadedBackground.image]] as const)
+          : []),
         ...(loadedStaticAssets.signature === staticAssetSignature
           ? loadedStaticAssets.images
           : []),
       ]),
-    [loadedStaticAssets, photoImages, staticAssetSignature],
+    [
+      backgroundAssetId,
+      loadedBackground,
+      loadedStaticAssets,
+      photoImages,
+      staticAssetSignature,
+    ],
   );
   const staticAssetsReady =
     staticAssetSources.length === 0 ||
@@ -657,6 +813,58 @@ export function StudioExperience() {
       store.getState().beginHistoryTransaction("Adjust photo zoom");
   };
   const finishPhotoZoom = () => store.getState().commitHistoryTransaction();
+  const chooseBackgroundImage = async (file: File) => {
+    const inspected = await inspectTemporaryImage(file, undefined, file.name);
+    const saved = await saveBackgroundImage(studioPersistence.assets, {
+      ...inspected,
+      id: crypto.randomUUID(),
+      projectId: project.id,
+      createdAt: new Date().toISOString(),
+    });
+    store.getState().setBackgroundImage(saved.id);
+    setBackgroundAdjusting(false);
+    setPhotoAdjusting(false);
+    setExportError(null);
+  };
+  const removeBackgroundImage = () => {
+    store.getState().setBackgroundImage(null);
+    setBackgroundAdjusting(false);
+  };
+  const beginBackgroundGesture = () => {
+    if (!store.getState().history.transaction)
+      store.getState().beginHistoryTransaction("Adjust background");
+  };
+  const finishBackgroundGesture = () =>
+    store.getState().commitHistoryTransaction();
+  const beginBackgroundCrop = () => {
+    if (!loadedBackground || loadedBackground.id !== backgroundAssetId) return;
+    backgroundPanStart.current = activeVariant.backgroundImageTransform;
+    if (!store.getState().history.transaction)
+      store.getState().beginHistoryTransaction("Adjust background crop");
+  };
+  const moveBackgroundCrop = (delta: { x: number; y: number }) => {
+    if (!loadedBackground || !backgroundPanStart.current) return;
+    const next = panPhotoTransform(
+      { ...backgroundPanStart.current, rotation: 0 },
+      {
+        width: loadedBackground.asset.width,
+        height: loadedBackground.asset.height,
+      },
+      {
+        width: activeVariant.dimensions.width,
+        height: activeVariant.dimensions.height,
+      },
+      delta,
+    );
+    store.getState().setBackgroundImageTransform(activeVariant.id, {
+      position: next.position,
+      scale: next.scale,
+    });
+  };
+  const finishBackgroundCrop = () => {
+    backgroundPanStart.current = null;
+    store.getState().commitHistoryTransaction();
+  };
   const runExport = async () => {
     if (photoExportBlocked) {
       setExportError(photoExportIssue);
@@ -665,6 +873,16 @@ export function StudioExperience() {
     if (!staticAssetsReady) {
       setExportError(
         "Your sticker artwork is still preparing. Try exporting again in a moment.",
+      );
+      return;
+    }
+    if (
+      project.design.background.mode === "image" &&
+      backgroundAssetId &&
+      loadedBackground?.id !== backgroundAssetId
+    ) {
+      setExportError(
+        "Your background image is still preparing. Try exporting again in a moment.",
       );
       return;
     }
@@ -759,12 +977,71 @@ export function StudioExperience() {
         visibleFields={visibleFields}
         activeLayout={activeLayout}
         detailCapabilities={detailCapabilities}
-        onTheme={(themeId) => store.getState().setTheme(themeId)}
+        onTheme={(themeId) => {
+          setPalettePreview(null);
+          store.getState().setTheme(themeId);
+        }}
+        onCustomPaletteColor={(role, color) => {
+          setPalettePreview(null);
+          store.getState().setCustomPaletteColor(role, color);
+        }}
+        onCustomPalettePickerStart={() => setPalettePreview(null)}
+        onCustomPalettePickerPreview={(role, color) =>
+          startTransition(() => setPalettePreview({ role, color }))
+        }
+        onCustomPalettePickerEnd={(role, color) => {
+          if (color !== null)
+            store.getState().setCustomPaletteColor(role, color);
+          setPalettePreview(null);
+        }}
+        onResetCustomPalette={() => store.getState().resetCustomPalette()}
+        backgroundImageFilename={
+          loadedBackground?.id === backgroundAssetId
+            ? loadedBackground.asset.filename
+            : undefined
+        }
+        backgroundImageAdjusting={backgroundAdjusting}
+        backgroundImageZoom={activeVariant.backgroundImageTransform.scale}
+        onBackgroundMode={(mode) => {
+          setBackgroundAdjusting(false);
+          store.getState().setBackgroundMode(mode);
+        }}
+        onBackground={(background) =>
+          store.getState().setBackground(background)
+        }
+        onBackgroundImageFile={chooseBackgroundImage}
+        onBackgroundImageAdjust={() => {
+          setPhotoAdjusting(false);
+          store.getState().setSelectedSticker(null);
+          setBackgroundAdjusting(true);
+        }}
+        onBackgroundImageRemove={removeBackgroundImage}
+        onBackgroundImageZoom={(scale) =>
+          store.getState().setBackgroundImageTransform(activeVariant.id, {
+            ...activeVariant.backgroundImageTransform,
+            scale,
+          })
+        }
+        onBackgroundImageCenter={() =>
+          store.getState().setBackgroundImageTransform(activeVariant.id, {
+            ...activeVariant.backgroundImageTransform,
+            position: { x: 0.5, y: 0.5 },
+          })
+        }
+        onBackgroundImageReset={() =>
+          store.getState().resetBackgroundImageTransform(activeVariant.id)
+        }
+        onBackgroundImageDone={() => setBackgroundAdjusting(false)}
+        onBackgroundGestureStart={beginBackgroundGesture}
+        onBackgroundGestureEnd={finishBackgroundGesture}
         onLayout={(layoutId) => {
           if (layoutId !== "photo") setPhotoAdjusting(false);
           store.getState().setLayout(layoutId);
         }}
         onStyle={(styleId) => store.getState().setLayoutStyle(styleId)}
+        onTypography={(typographyId) =>
+          store.getState().setTypography(typographyId)
+        }
         onTitleVisible={(visible) =>
           store.getState().setWallpaperTitleVisible(visible)
         }
@@ -801,6 +1078,7 @@ export function StudioExperience() {
           store.getState().setPhotoComposition(composition);
         }}
         onPhotoAdjust={(assetId) => {
+          setBackgroundAdjusting(false);
           store.getState().setSelectedSticker(null);
           setSelectedPhotoId(assetId);
           setPhotoAdjusting(true);
@@ -839,6 +1117,7 @@ export function StudioExperience() {
         stickers={activeVariant.stickers}
         selectedStickerId={editor.selectedStickerId}
         onStickerAdd={(stickerId) => {
+          setBackgroundAdjusting(false);
           setPhotoAdjusting(false);
           const instanceId = store
             .getState()
@@ -846,6 +1125,7 @@ export function StudioExperience() {
           if (instanceId) store.getState().setSelectedSticker(instanceId);
         }}
         onStickerSelect={(instanceId) => {
+          setBackgroundAdjusting(false);
           setPhotoAdjusting(false);
           store.getState().setSelectedSticker(instanceId);
         }}
@@ -893,6 +1173,8 @@ export function StudioExperience() {
         <div className="flex items-center gap-1">
           <Button
             aria-label="Undo"
+            aria-keyshortcuts="Control+Z Meta+Z"
+            title="Undo (Ctrl/Cmd+Z)"
             variant="ghost"
             size="icon"
             disabled={!canUndo}
@@ -902,6 +1184,8 @@ export function StudioExperience() {
           </Button>
           <Button
             aria-label="Redo"
+            aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y Meta+Y"
+            title="Redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y)"
             variant="ghost"
             size="icon"
             disabled={!canRedo}
@@ -1012,6 +1296,18 @@ export function StudioExperience() {
                   }
                 : undefined
             }
+            backgroundEditor={
+              project.design.background.mode === "image" &&
+              backgroundAssetId &&
+              loadedBackground?.id === backgroundAssetId
+                ? {
+                    adjusting: backgroundAdjusting,
+                    onPanStart: beginBackgroundCrop,
+                    onPanMove: moveBackgroundCrop,
+                    onPanEnd: finishBackgroundCrop,
+                  }
+                : undefined
+            }
             stickerEditor={{
               selectedId: editor.selectedStickerId,
               onSelect: (instanceId) =>
@@ -1094,6 +1390,8 @@ export function StudioExperience() {
             </span>
             <div className="flex items-center gap-1">
               <Button
+                aria-keyshortcuts="Shift+1"
+                title="Fit canvas (Shift+1)"
                 variant="ghost"
                 size="sm"
                 onClick={() =>
@@ -1104,6 +1402,8 @@ export function StudioExperience() {
               </Button>
               <Button
                 aria-label="Zoom out"
+                aria-keyshortcuts="- Control+- Meta+-"
+                title="Zoom out (−)"
                 variant="ghost"
                 size="icon"
                 onClick={() =>
@@ -1122,6 +1422,8 @@ export function StudioExperience() {
               </span>
               <Button
                 aria-label="Zoom in"
+                aria-keyshortcuts="Shift+= Control+= Meta+="
+                title="Zoom in (+)"
                 variant="ghost"
                 size="icon"
                 onClick={() =>

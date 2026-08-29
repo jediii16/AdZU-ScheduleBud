@@ -14,12 +14,110 @@ import {
   PINK_DIARY_THEME,
   SITEAO_ORANGE_THEME,
   buildScheduleRenderModel,
+  createCustomPalette,
   resolveWallpaperTheme,
 } from "@/domain/render";
 import { availableThemes } from "@/data/themes/registry";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("wallpaper theme registry", () => {
+  it("keeps all approved built-in palette IDs and organization labels exact", () => {
+    expect(availableThemes.map((theme) => theme.id)).toEqual([
+      "clean-slate",
+      "adzu-classic",
+      "midnight",
+      "siteao-orange",
+      "laao-green",
+      "eao-blue",
+      "mao-red",
+      "aao-yellow",
+      "nao-white",
+      "matcha-study",
+      "girlfriends-choice",
+      "pink-diary",
+    ]);
+    expect(
+      availableThemes
+        .filter((theme) =>
+          [
+            "siteao-orange",
+            "nao-white",
+            "laao-green",
+            "eao-blue",
+            "mao-red",
+            "aao-yellow",
+          ].includes(theme.id),
+        )
+        .map((theme) => theme.name),
+    ).toEqual(["SITEAO", "LAAO", "EAO", "MAO", "AAO", "NAO"]);
+  });
+
+  it("derives only changed Custom semantic roles and retains base subject colors", () => {
+    const base = resolveWallpaperTheme("matcha-study", "planner");
+    const seeded = createCustomPalette("matcha-study");
+    const unchanged = resolveWallpaperTheme("custom", "planner", seeded);
+    expect(unchanged).toEqual({ ...base, id: "custom" });
+
+    const custom = {
+      ...seeded,
+      canvas: "#101010",
+      primary: "#202020",
+      secondary: "#303030",
+      accent: "#404040",
+      surface: "#505050",
+      border: "#606060",
+    };
+    const resolved = resolveWallpaperTheme("custom", "planner", custom);
+    expect(resolved).toMatchObject({
+      id: "custom",
+      background: "#101010",
+      foreground: "#202020",
+      secondary: "#303030",
+      muted: "#303030",
+      dayAccent: "#404040",
+      plannerRule: "#404040",
+      surface: "#505050",
+      plannerSurface: "#505050",
+      border: "#606060",
+      plannerBorder: "#606060",
+    });
+    expect(resolved.subjectPalette).toEqual(base.subjectPalette);
+  });
+
+  it("flows Custom semantic colors through the shared RenderModel", () => {
+    const base = visualScheduleProject();
+    const variant = base.deviceVariants[0]!;
+    const customPalette = {
+      ...createCustomPalette("pink-diary"),
+      canvas: "#102030",
+      primary: "#F0E0D0",
+      accent: "#AABBCC",
+    };
+    const project = {
+      ...base,
+      design: {
+        ...base.design,
+        layoutId: "minimal" as const,
+        themeId: "custom" as const,
+        customPalette,
+      },
+    };
+    const result = buildScheduleRenderModel(project, variant);
+    expect(result.model.layers[0].nodes[0]).toMatchObject({
+      kind: "rect",
+      fill: "#102030",
+    });
+    expect(
+      result.model.layers
+        .flatMap((layer) => layer.nodes)
+        .find((node) => node.id === "wallpaper-title"),
+    ).toMatchObject({ kind: "text", fill: "#F0E0D0" });
+    expect(
+      result.model.layers
+        .flatMap((layer) => layer.nodes)
+        .some((node) => node.kind === "line" && node.stroke === "#AABBCC"),
+    ).toBe(true);
+  });
   it("keeps the approved Clean Slate tokens unchanged", () => {
     expect(
       availableThemes.find((theme) => theme.id === "clean-slate"),

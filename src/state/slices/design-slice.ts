@@ -3,6 +3,13 @@ import { layoutById } from "@/data/layouts/registry";
 import { themeById } from "@/data/themes/registry";
 import { layoutStyleById } from "@/data/layout-styles/registry";
 import { resolveAvailablePhotoComposition } from "@/domain/render/photo-crop";
+import { typographyPresetById } from "@/data/typography/registry";
+import { opaqueHexColorSchema } from "@/domain/project";
+import { createCustomPalette } from "@/domain/render/themes/registry";
+import {
+  initializeBackgroundMode,
+  resolveWallpaperTheme,
+} from "@/domain/render";
 
 function withPhotoCollection(
   project: Parameters<StoreContext["commit"]>[1] extends (
@@ -71,8 +78,73 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
   };
   return {
     setTheme(value) {
+      if (value === "custom") {
+        context.commit("Change color palette", (project) => {
+          const customPalette =
+            project.design.customPalette ??
+            createCustomPalette(
+              project.design.themeId === "custom"
+                ? "clean-slate"
+                : project.design.themeId,
+            );
+          return {
+            ...project,
+            design: {
+              ...project.design,
+              themeId: "custom",
+              customPalette,
+              templateModified:
+                project.design.baseTemplateId !== null ||
+                project.design.templateModified,
+            },
+          };
+        });
+        return;
+      }
       if (!themeById.has(value)) return;
-      edit("Change theme", "themeId", value);
+      edit("Change color palette", "themeId", value);
+    },
+    setCustomPaletteColor(role, color) {
+      const parsedColor = opaqueHexColorSchema.safeParse(color);
+      if (!parsedColor.success) return;
+      context.commit("Customize color palette", (project) => {
+        const basePalette =
+          project.design.themeId === "custom"
+            ? project.design.customPalette
+            : createCustomPalette(project.design.themeId);
+        if (!basePalette || basePalette[role] === parsedColor.data)
+          return project;
+        return {
+          ...project,
+          design: {
+            ...project.design,
+            themeId: "custom",
+            customPalette: { ...basePalette, [role]: parsedColor.data },
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+        };
+      });
+    },
+    resetCustomPalette() {
+      context.commit("Reset color palette", (project) => {
+        if (
+          project.design.themeId !== "custom" ||
+          !project.design.customPalette
+        )
+          return project;
+        return {
+          ...project,
+          design: {
+            ...project.design,
+            themeId: project.design.customPalette.basedOnPaletteId,
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+        };
+      });
     },
     setThemeVariant: (value) =>
       edit("Change theme variant", "themeVariantId", value),
@@ -196,7 +268,11 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
       });
     },
     applyTemplateMetadata(templateId, design) {
-      if (!themeById.has(design.themeId)) return;
+      if (
+        (design.themeId === "custom" && !design.customPalette) ||
+        (design.themeId !== "custom" && !themeById.has(design.themeId))
+      )
+        return;
       context.commit("Apply template", (project) => ({
         ...project,
         design: {
@@ -251,7 +327,72 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
       });
     },
     setBackground: (value) => edit("Change background", "background", value),
-    setTypography: (value) => edit("Change typography", "typography", value),
+    setBackgroundMode(mode) {
+      context.commit("Change background mode", (project) => {
+        const theme = resolveWallpaperTheme(
+          project.design.themeId,
+          project.design.layoutId,
+          project.design.customPalette,
+        );
+        if (mode === "image" && !project.design.background.image)
+          return project;
+        return {
+          ...project,
+          design: {
+            ...project.design,
+            background: initializeBackgroundMode(
+              project.design.background,
+              mode,
+              theme,
+            ),
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+        };
+      });
+    },
+    setBackgroundImage(assetId) {
+      context.commit(
+        assetId ? "Set background image" : "Remove background image",
+        (project) => ({
+          ...project,
+          design: {
+            ...project.design,
+            background: assetId
+              ? {
+                  ...project.design.background,
+                  mode: "image",
+                  image: {
+                    assetId,
+                    overlay: project.design.background.image?.overlay ?? "none",
+                    overlayIntensity:
+                      project.design.background.image?.overlayIntensity ?? 0,
+                  },
+                }
+              : {
+                  ...project.design.background,
+                  mode: "palette",
+                  image: undefined,
+                },
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+          deviceVariants: project.deviceVariants.map((variant) => ({
+            ...variant,
+            backgroundImageTransform: {
+              position: { x: 0.5, y: 0.5 },
+              scale: 1,
+            },
+          })),
+        }),
+      );
+    },
+    setTypography(value) {
+      if (!typographyPresetById.has(value)) return;
+      edit("Change typography", "typography", { presetId: value });
+    },
     setDecorationIntensity: (value) =>
       edit(
         "Change decoration intensity",

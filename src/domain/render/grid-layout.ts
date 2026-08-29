@@ -853,7 +853,7 @@ export function buildGridRenderModel(
   const activeDays = DAYS.filter((day) => (byDay.get(day)?.length ?? 0) > 0);
   const visibleDays =
     project.design.dayVisibility === "full-week" ? DAYS : activeDays;
-  const typography = scaleTypography(family, project.design.typography.scale);
+  const typography = scaleTypography(family, 1);
   const metrics = metricsFor(family, titleVisible, visibleDays.length);
   const detailCapabilities = resolveLayoutDetailCapabilities("grid", variant);
   const fields = applyLayoutDetailCapabilities(
@@ -955,7 +955,7 @@ export function buildGridRenderModel(
         fit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 700,
           height: metrics.titleHeight,
           verticalAlign: "middle",
@@ -1046,7 +1046,7 @@ export function buildGridRenderModel(
           typography.day,
           theme.foreground,
           {
-            fontId: project.design.typography.headingFontId,
+            fontId: "heading-sans",
             fontWeight: 700,
             align: "center",
             height: metrics.dayHeaderHeight - 8,

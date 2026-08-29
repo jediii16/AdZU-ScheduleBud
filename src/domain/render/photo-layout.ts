@@ -547,10 +547,7 @@ export function buildPhotoHeroRenderModel(
 ): PhotoHeroRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
-  const baseTypography = photoTypographyFor(
-    family,
-    project.design.typography.scale,
-  );
+  const baseTypography = photoTypographyFor(family, 1);
   const baseMetrics = photoMetricsFor(family);
   const fields = resolveLayoutVisibleFields(
     "photo",
@@ -751,7 +748,7 @@ export function buildPhotoHeroRenderModel(
         fit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 700,
           height: metrics.titleHeight,
           verticalAlign: "middle",
@@ -787,7 +784,7 @@ export function buildPhotoHeroRenderModel(
         dayFit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 600,
           height: metrics.dayHeaderHeight,
           wrap: "none",

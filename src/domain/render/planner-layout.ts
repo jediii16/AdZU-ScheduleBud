@@ -571,7 +571,7 @@ export function buildPlannerRenderModel(
 ): PlannerRenderResult {
   const { width, height } = variant.dimensions;
   const family = resolveTargetComposition(variant);
-  const typography = typographyFor(family, project.design.typography.scale);
+  const typography = typographyFor(family, 1);
   const metrics = metricsFor(family);
   const fields = resolveLayoutVisibleFields(
     "planner",
@@ -720,7 +720,7 @@ export function buildPlannerRenderModel(
         fit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 700,
           height: metrics.titleTextHeight,
           verticalAlign: "middle",
@@ -769,7 +769,7 @@ export function buildPlannerRenderModel(
         dayFit.fontSize,
         theme.foreground,
         {
-          fontId: project.design.typography.headingFontId,
+          fontId: "heading-sans",
           fontWeight: 600,
           height: metrics.dayTextHeight,
           wrap: "none",

@@ -19,11 +19,22 @@ import {
   type StickerEditorInteraction,
 } from "./editor-overlay/sticker-overlay";
 import { ScheduleScene, type RenderAssetImages } from "./schedule-scene";
+import {
+  ensureRenderModelFontSignature,
+  renderModelFontSignature,
+} from "./font-loading";
 
 type PhotoEditorInteraction = {
   frame: { x: number; y: number; width: number; height: number };
   rotation?: number;
   hasPhoto: boolean;
+  adjusting: boolean;
+  onPanStart(): void;
+  onPanMove(delta: { x: number; y: number }): void;
+  onPanEnd(): void;
+};
+
+type BackgroundEditorInteraction = {
   adjusting: boolean;
   onPanStart(): void;
   onPanMove(delta: { x: number; y: number }): void;
@@ -45,6 +56,7 @@ export function ScheduleArtboard({
   guideOpacity,
   assetImages,
   photoEditor,
+  backgroundEditor,
   stickerEditor,
 }: {
   result: ScheduleRenderResult;
@@ -61,6 +73,7 @@ export function ScheduleArtboard({
   guideOpacity: number;
   assetImages?: RenderAssetImages | undefined;
   photoEditor?: PhotoEditorInteraction | undefined;
+  backgroundEditor?: BackgroundEditorInteraction | undefined;
   stickerEditor?: StickerEditorInteraction | undefined;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +81,14 @@ export function ScheduleArtboard({
   const [scheduleSelected, setScheduleSelected] = useState(false);
   const [scheduleHovered, setScheduleHovered] = useState(false);
   const [photoDragging, setPhotoDragging] = useState(false);
+  const [backgroundDragging, setBackgroundDragging] = useState(false);
+  const fontSignature = renderModelFontSignature(result.model);
+  const [fontReadiness, setFontReadiness] = useState<{
+    signature: string;
+    state: "loading" | "ready" | "error";
+  }>(() => ({ signature: fontSignature, state: "loading" }));
   const photoDragStart = useRef<{ x: number; y: number } | null>(null);
+  const backgroundDragStart = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
@@ -79,6 +99,22 @@ export function ScheduleArtboard({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  useEffect(() => {
+    let active = true;
+    void ensureRenderModelFontSignature(fontSignature).then(
+      () =>
+        active &&
+        setFontReadiness({ signature: fontSignature, state: "ready" }),
+      () =>
+        active &&
+        setFontReadiness({ signature: fontSignature, state: "error" }),
+    );
+    return () => {
+      active = false;
+    };
+  }, [fontSignature]);
+  const fontState =
+    fontReadiness.signature === fontSignature ? fontReadiness.state : "loading";
   const fit = Math.min(
     (space.width - 32) / result.model.width,
     (space.height - 32) / result.model.height,
@@ -106,12 +142,21 @@ export function ScheduleArtboard({
         data-schedule-selected={scheduleSelected ? "true" : "false"}
         data-guide-vertical={guides.verticalCenter ? "true" : "false"}
         data-guide-horizontal={guides.horizontalCenter ? "true" : "false"}
-        className="m-auto shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
+        data-background-adjusting={
+          backgroundEditor?.adjusting ? "true" : "false"
+        }
+        data-background-position-x={variant.backgroundImageTransform.position.x}
+        data-background-position-y={variant.backgroundImageTransform.position.y}
+        data-background-zoom={variant.backgroundImageTransform.scale}
+        className="relative m-auto shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
         style={{
           width: result.model.width * scale,
           height: result.model.height * scale,
-          cursor:
-            photoEditor?.adjusting && photoEditor.hasPhoto
+          cursor: backgroundEditor?.adjusting
+            ? backgroundDragging
+              ? "grabbing"
+              : "grab"
+            : photoEditor?.adjusting && photoEditor.hasPhoto
               ? photoDragging
                 ? "grabbing"
                 : "grab"
@@ -123,6 +168,16 @@ export function ScheduleArtboard({
             x: (event.clientX - rect.left) / scale,
             y: (event.clientY - rect.top) / scale,
           };
+          if (backgroundEditor?.adjusting) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            backgroundDragStart.current = {
+              x: event.clientX,
+              y: event.clientY,
+            };
+            setBackgroundDragging(true);
+            backgroundEditor.onPanStart();
+            return;
+          }
           if (photoEditor?.adjusting && photoEditor.hasPhoto) {
             const frame = photoEditor.frame;
             const radians = (-(photoEditor.rotation ?? 0) * Math.PI) / 180;
@@ -161,6 +216,14 @@ export function ScheduleArtboard({
           );
         }}
         onPointerMove={(event) => {
+          const backgroundStart = backgroundDragStart.current;
+          if (backgroundStart && backgroundEditor?.adjusting) {
+            backgroundEditor.onPanMove({
+              x: (event.clientX - backgroundStart.x) / scale,
+              y: (event.clientY - backgroundStart.y) / scale,
+            });
+            return;
+          }
           const start = photoDragStart.current;
           if (!start || !photoEditor?.adjusting) return;
           photoEditor.onPanMove({
@@ -169,6 +232,14 @@ export function ScheduleArtboard({
           });
         }}
         onPointerUp={(event) => {
+          if (backgroundDragStart.current) {
+            backgroundDragStart.current = null;
+            setBackgroundDragging(false);
+            if (event.currentTarget.hasPointerCapture(event.pointerId))
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            backgroundEditor?.onPanEnd();
+            return;
+          }
           if (!photoDragStart.current) return;
           photoDragStart.current = null;
           setPhotoDragging(false);
@@ -177,6 +248,12 @@ export function ScheduleArtboard({
           photoEditor?.onPanEnd();
         }}
         onPointerCancel={() => {
+          if (backgroundDragStart.current) {
+            backgroundDragStart.current = null;
+            setBackgroundDragging(false);
+            backgroundEditor?.onPanEnd();
+            return;
+          }
           if (!photoDragStart.current) return;
           photoDragStart.current = null;
           setPhotoDragging(false);
@@ -216,7 +293,7 @@ export function ScheduleArtboard({
               previewScale={scale}
             />
           ) : null}
-          {photoEditor ? (
+          {photoEditor && !backgroundEditor?.adjusting ? (
             <PhotoEditorOverlay
               frame={photoEditor.frame}
               rotation={photoEditor.rotation ?? 0}
@@ -225,7 +302,7 @@ export function ScheduleArtboard({
               previewScale={scale}
             />
           ) : null}
-          {!photoEditor?.adjusting ? (
+          {!photoEditor?.adjusting && !backgroundEditor?.adjusting ? (
             <ScheduleEditorOverlay
               bounds={result.scheduleBounds}
               canvasSize={{
@@ -247,7 +324,9 @@ export function ScheduleArtboard({
               onDragEnd={(x, y) => onDragEnd(x, y, scale)}
             />
           ) : null}
-          {!photoEditor?.adjusting && stickerEditor ? (
+          {!photoEditor?.adjusting &&
+          !backgroundEditor?.adjusting &&
+          stickerEditor ? (
             <StickerEditorOverlay
               variant={variant}
               previewScale={scale}
@@ -263,6 +342,22 @@ export function ScheduleArtboard({
             />
           ) : null}
         </Stage>
+        {fontState !== "ready" ? (
+          <div
+            role="status"
+            className="absolute inset-0 flex items-center justify-center bg-white/95 text-xs font-medium text-text-muted"
+          >
+            {fontState === "error" ? "Type unavailable" : "Loading type…"}
+          </div>
+        ) : null}
+        {backgroundEditor?.adjusting ? (
+          <div
+            role="status"
+            className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-white/70 bg-foreground/80 px-3 py-1.5 text-center text-[11px] font-semibold whitespace-nowrap text-white shadow-lg backdrop-blur-sm"
+          >
+            Adjusting background · Drag to reposition · Esc or Done to finish
+          </div>
+        ) : null}
       </div>
       <div
         aria-hidden="true"
