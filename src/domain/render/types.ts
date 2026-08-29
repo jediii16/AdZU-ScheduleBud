@@ -1,4 +1,5 @@
 import type { FontId } from "@/lib/font-registry";
+import type { ResolvedLayoutStyleTokens } from "./layout-style";
 
 export const EXPORT_LAYER_IDS = [
   "background",
@@ -98,6 +99,7 @@ export type RenderModel = {
 
 export type ScheduleRenderResult = {
   model: RenderModel;
+  resolvedStyle?: ResolvedLayoutStyleTokens;
   overlay: EditorOverlayModel;
   scheduleBounds: Rect;
   positionRange: { minX: number; maxX: number; minY: number; maxY: number };

@@ -8,6 +8,7 @@ export * from "./photo-split-layout";
 export * from "./photo-polaroid-layout";
 export * from "./photo-crop";
 export * from "./layout-resolver";
+export * from "./layout-style";
 export * from "./text-fit";
 export * from "./alignment-guides";
 export * from "./layout-capabilities";

@@ -224,6 +224,22 @@ describe("ScheduleProject", () => {
     expect(migrated.project.design.themeId).toBe("clean-slate");
   });
 
+  it("loads schema-1 projects without styles using visual baseline defaults", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const { layoutStyles: _layoutStyles, ...legacyDesign } = project.design;
+    void _layoutStyles;
+    const migrated = migrateProject({ ...project, design: legacyDesign });
+    expect(migrated.status).toBe("success");
+    if (migrated.status !== "success") return;
+    expect(migrated.project.design.layoutStyles).toEqual({
+      minimal: "minimal-clean",
+      cards: "cards-soft",
+      grid: "grid-filled",
+      planner: "planner-paper",
+      photo: "photo-clean",
+    });
+  });
+
   it("strips legacy subject-name fields from saved schema-1 projects", () => {
     const project = createBlankProject({ id: "project-1", now: NOW });
     const subject = normalizeSubject(

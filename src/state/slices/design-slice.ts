@@ -1,6 +1,7 @@
 import type { DesignSlice, StoreContext } from "../types";
 import { layoutById } from "@/data/layouts/registry";
 import { themeById } from "@/data/themes/registry";
+import { layoutStyleById } from "@/data/layout-styles/registry";
 import { resolveAvailablePhotoComposition } from "@/domain/render/photo-crop";
 
 function withPhotoCollection(
@@ -93,6 +94,26 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
             project.design.templateModified,
         },
       }));
+    },
+    setLayoutStyle(value) {
+      const definition = layoutStyleById.get(value);
+      if (!definition) return;
+      context.commit("Change layout style", (project) => {
+        if (project.design.layoutId !== definition.layout) return project;
+        return {
+          ...project,
+          design: {
+            ...project.design,
+            layoutStyles: {
+              ...project.design.layoutStyles,
+              [definition.layout]: value,
+            },
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+        };
+      });
     },
     setPhotoComposition(value) {
       edit("Change Photo composition", "photoComposition", value);

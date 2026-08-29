@@ -764,6 +764,7 @@ export function StudioExperience() {
           if (layoutId !== "photo") setPhotoAdjusting(false);
           store.getState().setLayout(layoutId);
         }}
+        onStyle={(styleId) => store.getState().setLayoutStyle(styleId)}
         onTitleVisible={(visible) =>
           store.getState().setWallpaperTitleVisible(visible)
         }

@@ -13,6 +13,7 @@ import { buildPhotoSplitRenderModel } from "./photo-split-layout";
 import { buildPhotoPolaroidRenderModel } from "./photo-polaroid-layout";
 import { resolveAvailablePhotoComposition } from "./photo-crop";
 import { resolveWallpaperTheme } from "./themes/registry";
+import { applyLayoutStyle, resolveLayoutStyle } from "./layout-style";
 
 export function resolveProjectLayout(
   project: ScheduleProject,
@@ -35,7 +36,21 @@ export function buildScheduleRenderModel(
       ? resolveAvailablePhotoComposition(project.design.photoComposition)
       : undefined;
   const finish = <T extends ScheduleRenderResult>(result: T): T => {
-    return applyStickers(result, variant);
+    const style = resolveLayoutStyle({
+      layout,
+      preferences: project.design.layoutStyles,
+      theme,
+      target: variant,
+      composition,
+    });
+    return applyStickers(
+      {
+        ...result,
+        model: applyLayoutStyle(result.model, style.tokens, theme),
+        resolvedStyle: style.tokens,
+      },
+      variant,
+    ) as T;
   };
   if (layout === "minimal")
     return finish(buildMinimalRenderModel(project, variant, theme));

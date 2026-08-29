@@ -11,6 +11,52 @@ export const layoutIdSchema = z.enum([
 ]);
 export type LayoutId = z.infer<typeof layoutIdSchema>;
 
+export const layoutStyleIdSchema = z.enum([
+  "minimal-clean",
+  "minimal-editorial",
+  "minimal-bold",
+  "cards-soft",
+  "cards-outline",
+  "cards-bold",
+  "cards-glass",
+  "grid-filled",
+  "grid-outline",
+  "grid-soft",
+  "planner-paper",
+  "planner-soft",
+  "planner-editorial",
+  "photo-clean",
+  "photo-framed",
+]);
+export type LayoutStyleId = z.infer<typeof layoutStyleIdSchema>;
+
+export const layoutStylePreferencesSchema = z
+  .object({
+    minimal: z
+      .enum(["minimal-clean", "minimal-editorial", "minimal-bold"])
+      .default("minimal-clean"),
+    cards: z
+      .enum(["cards-soft", "cards-outline", "cards-bold", "cards-glass"])
+      .default("cards-soft"),
+    grid: z
+      .enum(["grid-filled", "grid-outline", "grid-soft"])
+      .default("grid-filled"),
+    planner: z
+      .enum(["planner-paper", "planner-soft", "planner-editorial"])
+      .default("planner-paper"),
+    photo: z.enum(["photo-clean", "photo-framed"]).default("photo-clean"),
+  })
+  .default({
+    minimal: "minimal-clean",
+    cards: "cards-soft",
+    grid: "grid-filled",
+    planner: "planner-paper",
+    photo: "photo-clean",
+  });
+export type LayoutStylePreferences = z.infer<
+  typeof layoutStylePreferencesSchema
+>;
+
 export const photoCompositionSchema = z.enum(["hero", "split", "polaroid"]);
 export type PhotoComposition = z.infer<typeof photoCompositionSchema>;
 

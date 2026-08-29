@@ -5,18 +5,20 @@ import { useMemo, useRef, useState, type RefObject } from "react";
 import { Copy, Layers, RotateCcw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import {
-  emojiCategories,
-  type EmojiCategoryId,
-} from "@/data/emojis/catalog";
+import { emojiCategories, type EmojiCategoryId } from "@/data/emojis/catalog";
+import { normalizeEmojiSearch, searchEmojiCatalog } from "@/data/emojis/search";
 import { availableLayouts } from "@/data/layouts/registry";
+import {
+  resolveLayoutStyleId,
+  stylesForLayout,
+} from "@/data/layout-styles/registry";
 import { availableThemes } from "@/data/themes/registry";
 import {
   stickerById,
   stickerCatalog,
   stickerCategories,
 } from "@/data/stickers/catalog";
-import type { LayoutId, ThemeId } from "@/domain/design/types";
+import type { LayoutId, LayoutStyleId, ThemeId } from "@/domain/design/types";
 import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
 import { resolveWallpaperTheme } from "@/domain/render/themes/registry";
 import {
@@ -137,26 +139,24 @@ function StickerInspectorSection({
   );
   const [visibleLimit, setVisibleLimit] = useState(60);
   const selected = stickers.find((item) => item.instanceId === selectedId);
-  const normalizedQuery = query.trim().toLowerCase();
-  const filtered = useMemo(
-    () =>
-      stickerCatalog.filter(
-        (item) =>
-          item.category === category &&
-          (category !== "Emojis" || item.subcategory === emojiCategory) &&
-          (!normalizedQuery ||
-            [
-              item.label,
-              item.category,
-              item.subcategory ?? "",
-              ...(item.keywords ?? []),
-            ]
-              .join(" ")
-              .toLowerCase()
-              .includes(normalizedQuery)),
-      ),
-    [category, emojiCategory, normalizedQuery],
-  );
+  const normalizedQuery = normalizeEmojiSearch(query);
+  const filtered = useMemo(() => {
+    if (category === "Emojis" && normalizedQuery) {
+      return searchEmojiCatalog(normalizedQuery).flatMap(({ emoji }) => {
+        const sticker = stickerById.get(emoji.id);
+        return sticker ? [sticker] : [];
+      });
+    }
+    return stickerCatalog.filter(
+      (item) =>
+        item.category === category &&
+        (category !== "Emojis" || item.subcategory === emojiCategory) &&
+        (!normalizedQuery ||
+          normalizeEmojiSearch(
+            [item.label, item.category, ...(item.keywords ?? [])].join(" "),
+          ).includes(normalizedQuery)),
+    );
+  }, [category, emojiCategory, normalizedQuery]);
   const visibleStickers = filtered.slice(0, visibleLimit);
   return (
     <section
@@ -188,7 +188,7 @@ function StickerInspectorSection({
               <input
                 className="sb-control pl-8"
                 value={query}
-                placeholder="Search stickers"
+                placeholder="Search names, keywords, or ideas"
                 onChange={(event) => {
                   setQuery(event.target.value);
                   setVisibleLimit(60);
@@ -217,7 +217,11 @@ function StickerInspectorSection({
                 </Button>
               ))}
             </div>
-            {category === "Emojis" ? (
+            {category === "Emojis" && normalizedQuery ? (
+              <p className="mt-2 text-xs text-text-muted" role="status">
+                Searching all emoji categories and metadata
+              </p>
+            ) : category === "Emojis" ? (
               <div
                 className="mt-2 flex flex-wrap gap-1 border-t border-border pt-2"
                 role="tablist"
@@ -428,7 +432,6 @@ function PhotoInspectorSection({
   adjusting,
   zoom,
   onFile,
-  onComposition,
   onAdjust,
   onRemove,
   onZoomStart,
@@ -445,7 +448,6 @@ function PhotoInspectorSection({
   adjusting: boolean;
   zoom: number;
   onFile(file: File, intent: "replace-primary" | "append"): Promise<void>;
-  onComposition(value: AvailablePhotoComposition): void;
   onAdjust(assetId: string): void;
   onRemove(assetId: string): void;
   onZoomStart(): void;
@@ -501,10 +503,6 @@ function PhotoInspectorSection({
           }}
         />
         <div className="space-y-4">
-          <PhotoCompositionControl
-            composition={composition}
-            onComposition={onComposition}
-          />
           {photos.length === 0 ? (
             <div>
               <p className="mb-3 text-xs leading-5 text-text-muted">
@@ -715,6 +713,50 @@ function PhotoInspectorSection({
   );
 }
 
+function StyleInspectorSection({
+  design,
+  layout,
+  composition,
+  onStyle,
+}: {
+  design: ProjectDesign;
+  layout: LayoutId;
+  composition?: AvailablePhotoComposition;
+  onStyle?: ((styleId: LayoutStyleId) => void) | undefined;
+}) {
+  const styles = stylesForLayout(layout, composition);
+  if (styles.length <= 1) return null;
+  const activeStyle = resolveLayoutStyleId(
+    layout,
+    design.layoutStyles,
+    composition,
+  );
+  return (
+    <section className="sb-inspector-major-section">
+      <h3 className="sb-inspector-heading">Style</h3>
+      <div
+        role="radiogroup"
+        aria-label={`${layout} layout style`}
+        className="sb-inspector-children grid grid-cols-2 rounded-sm border border-border bg-muted/40 p-1"
+      >
+        {styles.map((style) => (
+          <button
+            key={style.id}
+            type="button"
+            role="radio"
+            aria-checked={activeStyle === style.id}
+            title={style.description}
+            className={`min-h-10 min-w-0 cursor-pointer rounded-sm px-2 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${activeStyle === style.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
+            onClick={() => onStyle?.(style.id)}
+          >
+            {style.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function DesignStudioPanel({
   design,
   visibleFields,
@@ -722,6 +764,7 @@ export function DesignStudioPanel({
   detailCapabilities,
   onTheme,
   onLayout,
+  onStyle,
   onTitleVisible,
   onTitleText,
   onField,
@@ -758,6 +801,7 @@ export function DesignStudioPanel({
   detailCapabilities: LayoutDetailCapabilities;
   onTheme?(value: ThemeId): void;
   onLayout(value: LayoutId): void;
+  onStyle?(value: LayoutStyleId): void;
   onTitleVisible(value: boolean): void;
   onTitleText(value: string): void;
   onField(field: keyof VisibleFields, value: boolean): void;
@@ -863,6 +907,49 @@ export function DesignStudioPanel({
           ))}
         </div>
       </section>
+      {activeLayout !== "photo" ? (
+        <StyleInspectorSection
+          design={design}
+          layout={activeLayout}
+          onStyle={onStyle}
+        />
+      ) : null}
+      {activeLayout === "photo" ? (
+        <>
+          <section className="sb-inspector-major-section">
+            <h3 className="sb-inspector-heading">Composition</h3>
+            <div className="sb-inspector-children">
+              <PhotoCompositionControl
+                composition={photoComposition}
+                onComposition={onPhotoComposition}
+              />
+            </div>
+          </section>
+          <StyleInspectorSection
+            design={design}
+            layout="photo"
+            composition={photoComposition}
+            onStyle={onStyle}
+          />
+          <PhotoInspectorSection
+            photos={photos}
+            composition={photoComposition}
+            activePhotoId={activePhotoId}
+            adjusting={photoAdjusting}
+            zoom={photoZoom}
+            onFile={onPhotoFile}
+            onAdjust={onPhotoAdjust}
+            onRemove={onPhotoRemove}
+            onZoomStart={onPhotoZoomStart}
+            onZoom={onPhotoZoom}
+            onZoomEnd={onPhotoZoomEnd}
+            onReset={onPhotoReset}
+            onDone={onPhotoDone}
+            onMove={onPhotoMove}
+            onCaption={onPhotoCaption}
+          />
+        </>
+      ) : null}
       <StickerInspectorSection
         stickers={stickers}
         selectedId={selectedStickerId}
@@ -874,26 +961,6 @@ export function DesignStudioPanel({
         onLayer={onStickerLayer}
         onStack={onStickerStack}
       />
-      {activeLayout === "photo" ? (
-        <PhotoInspectorSection
-          photos={photos}
-          composition={photoComposition}
-          activePhotoId={activePhotoId}
-          adjusting={photoAdjusting}
-          zoom={photoZoom}
-          onFile={onPhotoFile}
-          onComposition={onPhotoComposition}
-          onAdjust={onPhotoAdjust}
-          onRemove={onPhotoRemove}
-          onZoomStart={onPhotoZoomStart}
-          onZoom={onPhotoZoom}
-          onZoomEnd={onPhotoZoomEnd}
-          onReset={onPhotoReset}
-          onDone={onPhotoDone}
-          onMove={onPhotoMove}
-          onCaption={onPhotoCaption}
-        />
-      ) : null}
       <section className="sb-inspector-major-section">
         <h3 className="sb-inspector-heading">Wallpaper title</h3>
         <div className="sb-inspector-children space-y-3">

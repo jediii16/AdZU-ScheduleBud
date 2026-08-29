@@ -1,11 +1,16 @@
 import generatedCatalog from "./catalog.generated.json";
+import generatedSource from "./source.generated.json";
 
 export const emojiCategories = [
-  { id: "emojis-people", label: "Emojis & People" },
+  { id: "smileys-emotion", label: "Smileys & Emotion" },
+  { id: "people-body", label: "People & Body" },
   { id: "animals-nature", label: "Animals & Nature" },
+  { id: "food-drink", label: "Food & Drink" },
+  { id: "travel-places", label: "Travel & Places" },
+  { id: "activities", label: "Activities" },
+  { id: "objects", label: "Objects" },
+  { id: "symbols", label: "Symbols" },
   { id: "flags", label: "Flags" },
-  { id: "food-drinks", label: "Food & Drinks" },
-  { id: "others", label: "Others" },
 ] as const;
 export type EmojiCategoryId = (typeof emojiCategories)[number]["id"];
 
@@ -17,7 +22,23 @@ export type EmojiDefinition = {
   keywords: readonly string[];
   intrinsicWidth: number;
   intrinsicHeight: number;
-  glyph?: string;
+  glyph: string;
+  unicode: string;
+  subgroup: string;
+  sortOrder: number;
+};
+
+export type EmojiCatalogSource = {
+  name: string;
+  source: string;
+  license: string;
+  licensePath: string;
+  commit: string;
+  style: string;
+  emojiCount: number;
+  unicodeSource: string;
+  unicodeVersion: string;
+  skipped: readonly string[];
 };
 
 /**
@@ -28,6 +49,7 @@ export type EmojiDefinition = {
  */
 export const emojiCatalog: readonly EmojiDefinition[] =
   generatedCatalog as EmojiDefinition[];
+export const emojiCatalogSource = generatedSource as EmojiCatalogSource;
 export const emojiById = new Map(
   emojiCatalog.map((emoji) => [emoji.id, emoji]),
 );

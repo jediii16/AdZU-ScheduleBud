@@ -6,6 +6,48 @@ import { resolveLayoutDetailCapabilities } from "@/domain/render";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("layout design inspector", () => {
+  it("shows only contextual styles and hides the one-option Polaroid control", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onStyle = vi.fn();
+    const common = {
+      visibleFields: project.design.visibleFields,
+      detailCapabilities: resolveLayoutDetailCapabilities("cards", variant),
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+    };
+    const { rerender } = render(
+      <DesignStudioPanel
+        {...common}
+        design={project.design}
+        activeLayout="cards"
+        onStyle={onStyle}
+      />,
+    );
+    expect(
+      screen.getAllByRole("radio", { name: /Soft|Outline|Bold|Glass/ }),
+    ).toHaveLength(4);
+    fireEvent.click(screen.getByRole("radio", { name: "Glass" }));
+    expect(onStyle).toHaveBeenCalledWith("cards-glass");
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        design={{ ...project.design, layoutId: "photo" }}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photoComposition="polaroid"
+        onStyle={onStyle}
+      />,
+    );
+    expect(
+      screen.queryByRole("radiogroup", { name: "photo layout style" }),
+    ).toBeNull();
+  });
+
   it("browses built-in stickers and exposes compact selected-instance controls", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
@@ -42,14 +84,17 @@ describe("layout design inspector", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add sticker" }));
     expect(screen.getByRole("tab", { name: "Capybara" })).toBeVisible();
     fireEvent.click(screen.getByRole("tab", { name: "Emojis" }));
-    expect(screen.getByRole("tab", { name: "Emojis & People" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(
+      screen.getByRole("tab", { name: "Smileys & Emotion" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "People & Body" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Animals & Nature" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Food & Drink" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Travel & Places" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Activities" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Objects" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Symbols" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Flags" })).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Food & Drinks" })).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Others" })).toBeVisible();
     expect(
       screen.getAllByRole("button", { name: /^Add (?!sticker$)/ }),
     ).toHaveLength(60);
@@ -57,11 +102,33 @@ describe("layout design inspector", () => {
     expect(
       screen.getAllByRole("button", { name: /^Add (?!sticker$)/ }),
     ).toHaveLength(120);
-    fireEvent.click(screen.getByRole("tab", { name: "Food & Drinks" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Food & Drink" }));
     expect(
       screen.getAllByRole("button", { name: /^Add (?!sticker$)/ }),
-    ).toHaveLength(58);
+    ).toHaveLength(60);
+    expect(
+      screen.getByRole("button", { name: /Show more \(70 remaining\)/ }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "Flags" }));
+    expect(
+      screen.getAllByRole("button", { name: /^Add (?!sticker$)/ }),
+    ).toHaveLength(8);
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
+    fireEvent.change(screen.getByRole("textbox", { name: "Search stickers" }), {
+      target: { value: "school" },
+    });
+    expect(
+      screen.getByText("Searching all emoji categories and metadata"),
+    ).toBeVisible();
+    expect(
+      screen
+        .getAllByRole("button", { name: /^Add (?!sticker$)/ })
+        .slice(0, 4)
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["Add Graduation Cap", "Add Books", "Add Pencil", "Add Memo"]);
+    fireEvent.change(screen.getByRole("textbox", { name: "Search stickers" }), {
+      target: { value: "" },
+    });
     fireEvent.click(screen.getByRole("tab", { name: "Capybara" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Add Reading Capybara" }),

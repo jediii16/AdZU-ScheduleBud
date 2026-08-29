@@ -142,6 +142,52 @@ describe("design and device slices", () => {
     );
   });
 
+  it("remembers styles per layout and changes only style state through history and autosave", async () => {
+    const { store, projects } = createTestStore();
+    store.getState().createProject();
+    const variantId = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    store.getState().setTheme("midnight");
+    store.getState().setSubjectColor("subject-one", "#123456");
+    store.getState().setSchedulePosition(variantId, { x: 0.24, y: 0.71 });
+    store.getState().addSticker(variantId, "capy-reading");
+    const before = structuredClone(selectActiveProject(store.getState())!);
+    const historyBefore = store.getState().history.past.length;
+
+    store.getState().setLayoutStyle("cards-glass");
+    const styled = selectActiveProject(store.getState())!;
+    expect(styled.design.layoutStyles.cards).toBe("cards-glass");
+    expect(store.getState().history.past).toHaveLength(historyBefore + 1);
+    expect({
+      ...styled,
+      design: { ...styled.design, layoutStyles: before.design.layoutStyles },
+    }).toEqual({ ...before, updatedAt: styled.updatedAt });
+
+    store.getState().setLayout("grid");
+    store.getState().setLayoutStyle("grid-outline");
+    store.getState().setLayout("cards");
+    expect(
+      selectActiveProject(store.getState())?.design.layoutStyles,
+    ).toMatchObject({
+      cards: "cards-glass",
+      grid: "grid-outline",
+    });
+    store.getState().undo();
+    expect(selectActiveProject(store.getState())?.design.layoutId).toBe("grid");
+    store.getState().redo();
+    expect(
+      selectActiveProject(store.getState())?.design.layoutStyles.cards,
+    ).toBe("cards-glass");
+
+    await store.getState().flushAutosave();
+    const saved = await projects.read(styled.id);
+    expect(
+      saved.status === "found" ? saved.project.design.layoutStyles : null,
+    ).toMatchObject({ cards: "cards-glass", grid: "grid-outline" });
+  });
+
   it("switches themes as one undoable, redoable autosaved change without touching composition state", async () => {
     const { store, projects } = createTestStore();
     store.getState().createProject();

@@ -1,4 +1,4 @@
-import type { LayoutId, ThemeId } from "@/domain/design/types";
+import type { LayoutId, LayoutStyleId, ThemeId } from "@/domain/design/types";
 import type { AvailablePhotoComposition } from "@/domain/render/photo-crop";
 import type {
   Density,
@@ -133,6 +133,7 @@ export interface DesignSlice {
   setTheme(themeId: ThemeId): void;
   setThemeVariant(themeVariantId: string | null): void;
   setLayout(layoutId: LayoutId): void;
+  setLayoutStyle(styleId: LayoutStyleId): void;
   setPrimaryPhoto(assetId: string | null): void;
   addPhoto(assetId: string): boolean;
   removePhoto(assetId: string): void;

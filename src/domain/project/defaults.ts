@@ -24,6 +24,13 @@ export function createBlankProject({
       themeId: "clean-slate",
       themeVariantId: null,
       layoutId: "cards",
+      layoutStyles: {
+        minimal: "minimal-clean",
+        cards: "cards-soft",
+        grid: "grid-filled",
+        planner: "planner-paper",
+        photo: "photo-clean",
+      },
       photoComposition: null,
       photoCaptions: {},
       weekMode: "full",

@@ -3,7 +3,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { stickerCatalog, stickerCategories } from "@/data/stickers/catalog";
-import { emojiCatalog, emojiCategories } from "@/data/emojis/catalog";
+import {
+  emojiCatalog,
+  emojiCatalogSource,
+  emojiCategories,
+} from "@/data/emojis/catalog";
 import { deviceVariantSchema } from "@/domain/device/types";
 import { buildScheduleRenderModel } from "@/domain/render";
 import {
@@ -16,15 +20,19 @@ import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("built-in sticker system", () => {
   it("catalogs only real assets and non-empty categories", () => {
-    expect(emojiCatalog).toHaveLength(755);
-    expect(stickerCatalog).toHaveLength(770);
+    expect(emojiCatalog).toHaveLength(3145);
+    expect(stickerCatalog).toHaveLength(3160);
     expect(stickerCategories).toEqual(["Capybara", "Emojis"]);
     expect(emojiCategories.map((category) => category.label)).toEqual([
-      "Emojis & People",
+      "Smileys & Emotion",
+      "People & Body",
       "Animals & Nature",
+      "Food & Drink",
+      "Travel & Places",
+      "Activities",
+      "Objects",
+      "Symbols",
       "Flags",
-      "Food & Drinks",
-      "Others",
     ]);
     expect(
       emojiCategories.map((category) => [
@@ -32,11 +40,15 @@ describe("built-in sticker system", () => {
         emojiCatalog.filter((emoji) => emoji.category === category.id).length,
       ]),
     ).toEqual([
-      ["emojis-people", 206],
-      ["animals-nature", 175],
-      ["flags", 162],
-      ["food-drinks", 58],
-      ["others", 154],
+      ["smileys-emotion", 168],
+      ["people-body", 1893],
+      ["animals-nature", 158],
+      ["food-drink", 130],
+      ["travel-places", 218],
+      ["activities", 85],
+      ["objects", 262],
+      ["symbols", 223],
+      ["flags", 8],
     ]);
     for (const sticker of stickerCatalog) {
       expect(sticker.label).not.toMatch(/\.svg$/i);
@@ -48,12 +60,31 @@ describe("built-in sticker system", () => {
     expect(
       emojiCatalog.every((emoji) => !emoji.src.includes("source-assets")),
     ).toBe(true);
-    expect(emojiCatalog.every((emoji) => emoji.intrinsicWidth === 871)).toBe(
-      true,
-    );
+    expect(
+      emojiCatalog.every(
+        (emoji) =>
+          emoji.src.startsWith("/emojis/fluent/") &&
+          emoji.intrinsicWidth > 0 &&
+          emoji.intrinsicHeight > 0,
+      ),
+    ).toBe(true);
     expect(emojiCatalog.every((emoji) => !/ Emoji$/.test(emoji.label))).toBe(
       true,
     );
+    expect(new Set(emojiCatalog.map((emoji) => emoji.id))).toHaveProperty(
+      "size",
+      emojiCatalog.length,
+    );
+    expect(emojiCatalogSource).toMatchObject({
+      name: "Microsoft Fluent Emoji",
+      license: "MIT",
+      style: "Color",
+      emojiCount: emojiCatalog.length,
+      skipped: [],
+    });
+    expect(
+      existsSync(join(process.cwd(), "public", emojiCatalogSource.licensePath)),
+    ).toBe(true);
     expect(emojiCatalog[0]).not.toHaveProperty("defaultWidthRatio");
   });
 
