@@ -4,7 +4,9 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  CheckCircle2,
   FileSpreadsheet,
+  LoaderCircle,
   RotateCcw,
   Upload,
 } from "lucide-react";
@@ -55,6 +57,57 @@ function studentFileError(error: unknown): string {
       : "This workbook does not contain schedule rows.";
   }
   return "We couldn't read this workbook. Download a fresh XLSX schedule from the AdZU Portal and try again.";
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function WorkbookFileCard({
+  file,
+  status,
+}: {
+  file: File;
+  status: "reading" | "ready" | "selected";
+}) {
+  const extension = file.name.split(".").pop()?.toUpperCase() ?? "FILE";
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-md border border-brand/20 bg-accent/35 p-3 text-left">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-surface-elevated text-brand shadow-sm ring-1 ring-border">
+        {status === "reading" ? (
+          <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+        ) : status === "ready" ? (
+          <CheckCircle2 aria-hidden="true" className="size-5 text-success" />
+        ) : (
+          <FileSpreadsheet aria-hidden="true" className="size-5" />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className="block truncate text-sm font-semibold"
+          title={file.name}
+        >
+          {file.name}
+        </span>
+        <span className="mt-0.5 block text-xs text-text-muted">
+          {extension} {extension === "XLSX" ? "workbook" : "file"} ·{" "}
+          {formatFileSize(file.size)}
+        </span>
+        <span
+          className="mt-1 block text-xs font-medium text-brand"
+          role="status"
+        >
+          {status === "reading"
+            ? "Reading classes…"
+            : status === "ready"
+              ? "File received and ready to review"
+              : "File selected"}
+        </span>
+      </span>
+    </div>
+  );
 }
 
 export type PortalWarningSummary = {
@@ -151,11 +204,13 @@ export function actionablePortalWarnings(
 
 export function PendingPortalReview({
   pending,
+  sourceFile,
   onChange,
   onCancel,
   onConfirm,
 }: {
   pending: PendingPortalImport;
+  sourceFile?: File | null;
   onChange(value: PendingPortalImport): void;
   onCancel(): void;
   onConfirm(): void;
@@ -243,6 +298,11 @@ export function PendingPortalReview({
           {pending.subjects.length} subjects · {meetingCount} meetings ·{" "}
           {reviewIssueCount} {reviewIssueCount === 1 ? "warning" : "warnings"}
         </p>
+        {sourceFile ? (
+          <div className="mt-4">
+            <WorkbookFileCard file={sourceFile} status="ready" />
+          </div>
+        ) : null}
       </div>
       {reviewIssueCount > 0 ? (
         <div className="mb-6">
@@ -415,26 +475,31 @@ export function PortalCreation() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<PendingPortalImport | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filename, setFilename] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [parsing, setParsing] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
 
   const parseFile = async (file: File) => {
     setError(null);
+    setSelectedFile(file);
     const validation = validatePortalFile(file);
     if (validation.length > 0) {
       setError(validation.join(" "));
       return;
     }
+    setParsing(true);
     try {
       const bytes = await file.arrayBuffer();
       const parsed = parsePortalWorkbook(bytes, {
         idFactory: (kind) => `${kind}-${crypto.randomUUID()}`,
       });
-      setFilename(file.name);
       setPending(parsed);
     } catch (caught) {
       if (process.env.NODE_ENV === "development") console.error(caught);
       setError(studentFileError(caught));
+    } finally {
+      setParsing(false);
     }
   };
   const confirm = () => {
@@ -461,10 +526,11 @@ export function PortalCreation() {
         {pending ? (
           <PendingPortalReview
             pending={pending}
+            sourceFile={selectedFile}
             onChange={setPending}
             onCancel={() => {
               setPending(null);
-              setFilename(null);
+              setSelectedFile(null);
               setError(null);
             }}
             onConfirm={confirm}
@@ -484,26 +550,39 @@ export function PortalCreation() {
             <div
               onDragEnter={(event) => {
                 event.preventDefault();
+                dragDepth.current += 1;
                 setDragging(true);
               }}
-              onDragOver={(event) => event.preventDefault()}
-              onDragLeave={() => setDragging(false)}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+              }}
+              onDragLeave={(event) => {
+                event.preventDefault();
+                dragDepth.current = Math.max(0, dragDepth.current - 1);
+                if (dragDepth.current === 0) setDragging(false);
+              }}
               onDrop={(event) => {
                 event.preventDefault();
+                dragDepth.current = 0;
                 setDragging(false);
                 const file = event.dataTransfer.files[0];
                 if (file) void parseFile(file);
               }}
-              className={`flex min-h-64 flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors ${dragging ? "border-brand bg-accent" : "border-input bg-card"}`}
+              data-dragging={dragging}
+              aria-label="XLSX upload drop zone"
+              className="sb-dropzone flex min-h-64 flex-col items-center justify-center rounded-lg px-6 py-10 text-center"
             >
-              <span className="mb-4 flex size-12 items-center justify-center rounded-md bg-accent text-brand">
+              <span className="sb-dropzone-icon mb-4 flex size-12 items-center justify-center rounded-md bg-accent text-brand">
                 <FileSpreadsheet aria-hidden="true" className="size-6" />
               </span>
               <h2 className="font-heading text-lg font-bold">
-                Drop your XLSX here
+                {dragging ? "Release to import" : "Drop your XLSX here"}
               </h2>
               <p className="mt-2 text-sm text-text-secondary">
-                or choose it from your device
+                {dragging
+                  ? "We’ll check the workbook before adding any classes"
+                  : "or choose it from your device"}
               </p>
               <input
                 ref={inputRef}
@@ -518,18 +597,27 @@ export function PortalCreation() {
               <Button
                 type="button"
                 className="mt-5"
+                disabled={parsing}
                 onClick={() => inputRef.current?.click()}
               >
-                <Upload aria-hidden="true" /> Choose XLSX file
+                {parsing ? (
+                  <LoaderCircle aria-hidden="true" className="animate-spin" />
+                ) : (
+                  <Upload aria-hidden="true" />
+                )}
+                {parsing ? "Reading workbook…" : "Choose XLSX file"}
               </Button>
               <p className="mt-4 text-xs text-text-muted">
                 XLSX only · Maximum 5 MB
               </p>
             </div>
-            {filename ? (
-              <p className="mt-3 text-sm text-text-secondary">
-                Selected: {filename}
-              </p>
+            {selectedFile ? (
+              <div className="mt-4">
+                <WorkbookFileCard
+                  file={selectedFile}
+                  status={parsing ? "reading" : "selected"}
+                />
+              </div>
             ) : null}
             {error ? (
               <div className="mt-5" role="alert">

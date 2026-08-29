@@ -1,16 +1,27 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   ArrowRight as DirectionArrow,
   Check,
   ChevronDown,
   Copy,
+  FileImage,
+  ImagePlus,
   Layers,
   RotateCcw,
   Search,
   Trash2,
+  UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -43,6 +54,7 @@ import {
   createCustomPalette,
   resolveWallpaperTheme,
 } from "@/domain/render/themes/registry";
+import { resolveAutomaticSubjectColor } from "@/domain/render/subject-colors";
 import {
   supportsOrientationSwitch,
   type DeviceVariant,
@@ -56,6 +68,7 @@ import type {
   ProjectDesign,
 } from "@/domain/project";
 import type { StickerInstance, StickerLayer } from "@/domain/stickers/types";
+import type { Subject } from "@/domain/schedule/types";
 import {
   createDefaultBackgroundPattern,
   type LayoutDetailCapabilities,
@@ -98,7 +111,160 @@ type InspectorPhoto = {
   id: string;
   filename: string;
   caption: string;
+  previewUrl?: string;
+  mimeType?: string;
+  size?: number;
+  width?: number;
+  height?: number;
 };
+
+type InspectorImageAsset = Omit<InspectorPhoto, "id" | "caption">;
+
+function formatAssetSize(bytes?: number): string | null {
+  if (bytes === undefined) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function imageTypeLabel(asset: InspectorImageAsset): string {
+  const subtype = asset.mimeType?.split("/")[1]?.replace("jpeg", "jpg");
+  return (subtype ?? asset.filename.split(".").pop() ?? "image").toUpperCase();
+}
+
+function ImageAssetCard({
+  asset,
+  index,
+  children,
+}: {
+  asset: InspectorImageAsset;
+  index?: number;
+  children?: ReactNode;
+}) {
+  const size = formatAssetSize(asset.size);
+  return (
+    <article className="overflow-hidden rounded-md border border-border bg-surface-elevated shadow-sm">
+      <div className="flex min-w-0 gap-3 p-2.5">
+        <span className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-text-muted ring-1 ring-inset ring-border-muted">
+          {asset.previewUrl ? (
+            <Image
+              unoptimized
+              src={asset.previewUrl}
+              alt=""
+              width={64}
+              height={64}
+              className="size-full object-cover"
+            />
+          ) : (
+            <FileImage aria-hidden="true" className="size-6" />
+          )}
+          {index !== undefined ? (
+            <span className="absolute top-1 left-1 flex size-5 items-center justify-center rounded-full bg-foreground/75 text-[10px] font-bold text-white shadow-sm">
+              {index + 1}
+            </span>
+          ) : null}
+        </span>
+        <span className="min-w-0 flex-1 py-0.5">
+          <span
+            className="block truncate text-xs font-semibold"
+            title={asset.filename}
+          >
+            {index !== undefined ? `${index + 1}. ` : ""}
+            {asset.filename}
+          </span>
+          <span className="mt-1 block text-[11px] leading-4 text-text-muted">
+            {[imageTypeLabel(asset), size].filter(Boolean).join(" · ")}
+          </span>
+          {asset.width && asset.height ? (
+            <span className="block text-[11px] leading-4 text-text-muted">
+              {asset.width} × {asset.height} px
+            </span>
+          ) : null}
+          <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-success">
+            <Check aria-hidden="true" className="size-3" /> Ready
+          </span>
+        </span>
+      </div>
+      {children ? (
+        <div className="border-t border-border-muted bg-muted/20 p-2.5">
+          {children}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function ImageDropField({
+  busy,
+  label,
+  hint,
+  buttonLabel = "Choose image",
+  onChoose,
+  onFile,
+}: {
+  busy: boolean;
+  label: string;
+  hint: string;
+  buttonLabel?: string;
+  onChoose(): void;
+  onFile(file: File): void;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
+  const onDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    dragDepth.current += 1;
+    setDragging(true);
+  };
+  return (
+    <div
+      className="sb-dropzone flex min-h-36 flex-col items-center justify-center rounded-md px-4 py-5 text-center"
+      data-dragging={dragging}
+      aria-label={`${label} drop zone`}
+      onDragEnter={onDragEnter}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      }}
+      onDragLeave={(event) => {
+        event.preventDefault();
+        dragDepth.current = Math.max(0, dragDepth.current - 1);
+        if (dragDepth.current === 0) setDragging(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        dragDepth.current = 0;
+        setDragging(false);
+        const file = event.dataTransfer.files[0];
+        if (file) onFile(file);
+      }}
+    >
+      <span className="sb-dropzone-icon mb-2 flex size-10 items-center justify-center rounded-md bg-accent text-brand">
+        {dragging ? (
+          <UploadCloud aria-hidden="true" className="size-5" />
+        ) : (
+          <ImagePlus aria-hidden="true" className="size-5" />
+        )}
+      </span>
+      <p className="text-sm font-semibold">
+        {dragging ? "Release to add this image" : label}
+      </p>
+      <p className="mt-1 text-[11px] leading-4 text-text-muted">
+        {dragging ? "PNG, JPG, or WebP" : hint}
+      </p>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="mt-3"
+        disabled={busy}
+        onClick={onChoose}
+      >
+        {busy ? "Adding…" : buttonLabel}
+      </Button>
+    </div>
+  );
+}
 
 const PHOTO_COMPOSITIONS: readonly AvailablePhotoComposition[] = [
   "hero",
@@ -520,7 +686,7 @@ function PhotoInspectorSection({
       aria-labelledby="photo-heading"
     >
       <h3 id="photo-heading" className="sb-inspector-heading">
-        Photo
+        Photos
       </h3>
       <div className="sb-inspector-children">
         <input
@@ -536,29 +702,29 @@ function PhotoInspectorSection({
         />
         <div className="space-y-4">
           {photos.length === 0 ? (
-            <div>
-              <p className="mb-3 text-xs leading-5 text-text-muted">
-                {composition === "polaroid"
+            <ImageDropField
+              busy={busy}
+              label={
+                composition === "polaroid"
+                  ? "Add 1–4 photos"
+                  : composition === "split"
+                    ? "Build your photo mosaic"
+                    : "Add your main photo"
+              }
+              hint={
+                composition === "polaroid"
                   ? "Previewing 4 empty frames · Add 1–4 photos"
                   : composition === "split"
                     ? "Add 1–4 photos to build the Split mosaic"
-                    : "Previewing an empty photo frame"}
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => chooseFile("replace-primary")}
-              >
-                {busy ? "Adding…" : "Add photo"}
-              </Button>
-              <p className="mt-2 text-xs leading-5 text-text-muted">
-                PNG, JPG or WebP
-                <br />
-                Stays on this device
-              </p>
-            </div>
+                    : "Previewing an empty photo frame"
+              }
+              buttonLabel="Add photo"
+              onChoose={() => chooseFile("replace-primary")}
+              onFile={(file) => {
+                fileIntent.current = "replace-primary";
+                void receiveFile(file);
+              }}
+            />
           ) : adjusting && selectedPhoto ? (
             <div className="space-y-3">
               <p
@@ -615,70 +781,65 @@ function PhotoInspectorSection({
                   </p>
                   <ol className="space-y-3">
                     {photos.map((photo, index) => (
-                      <li
-                        key={photo.id}
-                        className="border-b border-border pb-3 last:border-0 last:pb-0"
-                      >
-                        <p
-                          className="truncate text-sm font-semibold"
-                          title={photo.filename}
-                        >
-                          {index + 1}. {photo.filename}
-                        </p>
-                        {composition === "polaroid" ? (
-                          <label className="mt-2 block">
-                            <span className="text-xs font-medium text-text-secondary">
-                              Caption (optional)
-                            </span>
-                            <input
-                              key={`${photo.id}-${photo.caption}`}
-                              className="sb-control mt-1"
-                              defaultValue={photo.caption}
-                              maxLength={40}
-                              onBlur={(event) =>
-                                onCaption(photo.id, event.target.value)
-                              }
-                            />
-                          </label>
-                        ) : null}
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onAdjust(photo.id)}
+                      <li key={photo.id}>
+                        <ImageAssetCard asset={photo} index={index}>
+                          {composition === "polaroid" ? (
+                            <label className="block">
+                              <span className="text-xs font-medium text-text-secondary">
+                                Caption (optional)
+                              </span>
+                              <input
+                                key={`${photo.id}-${photo.caption}`}
+                                className="sb-control mt-1"
+                                defaultValue={photo.caption}
+                                maxLength={40}
+                                onBlur={(event) =>
+                                  onCaption(photo.id, event.target.value)
+                                }
+                              />
+                            </label>
+                          ) : null}
+                          <div
+                            className={`${composition === "polaroid" ? "mt-2" : ""} flex flex-wrap gap-1`}
                           >
-                            Adjust
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            aria-label={`Move photo ${index + 1} up`}
-                            disabled={index === 0}
-                            onClick={() => onMove(photo.id, "up")}
-                          >
-                            ↑
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            aria-label={`Move photo ${index + 1} down`}
-                            disabled={index === photos.length - 1}
-                            onClick={() => onMove(photo.id, "down")}
-                          >
-                            ↓
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => onRemove(photo.id)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onAdjust(photo.id)}
+                            >
+                              Adjust
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              aria-label={`Move photo ${index + 1} up`}
+                              disabled={index === 0}
+                              onClick={() => onMove(photo.id, "up")}
+                            >
+                              ↑
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              aria-label={`Move photo ${index + 1} down`}
+                              disabled={index === photos.length - 1}
+                              onClick={() => onMove(photo.id, "down")}
+                            >
+                              ↓
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => onRemove(photo.id)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </ImageAssetCard>
                       </li>
                     ))}
                   </ol>
@@ -697,39 +858,35 @@ function PhotoInspectorSection({
                 </div>
               ) : (
                 <div>
-                  <p
-                    className="truncate text-sm font-semibold"
-                    title={photos[0]!.filename}
-                  >
-                    {photos[0]!.filename}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onAdjust(photos[0]!.id)}
-                    >
-                      Adjust
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => chooseFile("replace-primary")}
-                    >
-                      Replace
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onRemove(photos[0]!.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
+                  <ImageAssetCard asset={photos[0]!}>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onAdjust(photos[0]!.id)}
+                      >
+                        Adjust
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => chooseFile("replace-primary")}
+                      >
+                        Replace
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onRemove(photos[0]!.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </ImageAssetCard>
                 </div>
               )}
             </div>
@@ -993,6 +1150,167 @@ function ColorInputRow({
         }}
       />
     </div>
+  );
+}
+
+function SubjectColorsInspectorSection({
+  design,
+  layout,
+  subjects,
+  onMode,
+  onSingleColor,
+  onCustomColor,
+  onPickerPreview,
+  onPickerStart,
+  onPickerEnd,
+  onResetCustom,
+}: {
+  design: ProjectDesign;
+  layout: LayoutId;
+  subjects: readonly Subject[];
+  onMode?(mode: ProjectDesign["subjectColors"]["mode"]): void;
+  onSingleColor?(color: string): void;
+  onCustomColor?(subjectId: string, color: string): void;
+  onPickerPreview?(subjectId: string | null, color: string): void;
+  onPickerStart?(): void;
+  onPickerEnd?(subjectId: string | null, color: string | null): void;
+  onResetCustom?(): void;
+}) {
+  if (layout !== "cards" && layout !== "grid") return null;
+  const theme = resolveWallpaperTheme(
+    design.themeId,
+    layout,
+    design.customPalette,
+  );
+  const baseThemeId =
+    design.themeId === "custom"
+      ? (design.customPalette?.basedOnPaletteId ?? "clean-slate")
+      : design.themeId;
+  const baseTheme = availableThemes.find((item) => item.id === baseThemeId);
+  const activeSubjects = subjects.filter((subject) => subject.enabled);
+  const singleColor =
+    design.subjectColors.singleColor ?? theme.subjectPalette[0] ?? "#FFFFFF";
+  const modes = [
+    ["automatic", "Automatic"],
+    ["single", "Single Color"],
+    ["custom", "Custom"],
+  ] as const;
+  return (
+    <section className="sb-inspector-major-section">
+      <h3 className="sb-inspector-heading">Subject Colors</h3>
+      <div
+        role="radiogroup"
+        aria-label="Subject color mode"
+        className="sb-inspector-children grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
+      >
+        {modes.map(([mode, label]) => (
+          <button
+            key={mode}
+            type="button"
+            role="radio"
+            aria-checked={design.subjectColors.mode === mode}
+            className={`min-h-10 min-w-0 cursor-pointer rounded-sm px-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${design.subjectColors.mode === mode ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
+            onClick={() => onMode?.(mode)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {design.subjectColors.mode === "automatic" ? (
+        <div className="sb-inspector-children mt-2">
+          <p className="mb-2 text-xs text-text-muted">
+            Uses {baseTheme?.name ?? "Clean Slate"} subject colors
+          </p>
+          <div
+            aria-label={`${baseTheme?.name ?? "Clean Slate"} automatic subject colors`}
+            className="flex gap-2"
+          >
+            {theme.subjectPalette.map((color, index) => (
+              <span
+                key={`${color}-${index}`}
+                aria-hidden="true"
+                className="size-7 rounded-sm border border-border"
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+        </div>
+      ) : design.subjectColors.mode === "single" ? (
+        <div className="sb-inspector-children mt-2 rounded-sm border border-border bg-muted/25 p-2">
+          <ColorInputRow
+            id="subject-single"
+            label="Color"
+            value={singleColor}
+            {...(onSingleColor ? { onColor: onSingleColor } : {})}
+            {...(onPickerPreview
+              ? {
+                  onPickerPreview: (color: string) =>
+                    onPickerPreview(null, color),
+                }
+              : {})}
+            {...(onPickerStart ? { onPickerStart } : {})}
+            {...(onPickerEnd
+              ? {
+                  onPickerEnd: (color: string | null) =>
+                    onPickerEnd(null, color),
+                }
+              : {})}
+          />
+        </div>
+      ) : (
+        <div className="sb-inspector-children mt-2 space-y-2 rounded-sm border border-border bg-muted/25 p-2">
+          {activeSubjects.length ? (
+            activeSubjects.map((subject) => {
+              const value =
+                design.subjectColors.bySubjectId[subject.id] ??
+                resolveAutomaticSubjectColor({
+                  subjectId: subject.id,
+                  subjects,
+                  automaticPalette: theme.subjectPalette,
+                });
+              return (
+                <ColorInputRow
+                  key={subject.id}
+                  id={`subject-${subject.id}`}
+                  label={subject.code}
+                  value={value}
+                  {...(onCustomColor
+                    ? {
+                        onColor: (color: string) =>
+                          onCustomColor(subject.id, color),
+                      }
+                    : {})}
+                  {...(onPickerPreview
+                    ? {
+                        onPickerPreview: (color: string) =>
+                          onPickerPreview(subject.id, color),
+                      }
+                    : {})}
+                  {...(onPickerStart ? { onPickerStart } : {})}
+                  {...(onPickerEnd
+                    ? {
+                        onPickerEnd: (color: string | null) =>
+                          onPickerEnd(subject.id, color),
+                      }
+                    : {})}
+                />
+              );
+            })
+          ) : (
+            <p className="text-xs text-text-muted">No included subjects.</p>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            {...(onResetCustom ? { onClick: onResetCustom } : {})}
+          >
+            Reset custom colors
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1496,6 +1814,7 @@ function BackgroundInspectorSection({
   design,
   activeLayout,
   imageFilename,
+  imageAsset,
   imageAdjusting,
   imageZoom,
   onMode,
@@ -1513,6 +1832,7 @@ function BackgroundInspectorSection({
   design: ProjectDesign;
   activeLayout: LayoutId;
   imageFilename?: string | undefined;
+  imageAsset?: InspectorImageAsset | undefined;
   imageAdjusting: boolean;
   imageZoom: number;
   onMode(mode: BackgroundDesign["mode"]): void;
@@ -1529,6 +1849,7 @@ function BackgroundInspectorSection({
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [fileBusy, setFileBusy] = useState(false);
   const background = design.background;
   const theme = resolveWallpaperTheme(
     design.themeId,
@@ -1546,12 +1867,15 @@ function BackgroundInspectorSection({
   };
   const chooseFile = async (file: File) => {
     setFileError(null);
+    setFileBusy(true);
     try {
       await onImageFile(file);
     } catch (error) {
       setFileError(
         error instanceof Error ? error.message : "Could not use this image.",
       );
+    } finally {
+      setFileBusy(false);
     }
   };
   const resetActiveMode = () => {
@@ -2056,18 +2380,22 @@ function BackgroundInspectorSection({
           </>
         ) : background.mode === "image" && background.image ? (
           <>
-            <div className="rounded-sm border border-border bg-muted/25 p-2">
-              <p className="truncate text-xs font-semibold">
-                {imageFilename ?? "Loading image…"}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1">
+            <ImageAssetCard
+              asset={
+                imageAsset ?? {
+                  filename: imageFilename ?? "Loading image…",
+                }
+              }
+            >
+              <div className="flex flex-wrap gap-1">
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
+                  disabled={fileBusy}
                   onClick={() => fileInput.current?.click()}
                 >
-                  Change image
+                  {fileBusy ? "Changing…" : "Change image"}
                 </Button>
                 <Button
                   type="button"
@@ -2086,7 +2414,7 @@ function BackgroundInspectorSection({
                   Remove image
                 </Button>
               </div>
-            </div>
+            </ImageAssetCard>
             {imageAdjusting ? (
               <div className="space-y-2 rounded-sm border border-brand/25 bg-accent/40 p-2">
                 <div>
@@ -2190,7 +2518,16 @@ export function DesignStudioPanel({
   onCustomPalettePickerStart,
   onCustomPalettePickerEnd,
   onResetCustomPalette,
+  subjects = [],
+  onSubjectColorMode,
+  onSingleSubjectColor,
+  onCustomSubjectColor,
+  onSubjectColorPickerPreview,
+  onSubjectColorPickerStart,
+  onSubjectColorPickerEnd,
+  onResetCustomSubjectColors,
   backgroundImageFilename,
+  backgroundImageAsset,
   backgroundImageAdjusting = false,
   backgroundImageZoom = 1,
   onBackgroundMode = () => {},
@@ -2253,7 +2590,19 @@ export function DesignStudioPanel({
     color: string | null,
   ): void;
   onResetCustomPalette?(): void;
+  subjects?: readonly Subject[];
+  onSubjectColorMode?(mode: ProjectDesign["subjectColors"]["mode"]): void;
+  onSingleSubjectColor?(color: string): void;
+  onCustomSubjectColor?(subjectId: string, color: string): void;
+  onSubjectColorPickerPreview?(subjectId: string | null, color: string): void;
+  onSubjectColorPickerStart?(): void;
+  onSubjectColorPickerEnd?(
+    subjectId: string | null,
+    color: string | null,
+  ): void;
+  onResetCustomSubjectColors?(): void;
   backgroundImageFilename?: string | undefined;
+  backgroundImageAsset?: InspectorImageAsset | undefined;
   backgroundImageAdjusting?: boolean;
   backgroundImageZoom?: number;
   onBackgroundMode?(mode: BackgroundDesign["mode"]): void;
@@ -2300,239 +2649,291 @@ export function DesignStudioPanel({
   onStickerLayer?(instanceId: string, layer: StickerLayer): void;
   onStickerStack?(instanceId: string, direction: "forward" | "backward"): void;
 }) {
-  const subjectPalette = resolveWallpaperTheme(
-    design.themeId,
-    activeLayout,
-    design.customPalette,
-  ).subjectPalette;
-  const subjectPaletteTheme = availableThemes.find(
-    (theme) =>
-      theme.id ===
-      (design.themeId === "custom"
-        ? design.customPalette?.basedOnPaletteId
-        : design.themeId),
-  );
   return (
     <section aria-labelledby="studio-design-heading">
-      <div className="pb-3">
+      <header className="sticky -top-5 z-10 -mx-5 border-b border-border bg-surface-elevated/95 px-5 pt-1 pb-4 backdrop-blur-md">
         <h2 id="studio-design-heading" className="sb-section-title">
           Design
         </h2>
-      </div>
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Layout</h3>
-        <div
-          role="radiogroup"
-          aria-label="Schedule layout"
-          className="sb-inspector-children grid grid-cols-5 rounded-sm border border-border bg-muted/40 p-1"
-        >
-          {availableLayouts.map((layout) => (
-            <button
-              key={layout.id}
-              type="button"
-              role="radio"
-              aria-checked={activeLayout === layout.id}
-              className={`min-h-10 min-w-0 cursor-pointer rounded-sm px-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${activeLayout === layout.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
-              onClick={() => onLayout(layout.id)}
-            >
-              {layout.name}
-            </button>
-          ))}
-        </div>
-      </section>
-      {activeLayout !== "photo" ? (
-        <StyleInspectorSection
-          design={design}
-          layout={activeLayout}
-          onStyle={onStyle}
-        />
-      ) : null}
-      {activeLayout === "photo" ? (
-        <>
-          <section className="sb-inspector-major-section">
-            <h3 className="sb-inspector-heading">Composition</h3>
-            <div className="sb-inspector-children">
-              <PhotoCompositionControl
-                composition={photoComposition}
-                onComposition={onPhotoComposition}
-              />
-            </div>
-          </section>
-          <StyleInspectorSection
-            design={design}
-            layout="photo"
-            composition={photoComposition}
-            onStyle={onStyle}
-          />
-        </>
-      ) : null}
-      <ColorPaletteInspectorSection
-        design={design}
-        {...(onTheme ? { onTheme } : {})}
-        {...(onCustomPaletteColor ? { onColor: onCustomPaletteColor } : {})}
-        {...(onCustomPalettePickerPreview
-          ? { onPickerPreview: onCustomPalettePickerPreview }
-          : {})}
-        {...(onCustomPalettePickerStart
-          ? { onPickerStart: onCustomPalettePickerStart }
-          : {})}
-        {...(onCustomPalettePickerEnd
-          ? { onPickerEnd: onCustomPalettePickerEnd }
-          : {})}
-        {...(onResetCustomPalette ? { onReset: onResetCustomPalette } : {})}
-      />
-      <BackgroundInspectorSection
-        design={design}
-        activeLayout={activeLayout}
-        imageFilename={backgroundImageFilename}
-        imageAdjusting={backgroundImageAdjusting}
-        imageZoom={backgroundImageZoom}
-        onMode={onBackgroundMode}
-        onBackground={onBackground}
-        onImageFile={onBackgroundImageFile}
-        onImageAdjust={onBackgroundImageAdjust}
-        onImageRemove={onBackgroundImageRemove}
-        onImageZoom={onBackgroundImageZoom}
-        onImageCenter={onBackgroundImageCenter}
-        onImageReset={onBackgroundImageReset}
-        onImageDone={onBackgroundImageDone}
-        onGestureStart={onBackgroundGestureStart}
-        onGestureEnd={onBackgroundGestureEnd}
-      />
-      <TypographyInspectorSection
-        value={design.typography.presetId}
-        {...(onTypography ? { onChange: onTypography } : {})}
-      />
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Wallpaper title</h3>
-        <div className="sb-inspector-children space-y-3">
-          <label className="sb-setting-row">
-            <span className="font-medium">Show title</span>
-            <Switch
-              aria-label="Show title"
-              checked={design.wallpaperTitle.visible}
-              onChange={(event) => onTitleVisible(event.target.checked)}
-            />
-          </label>
-          {design.wallpaperTitle.visible ? (
-            <label>
-              <span className="sb-inspector-field-label">Title</span>
-              <input
-                key={design.wallpaperTitle.text}
-                className="sb-control"
-                defaultValue={design.wallpaperTitle.text}
-                maxLength={100}
-                onBlur={(event) => onTitleText(event.target.value)}
-              />
-            </label>
-          ) : null}
-        </div>
-      </section>
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Days</h3>
-        <div className="sb-inspector-children">
-          <label className="sb-setting-row">
-            <span className="font-medium">Hide days without classes</span>
-            <Switch
-              aria-label="Hide days without classes"
-              checked={design.dayVisibility === "scheduled-only"}
-              onChange={(event) =>
-                onDayVisibility(
-                  event.target.checked ? "scheduled-only" : "full-week",
-                )
-              }
-            />
-          </label>
-        </div>
-      </section>
-      <section
-        className="sb-inspector-major-section"
-        role="group"
-        aria-label="Class details"
-      >
-        <h3 className="sb-inspector-heading">Class details</h3>
-        <div className="sb-inspector-children">
-          <div className="flex min-h-11 items-center justify-between gap-3 px-2 py-2 text-sm">
-            <span className="font-medium">Subject code</span>
-            <span className="text-xs font-medium text-text-muted">
-              Always shown
-            </span>
+        <p className="mt-1 text-xs leading-5 text-text-muted">
+          Shape the layout, color, content, and finishing touches.
+        </p>
+      </header>
+      <div className="sb-inspector-group">
+        <div className="sb-inspector-group-header">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
+            1
+          </span>
+          <div>
+            <h3 className="text-sm font-bold">Start with structure</h3>
+            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
+              {activeLayout === "photo"
+                ? "Choose a composition, then add the photos it needs."
+                : "Choose how your schedule is arranged."}
+            </p>
           </div>
-          {INSPECTOR_FIELD_ORDER.map((field) => {
-            const available = detailCapabilities.fields[field] === "available";
-            return available ? (
-              <label key={field} className="sb-setting-row">
-                <span>{FIELD_LABELS[field]}</span>
-                <input
-                  className="sb-check"
-                  type="checkbox"
-                  checked={visibleFields[field]}
-                  onChange={(event) => onField(field, event.target.checked)}
-                />
-              </label>
-            ) : (
-              <div
-                key={field}
-                aria-disabled="true"
-                aria-label={`${FIELD_LABELS[field]}. Available on larger Grid devices.`}
-                className="flex min-h-11 items-center justify-between gap-3 px-2 py-2 text-sm"
-              >
-                <span className="font-medium">{FIELD_LABELS[field]}</span>
-                <span className="max-w-36 text-right text-xs leading-4 text-text-muted">
-                  Larger Grid devices only
-                </span>
-              </div>
-            );
-          })}
         </div>
-      </section>
-      {activeLayout === "cards" || activeLayout === "grid" ? (
-        <div className="sb-inspector-major-section">
-          <p className="sb-inspector-heading">Subject palette</p>
+        <section className="sb-inspector-major-section">
+          <h3 className="sb-inspector-heading">Layout</h3>
           <div
-            aria-label={`${subjectPaletteTheme?.name ?? "Clean Slate"} subject palette`}
-            className="sb-inspector-children flex gap-2"
+            role="radiogroup"
+            aria-label="Schedule layout"
+            className="sb-inspector-children grid grid-cols-5 rounded-sm border border-border bg-muted/40 p-1"
           >
-            {subjectPalette.map((color) => (
-              <span
-                key={color}
-                className="size-7 rounded-sm border border-border"
-                style={{ backgroundColor: color }}
-              />
+            {availableLayouts.map((layout) => (
+              <button
+                key={layout.id}
+                type="button"
+                role="radio"
+                aria-checked={activeLayout === layout.id}
+                className={`min-h-10 min-w-0 cursor-pointer rounded-sm px-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${activeLayout === layout.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
+                onClick={() => onLayout(layout.id)}
+              >
+                {layout.name}
+              </button>
             ))}
           </div>
+        </section>
+        {activeLayout !== "photo" ? (
+          <StyleInspectorSection
+            design={design}
+            layout={activeLayout}
+            onStyle={onStyle}
+          />
+        ) : null}
+        {activeLayout === "photo" ? (
+          <>
+            <section className="sb-inspector-major-section">
+              <h3 className="sb-inspector-heading">Composition</h3>
+              <div className="sb-inspector-children">
+                <PhotoCompositionControl
+                  composition={photoComposition}
+                  onComposition={onPhotoComposition}
+                />
+              </div>
+            </section>
+            <PhotoInspectorSection
+              photos={photos}
+              composition={photoComposition}
+              activePhotoId={activePhotoId}
+              adjusting={photoAdjusting}
+              zoom={photoZoom}
+              onFile={onPhotoFile}
+              onAdjust={onPhotoAdjust}
+              onRemove={onPhotoRemove}
+              onZoomStart={onPhotoZoomStart}
+              onZoom={onPhotoZoom}
+              onZoomEnd={onPhotoZoomEnd}
+              onReset={onPhotoReset}
+              onDone={onPhotoDone}
+              onMove={onPhotoMove}
+              onCaption={onPhotoCaption}
+            />
+            <StyleInspectorSection
+              design={design}
+              layout="photo"
+              composition={photoComposition}
+              onStyle={onStyle}
+            />
+          </>
+        ) : null}
+      </div>
+      <div className="sb-inspector-group">
+        <div className="sb-inspector-group-header">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
+            2
+          </span>
+          <div>
+            <h3 className="text-sm font-bold">Create the look</h3>
+            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
+              Set the mood with color, type, and background.
+            </p>
+          </div>
         </div>
-      ) : null}
-      {activeLayout === "photo" ? (
-        <PhotoInspectorSection
-          photos={photos}
-          composition={photoComposition}
-          activePhotoId={activePhotoId}
-          adjusting={photoAdjusting}
-          zoom={photoZoom}
-          onFile={onPhotoFile}
-          onAdjust={onPhotoAdjust}
-          onRemove={onPhotoRemove}
-          onZoomStart={onPhotoZoomStart}
-          onZoom={onPhotoZoom}
-          onZoomEnd={onPhotoZoomEnd}
-          onReset={onPhotoReset}
-          onDone={onPhotoDone}
-          onMove={onPhotoMove}
-          onCaption={onPhotoCaption}
+        <ColorPaletteInspectorSection
+          design={design}
+          {...(onTheme ? { onTheme } : {})}
+          {...(onCustomPaletteColor ? { onColor: onCustomPaletteColor } : {})}
+          {...(onCustomPalettePickerPreview
+            ? { onPickerPreview: onCustomPalettePickerPreview }
+            : {})}
+          {...(onCustomPalettePickerStart
+            ? { onPickerStart: onCustomPalettePickerStart }
+            : {})}
+          {...(onCustomPalettePickerEnd
+            ? { onPickerEnd: onCustomPalettePickerEnd }
+            : {})}
+          {...(onResetCustomPalette ? { onReset: onResetCustomPalette } : {})}
         />
-      ) : null}
-      <StickerInspectorSection
-        stickers={stickers}
-        selectedId={selectedStickerId}
-        onAdd={onStickerAdd}
-        onSelect={onStickerSelect}
-        onDelete={onStickerDelete}
-        onDuplicate={onStickerDuplicate}
-        onReset={onStickerReset}
-        onLayer={onStickerLayer}
-        onStack={onStickerStack}
-      />
+        <BackgroundInspectorSection
+          design={design}
+          activeLayout={activeLayout}
+          imageFilename={backgroundImageFilename}
+          imageAsset={backgroundImageAsset}
+          imageAdjusting={backgroundImageAdjusting}
+          imageZoom={backgroundImageZoom}
+          onMode={onBackgroundMode}
+          onBackground={onBackground}
+          onImageFile={onBackgroundImageFile}
+          onImageAdjust={onBackgroundImageAdjust}
+          onImageRemove={onBackgroundImageRemove}
+          onImageZoom={onBackgroundImageZoom}
+          onImageCenter={onBackgroundImageCenter}
+          onImageReset={onBackgroundImageReset}
+          onImageDone={onBackgroundImageDone}
+          onGestureStart={onBackgroundGestureStart}
+          onGestureEnd={onBackgroundGestureEnd}
+        />
+        <TypographyInspectorSection
+          value={design.typography.presetId}
+          {...(onTypography ? { onChange: onTypography } : {})}
+        />
+        <SubjectColorsInspectorSection
+          design={design}
+          layout={activeLayout}
+          subjects={subjects}
+          {...(onSubjectColorMode ? { onMode: onSubjectColorMode } : {})}
+          {...(onSingleSubjectColor
+            ? { onSingleColor: onSingleSubjectColor }
+            : {})}
+          {...(onCustomSubjectColor
+            ? { onCustomColor: onCustomSubjectColor }
+            : {})}
+          {...(onSubjectColorPickerPreview
+            ? { onPickerPreview: onSubjectColorPickerPreview }
+            : {})}
+          {...(onSubjectColorPickerStart
+            ? { onPickerStart: onSubjectColorPickerStart }
+            : {})}
+          {...(onSubjectColorPickerEnd
+            ? { onPickerEnd: onSubjectColorPickerEnd }
+            : {})}
+          {...(onResetCustomSubjectColors
+            ? { onResetCustom: onResetCustomSubjectColors }
+            : {})}
+        />
+      </div>
+      <div className="sb-inspector-group">
+        <div className="sb-inspector-group-header">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
+            3
+          </span>
+          <div>
+            <h3 className="text-sm font-bold">Tune the content</h3>
+            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
+              Decide what students can see at a glance.
+            </p>
+          </div>
+        </div>
+        <section className="sb-inspector-major-section">
+          <h3 className="sb-inspector-heading">Wallpaper title</h3>
+          <div className="sb-inspector-children space-y-3">
+            <label className="sb-setting-row">
+              <span className="font-medium">Show title</span>
+              <Switch
+                aria-label="Show title"
+                checked={design.wallpaperTitle.visible}
+                onChange={(event) => onTitleVisible(event.target.checked)}
+              />
+            </label>
+            {design.wallpaperTitle.visible ? (
+              <label>
+                <span className="sb-inspector-field-label">Title</span>
+                <input
+                  key={design.wallpaperTitle.text}
+                  className="sb-control"
+                  defaultValue={design.wallpaperTitle.text}
+                  maxLength={100}
+                  onBlur={(event) => onTitleText(event.target.value)}
+                />
+              </label>
+            ) : null}
+          </div>
+        </section>
+        <section className="sb-inspector-major-section">
+          <h3 className="sb-inspector-heading">Days</h3>
+          <div className="sb-inspector-children">
+            <label className="sb-setting-row">
+              <span className="font-medium">Hide days without classes</span>
+              <Switch
+                aria-label="Hide days without classes"
+                checked={design.dayVisibility === "scheduled-only"}
+                onChange={(event) =>
+                  onDayVisibility(
+                    event.target.checked ? "scheduled-only" : "full-week",
+                  )
+                }
+              />
+            </label>
+          </div>
+        </section>
+        <section
+          className="sb-inspector-major-section"
+          role="group"
+          aria-label="Class details"
+        >
+          <h3 className="sb-inspector-heading">Class details</h3>
+          <div className="sb-inspector-children">
+            <div className="flex min-h-11 items-center justify-between gap-3 px-2 py-2 text-sm">
+              <span className="font-medium">Subject code</span>
+              <span className="text-xs font-medium text-text-muted">
+                Always shown
+              </span>
+            </div>
+            {INSPECTOR_FIELD_ORDER.map((field) => {
+              const available =
+                detailCapabilities.fields[field] === "available";
+              return available ? (
+                <label key={field} className="sb-setting-row">
+                  <span>{FIELD_LABELS[field]}</span>
+                  <input
+                    className="sb-check"
+                    type="checkbox"
+                    checked={visibleFields[field]}
+                    onChange={(event) => onField(field, event.target.checked)}
+                  />
+                </label>
+              ) : (
+                <div
+                  key={field}
+                  aria-disabled="true"
+                  aria-label={`${FIELD_LABELS[field]}. Available on larger Grid devices.`}
+                  className="flex min-h-11 items-center justify-between gap-3 px-2 py-2 text-sm"
+                >
+                  <span className="font-medium">{FIELD_LABELS[field]}</span>
+                  <span className="max-w-36 text-right text-xs leading-4 text-text-muted">
+                    Larger Grid devices only
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+      <div className="sb-inspector-group">
+        <div className="sb-inspector-group-header">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
+            4
+          </span>
+          <div>
+            <h3 className="text-sm font-bold">Make it yours</h3>
+            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
+              Add playful finishing touches.
+            </p>
+          </div>
+        </div>
+        <StickerInspectorSection
+          stickers={stickers}
+          selectedId={selectedStickerId}
+          onAdd={onStickerAdd}
+          onSelect={onStickerSelect}
+          onDelete={onStickerDelete}
+          onDuplicate={onStickerDuplicate}
+          onReset={onStickerReset}
+          onLayer={onStickerLayer}
+          onStack={onStickerStack}
+        />
+      </div>
     </section>
   );
 }

@@ -85,7 +85,7 @@ function DesktopProgramCombobox({
                   <Combobox.Item
                     key={program.id}
                     value={program}
-                    className="grid min-h-13 cursor-default grid-cols-[1fr_1.25rem] items-center gap-3 rounded-sm px-3 py-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                    className="grid min-h-13 cursor-pointer grid-cols-[1fr_1.25rem] items-center gap-3 rounded-sm px-3 py-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                   >
                     <ProgramOption program={program} />
                     <Combobox.ItemIndicator>

@@ -131,21 +131,20 @@ function SceneNode({
                   context.fillRect(x, y, size, size);
             } else if (pattern.type === "diagonal") {
               const step = Math.max(14, pattern.spacing * edge);
-              context.strokeStyle = pattern.color;
-              context.lineWidth = Math.max(2, pattern.stripeWidth * edge);
-              for (
-                let offset = -height;
-                offset <= width + height;
-                offset += step
-              ) {
-                context.beginPath();
-                context.moveTo(offset, pattern.angle === 45 ? height : 0);
-                context.lineTo(
-                  offset + height,
-                  pattern.angle === 45 ? 0 : height,
+              const stripeWidth = Math.max(2, pattern.stripeWidth * edge);
+              const span = Math.hypot(width, height);
+              context.fillStyle = pattern.color;
+              context.save();
+              context.translate(width / 2, height / 2);
+              context.rotate(pattern.angle === 45 ? -Math.PI / 4 : Math.PI / 4);
+              for (let offset = -span; offset <= span; offset += step)
+                context.fillRect(
+                  offset - stripeWidth / 2,
+                  -span,
+                  stripeWidth,
+                  span * 2,
                 );
-                context.stroke();
-              }
+              context.restore();
             } else if (emojiImage) {
               const size = Math.max(18, pattern.size * edge);
               const step = Math.max(size * 1.1, pattern.spacing * edge);

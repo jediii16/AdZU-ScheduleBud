@@ -1,8 +1,9 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Check, ImageUp, Trash2, X } from "lucide-react";
-import { useRef, useState, type RefObject } from "react";
+import Image from "next/image";
+import { Check, ImageUp, Trash2, UploadCloud, X } from "lucide-react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +20,12 @@ import {
 } from "@/domain/device/types";
 import { cn } from "@/lib/utils";
 import { inspectTemporaryImage, type InspectedImage } from "@/storage/assets";
+
+function formatImageSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export function DeviceTargetPicker({
   open,
@@ -49,8 +56,19 @@ export function DeviceTargetPicker({
   const [custom, setCustom] = useState({ width: "1080", height: "2400" });
   const [error, setError] = useState<string | null>(null);
   const [image, setImage] = useState<InspectedImage | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const [draggingImage, setDraggingImage] = useState(false);
+  const dragDepth = useRef(0);
   const [matchCategory, setMatchCategory] = useState<DeviceCategory>("phone");
   const [saveGuide, setSaveGuide] = useState(false);
+
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    },
+    [],
+  );
 
   const commitCustom = () => {
     const parsed = deviceDimensionsSchema.safeParse({
@@ -79,6 +97,10 @@ export function DeviceTargetPicker({
         return;
       }
       const match = inferScreenMatch(inspected.width, inspected.height);
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      const nextPreviewUrl = URL.createObjectURL(inspected.blob);
+      previewUrlRef.current = nextPreviewUrl;
+      setPreviewUrl(nextPreviewUrl);
       setImage(inspected);
       setMatchCategory(
         match.recommendedCategory ?? match.candidates[0] ?? "phone",
@@ -92,6 +114,9 @@ export function DeviceTargetPicker({
   };
 
   const clearImage = () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
+    setPreviewUrl(null);
     setImage(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -284,45 +309,108 @@ export function DeviceTargetPicker({
                   }}
                 />
                 {!image ? (
-                  <Button
-                    className="mt-3"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
+                  <div
+                    aria-label="Screen screenshot drop zone"
+                    data-dragging={draggingImage}
+                    className="sb-dropzone mt-4 flex min-h-40 flex-col items-center justify-center rounded-md px-5 py-6 text-center"
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      dragDepth.current += 1;
+                      setDraggingImage(true);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "copy";
+                    }}
+                    onDragLeave={(event) => {
+                      event.preventDefault();
+                      dragDepth.current = Math.max(0, dragDepth.current - 1);
+                      if (dragDepth.current === 0) setDraggingImage(false);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      dragDepth.current = 0;
+                      setDraggingImage(false);
+                      const file = event.dataTransfer.files[0];
+                      if (file) void inspect(file);
+                    }}
                   >
-                    <ImageUp aria-hidden="true" className="size-4" />
-                    Upload screenshot
-                  </Button>
+                    <span className="sb-dropzone-icon mb-2 flex size-11 items-center justify-center rounded-md bg-accent text-brand">
+                      {draggingImage ? (
+                        <UploadCloud aria-hidden="true" className="size-5" />
+                      ) : (
+                        <ImageUp aria-hidden="true" className="size-5" />
+                      )}
+                    </span>
+                    <p className="text-sm font-semibold">
+                      {draggingImage
+                        ? "Release to read this screenshot"
+                        : "Drop a screenshot here"}
+                    </p>
+                    <p className="mt-1 text-xs text-text-muted">
+                      PNG, JPG, or WebP · Processed locally
+                    </p>
+                    <Button
+                      className="mt-3"
+                      variant="outline"
+                      aria-label="Upload screenshot"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Choose screenshot
+                    </Button>
+                  </div>
                 ) : null}
               </div>
 
               {image ? (
-                <div className="border-y border-border py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
+                <div className="rounded-md border border-border bg-card p-3 shadow-sm">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted ring-1 ring-inset ring-border-muted">
+                      {previewUrl ? (
+                        <Image
+                          unoptimized
+                          src={previewUrl}
+                          alt="Screenshot preview"
+                          width={80}
+                          height={80}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <ImageUp aria-hidden="true" className="size-6" />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">
                         {image.filename ?? "Screen screenshot"}
                       </p>
-                      <p className="mt-1 font-mono text-xs text-text-muted">
+                      <p className="mt-1 text-xs text-text-muted">
+                        {image.mimeType.split("/")[1]?.toUpperCase()} ·{" "}
+                        {formatImageSize(image.blob.size)}
+                      </p>
+                      <p className="font-mono text-xs text-text-muted">
                         {image.width} × {image.height}
                       </p>
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-success">
+                        <Check aria-hidden="true" className="size-3" /> Ready
+                      </p>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        Replace
-                      </Button>
-                      <Button
-                        aria-label="Remove screenshot"
-                        size="icon-lg"
-                        variant="ghost"
-                        onClick={clearImage}
-                      >
-                        <Trash2 aria-hidden="true" />
-                      </Button>
-                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-1 border-t border-border-muted pt-2.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Replace
+                    </Button>
+                    <Button
+                      aria-label="Remove screenshot"
+                      size="icon-lg"
+                      variant="ghost"
+                      onClick={clearImage}
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </Button>
                   </div>
                   <label className="sb-setting-row mt-3 px-0 hover:bg-transparent">
                     <span>

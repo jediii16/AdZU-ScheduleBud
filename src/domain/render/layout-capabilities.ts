@@ -37,7 +37,7 @@ export function resolveLayoutDetailCapabilities(
     fields: {
       time: "available",
       room: "available",
-      professor: compactPhoneGrid ? "larger-grid-targets" : "available",
+      professor: "available",
       section: compactPhoneGrid ? "larger-grid-targets" : "available",
     },
     preferenceScope: compactPhoneGrid ? "variant-layout" : "project",

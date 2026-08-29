@@ -458,7 +458,7 @@ describe("Clean Slate Minimal RenderModel", () => {
     const project = projectWithDays(["Mon"]);
     const subjectId = project.schedule[0]!.id;
     project.design.subjectColors = {
-      mode: "per-subject",
+      mode: "custom",
       singleColor: null,
       bySubjectId: { [subjectId]: "#123456" },
     };

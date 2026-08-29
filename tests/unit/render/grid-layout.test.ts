@@ -300,7 +300,7 @@ describe("Clean Slate Grid RenderModel", () => {
     expect(tuesday.map((block) => block.overlapColumnCount)).toEqual([1, 1]);
   });
 
-  it("defaults Phone Grid to Room on and Time off", () => {
+  it("defaults Phone Grid to Room and Professor on and Time off", () => {
     const project = gridProject([
       { day: "Mon", code: "ROOMY", start: "08:00", end: "12:00" },
       {
@@ -334,13 +334,13 @@ describe("Clean Slate Grid RenderModel", () => {
       time: false,
       room: true,
       section: false,
-      professor: false,
+      professor: true,
     });
     expect(byDay.get("Tue")?.shownFields).toMatchObject({
       time: false,
       room: true,
       section: false,
-      professor: false,
+      professor: true,
     });
     expect(byDay.get("Wed")?.shownFields.time).toBe(false);
     expect(byDay.get("Thu")?.shownFields).toEqual({
@@ -449,7 +449,7 @@ describe("Clean Slate Grid RenderModel", () => {
     expect(phone.detailCapabilities.fields).toEqual({
       time: "available",
       room: "available",
-      professor: "larger-grid-targets",
+      professor: "available",
       section: "larger-grid-targets",
     });
     expect(phone.detailCapabilities.defaultFields).toEqual({
@@ -460,6 +460,75 @@ describe("Clean Slate Grid RenderModel", () => {
     expect(desktop.detailCapabilities.preferenceScope).toBe("project");
     expect(desktop.detailCapabilities.fields.professor).toBe("available");
     expect(desktop.detailCapabilities.fields.section).toBe("available");
+  });
+
+  it("shows Professor in an ordinary Phone Grid class when geometry permits it", () => {
+    const project = gridProject([
+      {
+        day: "Mon",
+        code: "COMPROG1",
+        start: "09:00",
+        end: "10:20",
+        professor: "Professor Rivera",
+      },
+    ]);
+    const result = buildGridRenderModel(project, project.deviceVariants[0]!);
+
+    expect(result.blockLayout[0]?.shownFields.professor).toBe(true);
+    expect(
+      result.model.layers[3].nodes.find((node) =>
+        node.id.startsWith("grid-professor-"),
+      ),
+    ).toMatchObject({ kind: "text", text: "Professor Rivera" });
+  });
+
+  it("wraps a long Phone Grid Professor name instead of ellipsizing it", () => {
+    const professor = "Professor Alexandra Rivera";
+    const project = gridProject(
+      (["Mon", "Tue", "Wed", "Thu", "Fri"] as const).map((day) => ({
+        day,
+        code: day.toUpperCase(),
+        start: "09:00",
+        end: "10:20",
+        professor,
+      })),
+    );
+    const result = buildGridRenderModel(project, project.deviceVariants[0]!);
+    const node = result.model.layers[3].nodes.find((item) =>
+      item.id.startsWith("grid-professor-"),
+    );
+
+    expect(node).toMatchObject({ kind: "text" });
+    if (node?.kind !== "text") return;
+    expect(node.text).toContain("\n");
+    expect(node.text).not.toContain("…");
+    expect(node.text.replaceAll("\n", " ")).toBe(professor);
+  });
+
+  it("drops Professor from a narrow overlapping Phone Grid class", () => {
+    const project = gridProject([
+      ...["ONE", "TWO", "THREE"].map((code) => ({
+        day: "Mon" as const,
+        code,
+        start: "09:00",
+        end: "10:20",
+        professor: "Professor Rivera",
+      })),
+      ...(["Tue", "Wed", "Thu", "Fri", "Sat"] as const).map((day) => ({
+        day,
+        code: day.toUpperCase(),
+        start: "09:00",
+        end: "10:20",
+        professor: "Professor Rivera",
+      })),
+    ]);
+    const result = buildGridRenderModel(project, project.deviceVariants[0]!);
+
+    expect(
+      result.blockLayout
+        .filter((block) => block.day === "Mon")
+        .every((block) => !block.shownFields.professor),
+    ).toBe(true);
   });
 
   it("keeps realistic Phone full-week subject codes identifiable", () => {

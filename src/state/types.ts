@@ -154,7 +154,9 @@ export interface DesignSlice {
   setDayVisibility(value: ProjectDesign["dayVisibility"]): void;
   setVisibleField(field: keyof VisibleFields, visible: boolean): void;
   setSubjectColorMode(mode: ProjectDesign["subjectColors"]["mode"]): void;
-  setSubjectColor(subjectId: string, color: string | null): void;
+  setSingleSubjectColor(color: string): void;
+  setCustomSubjectColor(subjectId: string, color: string): void;
+  resetCustomSubjectColors(): void;
   setBackground(background: ProjectDesign["background"]): void;
   setBackgroundMode(mode: BackgroundDesign["mode"]): void;
   setBackgroundImage(assetId: string | null): void;

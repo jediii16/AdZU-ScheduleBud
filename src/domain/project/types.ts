@@ -65,6 +65,27 @@ export const opaqueHexColorSchema = z
   .regex(/^#[0-9A-Fa-f]{6}$/)
   .transform((color) => color.toUpperCase());
 
+export const subjectColorModeSchema = z.enum(["automatic", "single", "custom"]);
+export type SubjectColorMode = z.infer<typeof subjectColorModeSchema>;
+
+export const subjectColorsSchema = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null)
+      return { mode: "automatic", singleColor: null, bySubjectId: {} };
+    if (typeof value !== "object") return value;
+    const legacy = value as Record<string, unknown>;
+    return {
+      ...legacy,
+      mode: legacy.mode === "per-subject" ? "custom" : legacy.mode,
+    };
+  },
+  z.object({
+    mode: subjectColorModeSchema.default("automatic"),
+    singleColor: opaqueHexColorSchema.nullable().default(null),
+    bySubjectId: z.record(z.string().min(1), opaqueHexColorSchema).default({}),
+  }),
+);
+
 export const customPaletteSchema = z.object({
   basedOnPaletteId: builtInThemeIdSchema,
   canvas: opaqueHexColorSchema,
@@ -202,10 +223,10 @@ export const projectDesignSchema = z.object({
   clockFormat: z.enum(["12-hour", "24-hour"]),
   density: densitySchema,
   visibleFields: visibleFieldsSchema,
-  subjectColors: z.object({
-    mode: z.enum(["automatic", "single", "per-subject"]),
-    singleColor: z.string().nullable(),
-    bySubjectId: z.record(z.string(), z.string()),
+  subjectColors: subjectColorsSchema.default({
+    mode: "automatic",
+    singleColor: null,
+    bySubjectId: {},
   }),
   background: backgroundDesignSchema.default({ mode: "palette" }),
   typography: projectTypographySchema.default({ presetId: "schedulebud" }),

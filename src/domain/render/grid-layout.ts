@@ -31,6 +31,7 @@ import {
 } from "./layout-capabilities";
 import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
 import type { WallpaperThemeTokens } from "./themes/types";
+import { resolveSubjectColor } from "./subject-colors";
 import type {
   Rect,
   RenderModel,
@@ -417,20 +418,6 @@ function blockTime(
     : `${left.clock} ${left.period}–${right.clock} ${right.period}`;
 }
 
-function subjectFill(
-  project: ScheduleProject,
-  subjectId: string,
-  index: number,
-  theme: WallpaperThemeTokens,
-): string {
-  const colors = project.design.subjectColors;
-  if (colors.mode === "single" && colors.singleColor) return colors.singleColor;
-  if (colors.mode === "per-subject" && colors.bySubjectId[subjectId]) {
-    return colors.bySubjectId[subjectId]!;
-  }
-  return theme.subjectPalette[index % theme.subjectPalette.length]!;
-}
-
 function darkenHex(color: string): string {
   const match = /^#([0-9a-f]{6})$/i.exec(color);
   if (!match) return color;
@@ -467,6 +454,7 @@ function shownFieldsForBlock(
   if (family === "phonePortrait") {
     const textWidth = width - padding * 2;
     const room = occurrence.room.trim();
+    const professor = occurrence.professor.trim();
     const time = blockTime(
       occurrence.startTime,
       occurrence.endTime,
@@ -490,9 +478,36 @@ function shownFieldsForBlock(
       used + typography.time * 1.16 + 10 <= available
     ) {
       shown.time = true;
+      used += typography.time * 1.16;
+    }
+    const fittedProfessor = fitText({
+      text: professor,
+      width: textWidth,
+      preferredFontSize: typography.professor,
+      minimumFontSize: Math.max(8, typography.professor - 3),
+      maximumLines: 2,
+    });
+    if (
+      fields.professor &&
+      professor &&
+      !fittedProfessor.truncated &&
+      canAdd(
+        fittedProfessor.fontSize *
+          fittedProfessor.lineHeight *
+          fittedProfessor.lines,
+        typography.professor * 6.5,
+      )
+    ) {
+      shown.professor = true;
     }
     return {
-      tier: shown.time ? "roomy" : shown.room ? "medium" : "code-only",
+      tier: shown.professor
+        ? "roomy"
+        : shown.room
+          ? "medium"
+          : shown.time
+            ? "compact"
+            : "code-only",
       shown,
     };
   }
@@ -729,20 +744,17 @@ function drawBlock(
     fillColor: string,
     fontWeight: 400 | 500 | 600 | 700,
     fit = true,
+    maximumLines = 1,
+    requireComplete = false,
   ) => {
     const lineHeightFactor = family === "square" ? 1.1 : 1.2;
-    const height = Math.min(
-      fontSize * lineHeightFactor,
-      Math.max(0, textBottom - cursor),
-    );
-    if (!text || height <= 0) return;
     const fitted = fit
       ? fitText({
           text,
           width: textWidth,
           preferredFontSize: fontSize,
           minimumFontSize: Math.max(8, fontSize - 3),
-          maximumLines: 1,
+          maximumLines,
         })
       : {
           text,
@@ -751,6 +763,13 @@ function drawBlock(
           lines: 1,
           truncated: false,
         };
+    if (requireComplete && fitted.truncated) return;
+    const fittedHeight =
+      maximumLines > 1
+        ? fitted.fontSize * fitted.lineHeight * fitted.lines
+        : fontSize * lineHeightFactor;
+    const height = Math.min(fittedHeight, Math.max(0, textBottom - cursor));
+    if (!text || height <= 0) return;
     nodes.push(
       textNode(
         nodeId,
@@ -763,7 +782,8 @@ function drawBlock(
         {
           height,
           fontWeight,
-          wrap: "none",
+          lineHeight: fitted.lineHeight,
+          wrap: fitted.lines > 1 ? "word" : "none",
           verticalAlign: "middle",
         },
       ),
@@ -816,6 +836,9 @@ function drawBlock(
       typography.professor,
       theme.gridSupport,
       400,
+      true,
+      family === "phonePortrait" ? 2 : 1,
+      family === "phonePortrait",
     );
   }
   blockLayout.push({
@@ -867,9 +890,6 @@ export function buildGridRenderModel(
   );
   const subjects = new Map(
     project.schedule.map((subject) => [subject.id, subject]),
-  );
-  const subjectOrder = new Map(
-    project.schedule.map((subject, index) => [subject.id, index]),
   );
   const timeRange = resolveGridTimeRange(project.schedule);
   const startMinutes = timeToMinutes(timeRange.startTime)!;
@@ -1112,12 +1132,12 @@ export function buildGridRenderModel(
           typography,
           metrics,
           theme,
-          fill: subjectFill(
-            project,
-            subject.id,
-            subjectOrder.get(subject.id) ?? 0,
-            theme,
-          ),
+          fill: resolveSubjectColor({
+            subjectId: subject.id,
+            subjects: project.schedule,
+            automaticPalette: theme.subjectPalette,
+            configuration: project.design.subjectColors,
+          }),
         });
       }
     }

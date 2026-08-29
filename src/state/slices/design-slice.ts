@@ -9,7 +9,23 @@ import { createCustomPalette } from "@/domain/render/themes/registry";
 import {
   initializeBackgroundMode,
   resolveWallpaperTheme,
+  seedCustomSubjectColors,
+  syncBackgroundToPalette,
 } from "@/domain/render";
+
+function automaticSubjectPalette(
+  project: Parameters<StoreContext["commit"]>[1] extends (
+    value: infer P,
+  ) => unknown
+    ? P
+    : never,
+) {
+  return resolveWallpaperTheme(
+    project.design.themeId,
+    project.design.layoutId,
+    project.design.customPalette,
+  ).subjectPalette;
+}
 
 function withPhotoCollection(
   project: Parameters<StoreContext["commit"]>[1] extends (
@@ -87,12 +103,21 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
                 ? "clean-slate"
                 : project.design.themeId,
             );
+          const theme = resolveWallpaperTheme(
+            "custom",
+            project.design.layoutId,
+            customPalette,
+          );
           return {
             ...project,
             design: {
               ...project.design,
               themeId: "custom",
               customPalette,
+              background: syncBackgroundToPalette(
+                project.design.background,
+                theme,
+              ),
               templateModified:
                 project.design.baseTemplateId !== null ||
                 project.design.templateModified,
@@ -102,7 +127,27 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
         return;
       }
       if (!themeById.has(value)) return;
-      edit("Change color palette", "themeId", value);
+      context.commit("Change color palette", (project) => {
+        const theme = resolveWallpaperTheme(
+          value,
+          project.design.layoutId,
+          project.design.customPalette,
+        );
+        return {
+          ...project,
+          design: {
+            ...project.design,
+            themeId: value,
+            background: syncBackgroundToPalette(
+              project.design.background,
+              theme,
+            ),
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+        };
+      });
     },
     setCustomPaletteColor(role, color) {
       const parsedColor = opaqueHexColorSchema.safeParse(color);
@@ -114,12 +159,22 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
             : createCustomPalette(project.design.themeId);
         if (!basePalette || basePalette[role] === parsedColor.data)
           return project;
+        const customPalette = { ...basePalette, [role]: parsedColor.data };
+        const theme = resolveWallpaperTheme(
+          "custom",
+          project.design.layoutId,
+          customPalette,
+        );
         return {
           ...project,
           design: {
             ...project.design,
             themeId: "custom",
-            customPalette: { ...basePalette, [role]: parsedColor.data },
+            customPalette,
+            background:
+              role === "canvas"
+                ? syncBackgroundToPalette(project.design.background, theme)
+                : project.design.background,
             templateModified:
               project.design.baseTemplateId !== null ||
               project.design.templateModified,
@@ -134,11 +189,21 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
           !project.design.customPalette
         )
           return project;
+        const themeId = project.design.customPalette.basedOnPaletteId;
+        const theme = resolveWallpaperTheme(
+          themeId,
+          project.design.layoutId,
+          project.design.customPalette,
+        );
         return {
           ...project,
           design: {
             ...project.design,
-            themeId: project.design.customPalette.basedOnPaletteId,
+            themeId,
+            background: syncBackgroundToPalette(
+              project.design.background,
+              theme,
+            ),
             templateModified:
               project.design.baseTemplateId !== null ||
               project.design.templateModified,
@@ -298,22 +363,62 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
       }));
     },
     setSubjectColorMode(mode) {
-      context.commit("Change subject palette", (project) => ({
+      context.commit("Change subject colors", (project) => {
+        const palette = automaticSubjectPalette(project);
+        const current = project.design.subjectColors;
+        const subjectColors = {
+          ...current,
+          mode,
+          singleColor:
+            mode === "single" && current.singleColor === null
+              ? (palette[0] ?? "#FFFFFF")
+              : current.singleColor,
+          bySubjectId:
+            mode === "custom"
+              ? seedCustomSubjectColors({
+                  subjects: project.schedule,
+                  automaticPalette: palette,
+                  existing: current.bySubjectId,
+                })
+              : current.bySubjectId,
+        };
+        return {
+          ...project,
+          design: {
+            ...project.design,
+            subjectColors,
+            templateModified:
+              project.design.baseTemplateId !== null ||
+              project.design.templateModified,
+          },
+        };
+      });
+    },
+    setSingleSubjectColor(color) {
+      const parsedColor = opaqueHexColorSchema.safeParse(color);
+      if (!parsedColor.success) return;
+      context.commit("Change single subject color", (project) => ({
         ...project,
         design: {
           ...project.design,
-          subjectColors: { ...project.design.subjectColors, mode },
+          subjectColors: {
+            ...project.design.subjectColors,
+            singleColor: parsedColor.data,
+          },
           templateModified:
             project.design.baseTemplateId !== null ||
             project.design.templateModified,
         },
       }));
     },
-    setSubjectColor(subjectId, color) {
-      context.commit("Change subject color", (project) => {
+    setCustomSubjectColor(subjectId, color) {
+      const parsedColor = opaqueHexColorSchema.safeParse(color);
+      if (!parsedColor.success) return;
+      context.commit("Change custom subject color", (project) => {
+        if (!project.schedule.some((subject) => subject.id === subjectId))
+          return project;
         const bySubjectId = { ...project.design.subjectColors.bySubjectId };
-        if (color === null) delete bySubjectId[subjectId];
-        else bySubjectId[subjectId] = color;
+        bySubjectId[subjectId] = parsedColor.data;
         return {
           ...project,
           design: {
@@ -325,6 +430,24 @@ export function createDesignSlice(context: StoreContext): DesignSlice {
           },
         };
       });
+    },
+    resetCustomSubjectColors() {
+      context.commit("Reset custom subject colors", (project) => ({
+        ...project,
+        design: {
+          ...project.design,
+          subjectColors: {
+            ...project.design.subjectColors,
+            bySubjectId: seedCustomSubjectColors({
+              subjects: project.schedule,
+              automaticPalette: automaticSubjectPalette(project),
+            }),
+          },
+          templateModified:
+            project.design.baseTemplateId !== null ||
+            project.design.templateModified,
+        },
+      }));
     },
     setBackground: (value) => edit("Change background", "background", value),
     setBackgroundMode(mode) {

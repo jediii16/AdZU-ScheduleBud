@@ -4,6 +4,72 @@ import { selectActiveProject } from "@/state/selectors";
 import { createTestStore } from "./helpers";
 
 describe("background state", () => {
+  it("carries the selected palette canvas into Solid, Gradient, and Pattern", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+
+    store.getState().setBackgroundMode("solid");
+    store.getState().setBackgroundMode("gradient");
+    let background = selectActiveProject(store.getState())!.design.background;
+    store.getState().setBackground({
+      ...background,
+      gradient: {
+        ...background.gradient!,
+        color2: "#445566",
+        direction: 90,
+      },
+    });
+    store.getState().setBackgroundMode("pattern");
+    background = selectActiveProject(store.getState())!.design.background;
+    if (background.pattern?.type !== "dots")
+      throw new Error("Expected the default dots pattern");
+    store.getState().setBackground({
+      ...background,
+      pattern: { ...background.pattern, color: "#123456" },
+    });
+
+    store.getState().setTheme("matcha-study");
+    const synced = selectActiveProject(store.getState())!.design.background;
+    expect(synced.solid?.color).toBe("#F5F3E9");
+    expect(synced.gradient).toEqual({
+      color1: "#F5F3E9",
+      color2: "#445566",
+      direction: 90,
+    });
+    expect(synced.pattern).toMatchObject({
+      backgroundColor: "#F5F3E9",
+      color: "#123456",
+    });
+
+    store.getState().setBackgroundMode("solid");
+    expect(
+      selectActiveProject(store.getState())!.design.background.solid?.color,
+    ).toBe("#F5F3E9");
+    store.getState().setBackgroundMode("gradient");
+    expect(
+      selectActiveProject(store.getState())!.design.background.gradient?.color1,
+    ).toBe("#F5F3E9");
+    store.getState().setBackgroundMode("pattern");
+    expect(
+      selectActiveProject(store.getState())!.design.background.pattern
+        ?.backgroundColor,
+    ).toBe("#F5F3E9");
+  });
+
+  it("keeps custom Canvas edits synchronized with configured backgrounds", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+    store.getState().setBackgroundMode("solid");
+    store.getState().setBackgroundMode("gradient");
+    store.getState().setBackgroundMode("pattern");
+
+    store.getState().setCustomPaletteColor("canvas", "#DDEECC");
+    const background = selectActiveProject(store.getState())!.design.background;
+    expect(background.solid?.color).toBe("#DDEECC");
+    expect(background.gradient?.color1).toBe("#DDEECC");
+    expect(background.pattern?.backgroundColor).toBe("#DDEECC");
+  });
+
   it("changes modes independently and restores their configured values", () => {
     const { store } = createTestStore();
     store.getState().createProject();

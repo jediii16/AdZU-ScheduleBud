@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { DesignStudioPanel } from "@/features/studio/studio-panels";
@@ -6,6 +6,94 @@ import { resolveLayoutDetailCapabilities } from "@/domain/render";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("layout design inspector", () => {
+  it("offers compact Subject Colors modes and custom controls only for Cards and Grid", () => {
+    const project = visualScheduleProject();
+    const onMode = vi.fn();
+    const { rerender } = render(
+      <DesignStudioPanel
+        design={project.design}
+        subjects={project.schedule}
+        visibleFields={project.design.visibleFields}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities(
+          "cards",
+          project.deviceVariants[0]!,
+        )}
+        onSubjectColorMode={onMode}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Subject Colors" }),
+    ).toBeVisible();
+    const automatic = screen.getByRole("radio", { name: "Automatic" });
+    expect(automatic).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(
+      within(
+        screen.getByRole("radiogroup", { name: "Subject color mode" }),
+      ).getByRole("radio", { name: "Custom" }),
+    );
+    expect(onMode).toHaveBeenCalledWith("custom");
+
+    rerender(
+      <DesignStudioPanel
+        design={{
+          ...project.design,
+          subjectColors: {
+            mode: "custom",
+            singleColor: null,
+            bySubjectId: {
+              [project.schedule[0]!.id]: "#123456",
+              [project.schedule[2]!.id]: "#654321",
+            },
+          },
+        }}
+        subjects={project.schedule}
+        visibleFields={project.design.visibleFields}
+        activeLayout="grid"
+        detailCapabilities={resolveLayoutDetailCapabilities(
+          "grid",
+          project.deviceVariants[0]!,
+        )}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("CS.412 HEX")).toHaveValue("#123456");
+    expect(screen.queryByLabelText("THESIS1 HEX")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Reset custom colors" }),
+    ).toBeVisible();
+
+    rerender(
+      <DesignStudioPanel
+        design={project.design}
+        subjects={project.schedule}
+        visibleFields={project.design.visibleFields}
+        activeLayout="minimal"
+        detailCapabilities={resolveLayoutDetailCapabilities(
+          "minimal",
+          project.deviceVariants[0]!,
+        )}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Subject Colors" }),
+    ).toBeNull();
+  });
+
   it("selects a compact paired typography option with a non-color selected state", () => {
     const project = visualScheduleProject();
     const onTypography = vi.fn();
@@ -208,7 +296,9 @@ describe("layout design inspector", () => {
       name: "Girlfriend's Choice",
     });
     const pinkDiary = screen.getByRole("radio", { name: "Pink Diary" });
-    const custom = screen.getByRole("radio", { name: "Custom" });
+    const custom = within(
+      screen.getByRole("radiogroup", { name: "Color palette" }),
+    ).getByRole("radio", { name: "Custom" });
     expect(
       screen.getByRole("heading", { name: "Color Palette" }),
     ).toBeVisible();
@@ -333,7 +423,9 @@ describe("layout design inspector", () => {
       />,
     );
     expect(screen.getByText("Based on Pink Diary")).toBeVisible();
-    expect(screen.getByLabelText("Pink Diary subject palette")).toBeVisible();
+    expect(
+      screen.getByLabelText("Pink Diary automatic subject colors"),
+    ).toBeVisible();
     fireEvent.click(screen.getByText("Customize palette"));
     fireEvent.click(
       screen.getByRole("button", { name: "Reset to Pink Diary" }),
@@ -361,7 +453,9 @@ describe("layout design inspector", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Pink Diary subject palette")).toBeVisible();
+    expect(
+      screen.getByLabelText("Pink Diary automatic subject colors"),
+    ).toBeVisible();
     rerender(
       <DesignStudioPanel
         {...props}
@@ -369,7 +463,9 @@ describe("layout design inspector", () => {
         detailCapabilities={resolveLayoutDetailCapabilities("grid", variant)}
       />,
     );
-    expect(screen.getByLabelText("Pink Diary subject palette")).toBeVisible();
+    expect(
+      screen.getByLabelText("Pink Diary automatic subject colors"),
+    ).toBeVisible();
 
     for (const layoutId of ["minimal", "planner", "photo"] as const) {
       rerender(
@@ -382,7 +478,9 @@ describe("layout design inspector", () => {
           )}
         />,
       );
-      expect(screen.queryByLabelText("Pink Diary subject palette")).toBeNull();
+      expect(
+        screen.queryByLabelText("Pink Diary automatic subject colors"),
+      ).toBeNull();
     }
   });
 
@@ -407,7 +505,7 @@ describe("layout design inspector", () => {
     );
 
     expect(
-      screen.getByLabelText("Girlfriend's Choice subject palette"),
+      screen.getByLabelText("Girlfriend's Choice automatic subject colors"),
     ).toBeVisible();
     rerender(
       <DesignStudioPanel
@@ -417,7 +515,7 @@ describe("layout design inspector", () => {
       />,
     );
     expect(
-      screen.getByLabelText("Girlfriend's Choice subject palette"),
+      screen.getByLabelText("Girlfriend's Choice automatic subject colors"),
     ).toBeVisible();
 
     for (const layoutId of ["minimal", "planner", "photo"] as const) {
@@ -432,7 +530,7 @@ describe("layout design inspector", () => {
         />,
       );
       expect(
-        screen.queryByLabelText("Girlfriend's Choice subject palette"),
+        screen.queryByLabelText("Girlfriend's Choice automatic subject colors"),
       ).toBeNull();
     }
   });
@@ -457,7 +555,9 @@ describe("layout design inspector", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Matcha Study subject palette")).toBeVisible();
+    expect(
+      screen.getByLabelText("Matcha Study automatic subject colors"),
+    ).toBeVisible();
     rerender(
       <DesignStudioPanel
         {...props}
@@ -465,7 +565,9 @@ describe("layout design inspector", () => {
         detailCapabilities={resolveLayoutDetailCapabilities("grid", variant)}
       />,
     );
-    expect(screen.getByLabelText("Matcha Study subject palette")).toBeVisible();
+    expect(
+      screen.getByLabelText("Matcha Study automatic subject colors"),
+    ).toBeVisible();
 
     for (const layoutId of ["minimal", "planner", "photo"] as const) {
       rerender(
@@ -479,7 +581,7 @@ describe("layout design inspector", () => {
         />,
       );
       expect(
-        screen.queryByLabelText("Matcha Study subject palette"),
+        screen.queryByLabelText("Matcha Study automatic subject colors"),
       ).toBeNull();
     }
   });
@@ -501,7 +603,9 @@ describe("layout design inspector", () => {
       <DesignStudioPanel {...props} activeLayout="cards" />,
     );
 
-    expect(screen.getByLabelText("Midnight subject palette")).toBeVisible();
+    expect(
+      screen.getByLabelText("Midnight automatic subject colors"),
+    ).toBeVisible();
     rerender(
       <DesignStudioPanel
         {...props}
@@ -509,7 +613,9 @@ describe("layout design inspector", () => {
         detailCapabilities={resolveLayoutDetailCapabilities("minimal", variant)}
       />,
     );
-    expect(screen.queryByLabelText("Midnight subject palette")).toBeNull();
+    expect(
+      screen.queryByLabelText("Midnight automatic subject colors"),
+    ).toBeNull();
   });
 
   it("keeps Planner in the compact selector and hides Subject Palette", () => {
@@ -531,7 +637,9 @@ describe("layout design inspector", () => {
     const planner = screen.getByRole("radio", { name: "Planner" });
     expect(planner).toHaveAttribute("aria-checked", "true");
     expect(planner).toHaveClass("min-w-0", "px-1");
-    expect(screen.queryByLabelText("Clean Slate subject palette")).toBeNull();
+    expect(
+      screen.queryByLabelText("Clean Slate automatic subject colors"),
+    ).toBeNull();
   });
 
   it("selects Photo, shows its local asset action, and hides Subject Palette", () => {
@@ -563,6 +671,19 @@ describe("layout design inspector", () => {
     );
     expect(screen.getByRole("radio", { name: "split" })).toBeVisible();
     expect(screen.getByRole("radio", { name: "polaroid" })).toBeVisible();
+    const compositionHeading = screen.getByRole("heading", {
+      name: "Composition",
+    });
+    const photosHeading = screen.getByRole("heading", { name: "Photos" });
+    const styleHeading = screen.getByRole("heading", { name: "Style" });
+    expect(
+      compositionHeading.compareDocumentPosition(photosHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      photosHeading.compareDocumentPosition(styleHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "split" }));
     expect(onComposition).toHaveBeenCalledWith("split");
     expect(screen.getByText("Previewing an empty photo frame")).toBeVisible();
@@ -570,7 +691,9 @@ describe("layout design inspector", () => {
       "accept",
       "image/png,image/jpeg,image/webp",
     );
-    expect(screen.queryByLabelText("Clean Slate subject palette")).toBeNull();
+    expect(
+      screen.queryByLabelText("Clean Slate automatic subject colors"),
+    ).toBeNull();
   });
 
   it("preserves the original Photo filename and shows the adjust helper", () => {
@@ -597,6 +720,75 @@ describe("layout design inspector", () => {
     expect(screen.getByText("Drag the photo to reposition")).toBeVisible();
     expect(screen.getByLabelText("Photo composition")).toBeVisible();
     expect(screen.queryByText("internal-asset-id")).toBeNull();
+  });
+
+  it("shows visual proof and metadata for a received photo", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const { container } = render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photos={[
+          {
+            id: "photo-preview",
+            filename: "campus-sunset.png",
+            caption: "",
+            previewUrl: "data:image/png;base64,iVBORw0KGgo=",
+            mimeType: "image/png",
+            size: 2048,
+            width: 1200,
+            height: 800,
+          },
+        ]}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("campus-sunset.png")).toBeVisible();
+    expect(screen.getByText("PNG · 2.0 KB")).toBeVisible();
+    expect(screen.getByText("1200 × 800 px")).toBeVisible();
+    expect(screen.getByText("Ready")).toBeVisible();
+    expect(
+      container.querySelector('img[src^="data:image/png"]'),
+    ).not.toBeNull();
+  });
+
+  it("reacts to photo drag-and-drop and receives the dropped file", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const onPhotoFile = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        onPhotoFile={onPhotoFile}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    const zone = screen.getByLabelText("Add your main photo drop zone");
+    const file = new File(["image"], "friends.webp", {
+      type: "image/webp",
+    });
+
+    fireEvent.dragEnter(zone, { dataTransfer: { files: [] } });
+    expect(zone).toHaveAttribute("data-dragging", "true");
+    expect(screen.getByText("Release to add this image")).toBeVisible();
+    fireEvent.drop(zone, { dataTransfer: { files: [file] } });
+    expect(onPhotoFile).toHaveBeenCalledWith(file, "replace-primary");
+    expect(zone).toHaveAttribute("data-dragging", "false");
   });
 
   it("explains the default four-frame Polaroid placeholder", () => {

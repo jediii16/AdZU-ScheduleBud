@@ -172,13 +172,32 @@ body {
   button:not(:disabled),
   a[href],
   [role="button"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
   summary,
+  select:not(:disabled),
+  input[type="color"]:not(:disabled),
+  input[type="file"]:not(:disabled),
   input[type="checkbox"]:not(:disabled),
   input[type="radio"]:not(:disabled),
   input[type="range"]:not(:disabled) {
     cursor: pointer;
   }
+  input:not([type]),
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="text"],
+  input[type="time"],
+  input[type="url"],
+  textarea {
+    cursor: text;
+  }
   button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
   [aria-disabled="true"] {
     cursor: not-allowed;
   }
@@ -186,7 +205,7 @@ body {
 
 @layer components {
   .sb-control {
-    @apply min-h-10 w-full cursor-text rounded-md border border-input bg-surface-elevated px-3 text-sm text-foreground shadow-none transition-colors duration-150 placeholder:text-text-muted hover:border-text-muted/55 focus-visible:border-brand/55 focus-visible:ring-brand/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground motion-reduce:transition-none;
+    @apply min-h-10 w-full rounded-md border border-input bg-surface-elevated px-3 text-sm text-foreground shadow-none transition-colors duration-150 placeholder:text-text-muted hover:border-text-muted/55 focus-visible:border-brand/55 focus-visible:ring-brand/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground motion-reduce:transition-none;
   }
   .sb-label {
     @apply mb-1.5 block text-sm font-semibold text-foreground;
@@ -201,7 +220,7 @@ body {
     @apply font-heading text-lg font-bold tracking-[-0.01em] text-foreground;
   }
   .sb-inspector-major-section {
-    @apply border-t border-border-muted pt-4 pb-3 last:pb-0;
+    @apply border-t border-border-muted pt-4 pb-3 first:border-t-0 first:pt-0 last:pb-0;
   }
   .sb-inspector-heading {
     @apply font-heading text-sm font-bold tracking-[-0.005em] text-foreground;
@@ -217,5 +236,73 @@ body {
   }
   .sb-check {
     @apply size-4 shrink-0 cursor-pointer accent-[var(--brand)] focus-visible:ring-brand/30 focus-visible:ring-offset-1;
+  }
+  .sb-inspector-group {
+    @apply mt-3 rounded-lg border border-border-muted bg-card/80 p-3 shadow-[0_1px_2px_rgba(23,32,51,0.035)];
+  }
+  .sb-inspector-group-header {
+    @apply mb-1 flex items-start gap-2 border-b border-border-muted pb-3;
+  }
+  .sb-inspector-group > .sb-inspector-major-section {
+    @apply border-border-muted;
+  }
+  .sb-dropzone {
+    @apply relative border-2 border-dashed border-input bg-card transition-[background-color,box-shadow,transform] duration-200 motion-reduce:transition-none;
+  }
+  .sb-dropzone[data-dragging="true"] {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--accent), var(--accent)) padding-box,
+      repeating-linear-gradient(
+          90deg,
+          var(--brand) 0 12px,
+          transparent 12px 20px
+        )
+        0 0 / 200% 2px no-repeat,
+      repeating-linear-gradient(
+          180deg,
+          var(--brand) 0 12px,
+          transparent 12px 20px
+        )
+        100% 0 / 2px 200% no-repeat,
+      repeating-linear-gradient(90deg, transparent 0 8px, var(--brand) 8px 20px)
+        100% 100% / 200% 2px no-repeat,
+      repeating-linear-gradient(
+          180deg,
+          transparent 0 8px,
+          var(--brand) 8px 20px
+        )
+        0 100% / 2px 200% no-repeat;
+    box-shadow:
+      0 0 0 4px color-mix(in oklch, var(--brand) 13%, transparent),
+      0 16px 36px color-mix(in oklch, var(--brand) 18%, transparent);
+    transform: translateY(-2px);
+    animation: sb-dash-march 0.75s linear infinite;
+  }
+  .sb-dropzone[data-dragging="true"] .sb-dropzone-icon {
+    animation: sb-dropzone-float 0.8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes sb-dash-march {
+  to {
+    background-position:
+      40px 0,
+      100% 40px,
+      calc(100% - 40px) 100%,
+      0 calc(100% - 40px);
+  }
+}
+
+@keyframes sb-dropzone-float {
+  to {
+    transform: translateY(-4px) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-dropzone[data-dragging="true"],
+  .sb-dropzone[data-dragging="true"] .sb-dropzone-icon {
+    animation: none;
   }
 }

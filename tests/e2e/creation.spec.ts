@@ -524,7 +524,9 @@ test("mobile Studio keeps the artboard visible and uses bottom tool panels", asy
   await createStudioSchedule(page, "MOBILE 1");
   await expect(page.getByTestId("artboard-preview")).toBeVisible();
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Device" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Device", exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Vertical schedule position")).toBeVisible();
   expect(
     await page.evaluate(
@@ -649,9 +651,11 @@ test("Match My Screen uses dimensions locally and persists a guide only when req
   await expect(
     page.getByRole("button", { name: "Upload screenshot" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Screen screenshot")).toHaveClass(/sr-only/);
+  await expect(
+    page.getByLabel("Screen screenshot", { exact: true }),
+  ).toHaveClass(/sr-only/);
   await page
-    .getByLabel("Screen screenshot")
+    .getByLabel("Screen screenshot", { exact: true })
     .setInputFiles(
       resolve(
         "tests/e2e/creation.spec.ts-snapshots/phone-cards-clean-5-days-title-target-chromium-win32.png",
@@ -781,20 +785,28 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
     "Thu",
     "Fri",
   ]);
-  await expect(page.getByLabel("Clean Slate subject palette")).toBeVisible();
+  await expect(
+    page.getByLabel("Clean Slate automatic subject colors"),
+  ).toBeVisible();
   await switchToMinimal(page);
-  await expect(page.getByLabel("Clean Slate subject palette")).toHaveCount(0);
+  await expect(
+    page.getByLabel("Clean Slate automatic subject colors"),
+  ).toHaveCount(0);
 
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(
     page.getByRole("radio", { name: "Cards", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByLabel("Clean Slate subject palette")).toBeVisible();
+  await expect(
+    page.getByLabel("Clean Slate automatic subject colors"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Redo" }).click();
   await expect(
     page.getByRole("radio", { name: "Minimal", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByLabel("Clean Slate subject palette")).toHaveCount(0);
+  await expect(
+    page.getByLabel("Clean Slate automatic subject colors"),
+  ).toHaveCount(0);
 
   await page.getByLabel("Show title").uncheck();
   await page.getByLabel("Show title").check();
@@ -1114,7 +1126,7 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   await expect(page.getByText("Always shown", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Larger Grid devices only", { exact: true }),
-  ).toHaveCount(2);
+  ).toHaveCount(1);
   const detailsGroup = page.getByRole("group", { name: "Class details" });
   const timePosition = await detailsGroup
     .getByText("Time", { exact: true })
@@ -1132,9 +1144,8 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   await detailsGroup.getByText("Room", { exact: true }).click();
   await expect(page.getByLabel("Room")).toBeChecked();
   await page.getByLabel("Time").check();
-  await expect(page.getByRole("checkbox", { name: "Professor" })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("checkbox", { name: "Professor" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Professor" })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Section" })).toHaveCount(0);
 
   const preview = page.getByTestId("artboard-preview");

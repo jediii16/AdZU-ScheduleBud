@@ -274,6 +274,12 @@ describe("Portal creation", () => {
   it("rejects invalid extensions and oversize files with student-facing feedback", async () => {
     const user = userEvent.setup();
     renderWithStore(<PortalCreation />);
+    const dropZone = screen.getByLabelText("XLSX upload drop zone");
+    fireEvent.dragEnter(dropZone, { dataTransfer: { files: [] } });
+    expect(dropZone).toHaveAttribute("data-dragging", "true");
+    expect(screen.getByText("Release to import")).toBeVisible();
+    fireEvent.dragLeave(dropZone, { dataTransfer: { files: [] } });
+    expect(dropZone).toHaveAttribute("data-dragging", "false");
     const input = document.querySelector(
       'input[type="file"]',
     ) as HTMLInputElement;
@@ -282,6 +288,8 @@ describe("Portal creation", () => {
     });
     fireEvent.change(input, { target: { files: [invalid] } });
     expect(await screen.findByText(/must be .xlsx/i)).toBeVisible();
+    expect(screen.getByText("schedule.pdf")).toBeVisible();
+    expect(screen.getByText(/PDF file/i)).toBeVisible();
     const oversize = new File(["x"], "schedule.xlsx");
     Object.defineProperty(oversize, "size", { value: 5 * 1024 * 1024 + 1 });
     fireEvent.change(input, { target: { files: [oversize] } });
@@ -304,6 +312,9 @@ describe("Portal creation", () => {
         name: "Check the imported classes.",
       }),
     ).toBeVisible();
+    expect(screen.getByText("portal-normal.xlsx")).toBeVisible();
+    expect(screen.getByText(/XLSX workbook/i)).toBeVisible();
+    expect(screen.getByText("File received and ready to review")).toBeVisible();
     expect(store.getState().activeProjectId).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Cancel import" }));
     expect(store.getState().activeProjectId).toBeNull();

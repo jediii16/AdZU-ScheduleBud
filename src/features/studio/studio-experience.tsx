@@ -136,6 +136,10 @@ export function StudioExperience() {
     role: CustomPaletteColorRole;
     color: string;
   } | null>(null);
+  const [subjectColorPreview, setSubjectColorPreview] = useState<{
+    subjectId: string | null;
+    color: string;
+  } | null>(null);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [loadedGuide, setLoadedGuide] = useState<{
     id: string;
@@ -436,23 +440,46 @@ export function StudioExperience() {
     [loadedPhotos, photoAssetIds],
   );
   const previewProject = useMemo(() => {
-    if (!project || !palettePreview) return project;
-    const customPalette =
-      project.design.themeId === "custom"
-        ? (project.design.customPalette ?? createCustomPalette("clean-slate"))
-        : createCustomPalette(project.design.themeId);
-    return {
-      ...project,
-      design: {
-        ...project.design,
-        themeId: "custom" as const,
-        customPalette: {
-          ...customPalette,
-          [palettePreview.role]: palettePreview.color,
+    if (!project) return project;
+    let next = project;
+    if (palettePreview) {
+      const customPalette =
+        project.design.themeId === "custom"
+          ? (project.design.customPalette ?? createCustomPalette("clean-slate"))
+          : createCustomPalette(project.design.themeId);
+      next = {
+        ...next,
+        design: {
+          ...next.design,
+          themeId: "custom" as const,
+          customPalette: {
+            ...customPalette,
+            [palettePreview.role]: palettePreview.color,
+          },
         },
-      },
-    };
-  }, [palettePreview, project]);
+      };
+    }
+    if (subjectColorPreview) {
+      const current = next.design.subjectColors;
+      next = {
+        ...next,
+        design: {
+          ...next.design,
+          subjectColors:
+            subjectColorPreview.subjectId === null
+              ? { ...current, singleColor: subjectColorPreview.color }
+              : {
+                  ...current,
+                  bySubjectId: {
+                    ...current.bySubjectId,
+                    [subjectColorPreview.subjectId]: subjectColorPreview.color,
+                  },
+                },
+        },
+      };
+    }
+    return next;
+  }, [palettePreview, project, subjectColorPreview]);
   const renderResult = useMemo(
     () =>
       previewProject && activeVariant && target
@@ -995,9 +1022,49 @@ export function StudioExperience() {
           setPalettePreview(null);
         }}
         onResetCustomPalette={() => store.getState().resetCustomPalette()}
+        subjects={project.schedule}
+        onSubjectColorMode={(mode) => {
+          setSubjectColorPreview(null);
+          store.getState().setSubjectColorMode(mode);
+        }}
+        onSingleSubjectColor={(color) => {
+          setSubjectColorPreview(null);
+          store.getState().setSingleSubjectColor(color);
+        }}
+        onCustomSubjectColor={(subjectId, color) => {
+          setSubjectColorPreview(null);
+          store.getState().setCustomSubjectColor(subjectId, color);
+        }}
+        onSubjectColorPickerStart={() => setSubjectColorPreview(null)}
+        onSubjectColorPickerPreview={(subjectId, color) =>
+          startTransition(() => setSubjectColorPreview({ subjectId, color }))
+        }
+        onSubjectColorPickerEnd={(subjectId, color) => {
+          if (color !== null) {
+            if (subjectId === null)
+              store.getState().setSingleSubjectColor(color);
+            else store.getState().setCustomSubjectColor(subjectId, color);
+          }
+          setSubjectColorPreview(null);
+        }}
+        onResetCustomSubjectColors={() =>
+          store.getState().resetCustomSubjectColors()
+        }
         backgroundImageFilename={
           loadedBackground?.id === backgroundAssetId
             ? loadedBackground.asset.filename
+            : undefined
+        }
+        backgroundImageAsset={
+          loadedBackground?.id === backgroundAssetId
+            ? {
+                filename: loadedBackground.asset.filename ?? "Background image",
+                previewUrl: loadedBackground.image.src,
+                mimeType: loadedBackground.asset.mimeType,
+                size: loadedBackground.asset.blob.size,
+                width: loadedBackground.asset.width,
+                height: loadedBackground.asset.height,
+              }
             : undefined
         }
         backgroundImageAdjusting={backgroundAdjusting}
@@ -1061,12 +1128,23 @@ export function StudioExperience() {
           store.getState().setVisibleField(field, visible);
         }}
         onDayVisibility={(value) => store.getState().setDayVisibility(value)}
-        photos={photoAssetIds.map((assetId) => ({
-          id: assetId,
-          filename:
-            loadedPhotos.get(assetId)?.asset.filename ?? "Loading photo…",
-          caption: project.design.photoCaptions[assetId] ?? "",
-        }))}
+        photos={photoAssetIds.map((assetId) => {
+          const loaded = loadedPhotos.get(assetId);
+          return {
+            id: assetId,
+            filename: loaded?.asset.filename ?? "Loading photo…",
+            caption: project.design.photoCaptions[assetId] ?? "",
+            ...(loaded
+              ? {
+                  previewUrl: loaded.image.src,
+                  mimeType: loaded.asset.mimeType,
+                  size: loaded.asset.blob.size,
+                  width: loaded.asset.width,
+                  height: loaded.asset.height,
+                }
+              : {}),
+          };
+        })}
         activePhotoId={activePhotoId}
         photoAdjusting={photoAdjusting}
         photoComposition={activePhotoComposition}
@@ -1443,12 +1521,9 @@ export function StudioExperience() {
         <aside
           aria-label="Studio inspector"
           data-testid="studio-inspector"
-          className={`${editor.inspectorOpen ? "absolute" : "hidden"} inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 min-h-0 max-h-[48dvh] [overflow-anchor:none] overscroll-contain overflow-y-auto border-t border-border bg-surface-elevated p-5 shadow-[0_-8px_24px_rgba(23,32,51,0.08)] md:inset-x-auto md:right-3 md:bottom-16 md:w-[22rem] md:rounded-md md:border lg:static lg:block lg:h-full lg:max-h-full lg:w-[20rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:shadow-none`}
+          className={`${editor.inspectorOpen ? "absolute" : "hidden"} inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 min-h-0 max-h-[72dvh] [overflow-anchor:none] overscroll-contain overflow-y-auto rounded-t-xl border-t border-border bg-surface-elevated p-5 shadow-[0_-12px_32px_rgba(23,32,51,0.12)] md:inset-x-auto md:right-3 md:bottom-16 md:max-h-[70dvh] md:w-[23rem] md:rounded-lg md:border lg:static lg:block lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-r-0 lg:border-l lg:shadow-none`}
         >
-          <div className="mb-4 flex items-center justify-between border-b border-border pb-3 lg:hidden">
-            <p className="font-heading font-bold capitalize">
-              {editor.activeSection}
-            </p>
+          <div className="mb-1 flex justify-end lg:hidden">
             <Button
               aria-label="Close inspector"
               variant="ghost"

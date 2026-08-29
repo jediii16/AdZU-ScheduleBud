@@ -11,6 +11,39 @@ import {
   subjectSchema,
 } from "@/domain/schedule/types";
 import type { ScheduleSlice, StoreContext } from "../types";
+import {
+  resolveWallpaperTheme,
+  seedCustomSubjectColors,
+} from "@/domain/render";
+import type { ScheduleProject } from "@/domain/project";
+
+function withSchedule(
+  project: ScheduleProject,
+  schedule: ScheduleProject["schedule"],
+): ScheduleProject {
+  if (project.design.subjectColors.mode !== "custom")
+    return { ...project, schedule };
+  const palette = resolveWallpaperTheme(
+    project.design.themeId,
+    project.design.layoutId,
+    project.design.customPalette,
+  ).subjectPalette;
+  return {
+    ...project,
+    schedule,
+    design: {
+      ...project.design,
+      subjectColors: {
+        ...project.design.subjectColors,
+        bySubjectId: seedCustomSubjectColors({
+          subjects: schedule,
+          automaticPalette: palette,
+          existing: project.design.subjectColors.bySubjectId,
+        }),
+      },
+    },
+  };
+}
 
 export function createScheduleSlice(context: StoreContext): ScheduleSlice {
   const ids = (kind: "subject" | "meeting") =>
@@ -18,26 +51,30 @@ export function createScheduleSlice(context: StoreContext): ScheduleSlice {
   return {
     replaceSchedule(schedule, origin) {
       const validated = scheduleSchema.parse(schedule);
-      context.commit("Replace schedule", (project) => ({
-        ...project,
-        metadata: {
-          ...project.metadata,
-          source: origin.source,
-          term: origin.term === undefined ? project.metadata.term : origin.term,
-          curriculum:
-            origin.curriculum === undefined
-              ? project.metadata.curriculum
-              : origin.curriculum,
-        },
-        schedule: validated,
-      }));
+      context.commit("Replace schedule", (project) =>
+        withSchedule(
+          {
+            ...project,
+            metadata: {
+              ...project.metadata,
+              source: origin.source,
+              term:
+                origin.term === undefined ? project.metadata.term : origin.term,
+              curriculum:
+                origin.curriculum === undefined
+                  ? project.metadata.curriculum
+                  : origin.curriculum,
+            },
+          },
+          validated,
+        ),
+      );
     },
     addSubject(input) {
       const subject = normalizeSubject(input, ids);
-      const result = context.commit("Add subject", (project) => ({
-        ...project,
-        schedule: [...project.schedule, subject],
-      }));
+      const result = context.commit("Add subject", (project) =>
+        withSchedule(project, [...project.schedule, subject]),
+      );
       return result ? subject.id : null;
     },
     updateSubject(subjectId, updates) {
@@ -71,10 +108,9 @@ export function createScheduleSlice(context: StoreContext): ScheduleSlice {
         );
       if (!source) return null;
       const duplicate = copySubject(source, ids);
-      const result = context.commit("Duplicate subject", (project) => ({
-        ...project,
-        schedule: [...project.schedule, duplicate],
-      }));
+      const result = context.commit("Duplicate subject", (project) =>
+        withSchedule(project, [...project.schedule, duplicate]),
+      );
       return result ? duplicate.id : null;
     },
     setSubjectEnabled(subjectId, enabled) {

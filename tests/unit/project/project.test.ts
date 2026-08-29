@@ -60,6 +60,33 @@ describe("ScheduleProject", () => {
       });
   });
 
+  it("loads missing Subject Colors as Automatic and accepts legacy per-subject state", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const missing = structuredClone(project) as unknown as {
+      design: Record<string, unknown>;
+    };
+    delete missing.design.subjectColors;
+    expect(scheduleProjectSchema.parse(missing).design.subjectColors).toEqual({
+      mode: "automatic",
+      singleColor: null,
+      bySubjectId: {},
+    });
+
+    const legacy = structuredClone(project) as unknown as {
+      design: Record<string, unknown>;
+    };
+    legacy.design.subjectColors = {
+      mode: "per-subject",
+      singleColor: null,
+      bySubjectId: { old: "#abcdef" },
+    };
+    expect(scheduleProjectSchema.parse(legacy).design.subjectColors).toEqual({
+      mode: "custom",
+      singleColor: null,
+      bySubjectId: { old: "#ABCDEF" },
+    });
+  });
+
   it("keeps the project title separate from wallpaper title and supports blank wallpaper text", () => {
     const project = createBlankProject({
       id: "project-1",

@@ -82,6 +82,34 @@ export function initializeBackgroundMode(
   return next;
 }
 
+export function syncBackgroundToPalette(
+  background: BackgroundDesign,
+  theme: WallpaperThemeTokens,
+): BackgroundDesign {
+  return {
+    ...background,
+    ...(background.solid
+      ? { solid: { ...background.solid, color: theme.background } }
+      : {}),
+    ...(background.gradient
+      ? {
+          gradient: {
+            ...background.gradient,
+            color1: theme.background,
+          },
+        }
+      : {}),
+    ...(background.pattern
+      ? {
+          pattern: {
+            ...background.pattern,
+            backgroundColor: theme.background,
+          },
+        }
+      : {}),
+  };
+}
+
 function gradientEndpoints(
   width: number,
   height: number,

@@ -119,6 +119,12 @@ export function createProjectSlice(context: StoreContext): ProjectSlice {
           context.dependencies.idFactory!(kind),
         ),
       );
+      const subjectIdReplacements = new Map(
+        source.schedule.map((subject, index) => [
+          subject.id,
+          schedule[index]!.id,
+        ]),
+      );
       const variants = source.deviceVariants.map((variant) => ({
         ...variant,
         id: context.dependencies.idFactory!("device-variant"),
@@ -130,6 +136,20 @@ export function createProjectSlice(context: StoreContext): ProjectSlice {
         ...source,
         id,
         schedule,
+        design: {
+          ...source.design,
+          subjectColors: {
+            ...source.design.subjectColors,
+            bySubjectId: Object.fromEntries(
+              Object.entries(source.design.subjectColors.bySubjectId).flatMap(
+                ([subjectId, color]) => {
+                  const replacement = subjectIdReplacements.get(subjectId);
+                  return replacement ? [[replacement, color]] : [];
+                },
+              ),
+            ),
+          },
+        },
         deviceVariants: variants,
         activeDeviceVariantId:
           activeIndex >= 0 ? (variants[activeIndex]?.id ?? null) : null,

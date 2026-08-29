@@ -20,6 +20,7 @@ import type {
 import { fitText } from "./text-fit";
 import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
 import type { WallpaperThemeTokens } from "./themes/types";
+import { resolveSubjectColor } from "./subject-colors";
 
 const DAYS: readonly ScheduleDay[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_NAMES: Record<ScheduleDay, string> = {
@@ -106,19 +107,6 @@ function mergedFields(
       ],
     ),
   ) as VisibleFields;
-}
-
-function colorForSubject(
-  project: ScheduleProject,
-  subjectId: string,
-  index: number,
-  theme: WallpaperThemeTokens,
-): string {
-  const colors = project.design.subjectColors;
-  if (colors.mode === "single" && colors.singleColor) return colors.singleColor;
-  if (colors.mode === "per-subject" && colors.bySubjectId[subjectId])
-    return colors.bySubjectId[subjectId]!;
-  return theme.subjectPalette[index % theme.subjectPalette.length]!;
 }
 
 function emptyLayers(
@@ -492,9 +480,6 @@ export function buildCardsRenderModel(
   const subjects = new Map(
     project.schedule.map((subject) => [subject.id, subject]),
   );
-  const subjectOrder = new Map(
-    project.schedule.map((subject, index) => [subject.id, index]),
-  );
   const occurrences = expandOccurrences(project.schedule, "full").toSorted(
     (left, right) =>
       left.startMinutes - right.startMinutes ||
@@ -691,12 +676,12 @@ export function buildCardsRenderModel(
         geometry,
         typography,
         theme,
-        colorForSubject(
-          project,
-          item.subject.id,
-          subjectOrder.get(item.subject.id) ?? 0,
-          theme,
-        ),
+        resolveSubjectColor({
+          subjectId: item.subject.id,
+          subjects: project.schedule,
+          automaticPalette: theme.subjectPalette,
+          configuration: project.design.subjectColors,
+        }),
         plan.day,
       );
       cardY += item.height + cardGap;

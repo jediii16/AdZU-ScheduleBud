@@ -15,6 +15,8 @@ export * from "./alignment-guides";
 export * from "./layout-capabilities";
 export * from "./stickers";
 export * from "./background";
+export * from "./subject-colors";
+export * from "./watermark";
 export * from "./themes/clean-slate";
 export * from "./themes/adzu-classic";
 export * from "./themes/midnight";

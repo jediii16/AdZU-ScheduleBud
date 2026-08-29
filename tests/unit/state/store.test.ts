@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createBlankProject } from "@/domain/project";
-import { resolveAlignmentSnap } from "@/domain/render";
+import { resolveAlignmentSnap, resolveWallpaperTheme } from "@/domain/render";
 import {
   selectActiveDeviceVariant,
   selectActiveProject,
@@ -65,6 +65,21 @@ describe("project and schedule slices", () => {
     expect(await assets.listByProject(first)).toEqual([]);
   });
 
+  it("remaps Custom Subject Colors when duplicating a project", async () => {
+    const { store } = createTestStore();
+    const projectId = store.getState().createProject("Colored");
+    const subjectId = store.getState().addSubject({ code: "WEBPROG" })!;
+    store.getState().setSubjectColorMode("custom");
+    store.getState().setCustomSubjectColor(subjectId, "#123456");
+
+    const duplicateId = await store.getState().duplicateProject(projectId);
+    const duplicate = store.getState().projectsById[duplicateId!]!;
+    expect(duplicate.schedule[0]!.id).not.toBe(subjectId);
+    expect(duplicate.design.subjectColors.bySubjectId).toEqual({
+      [duplicate.schedule[0]!.id]: "#123456",
+    });
+  });
+
   it("loads multiple projects and honors the stored active pointer", async () => {
     const projects = new MemoryProjectRepository();
     const metadata = new MemoryMetadataRepository();
@@ -117,6 +132,79 @@ describe("project and schedule slices", () => {
 });
 
 describe("design and device slices", () => {
+  it("seeds, preserves, resets, undoes, and autosaves Subject Colors independently", async () => {
+    const { store, projects } = createTestStore();
+    store.getState().createProject();
+    const firstId = store.getState().addSubject({ code: "WEBPROG" })!;
+    const secondId = store.getState().addSubject({ code: "MATMOD" })!;
+    store.getState().setTheme("pink-diary");
+    const before = structuredClone(selectActiveProject(store.getState())!);
+    const automatic = resolveWallpaperTheme(
+      "pink-diary",
+      "cards",
+    ).subjectPalette;
+
+    store.getState().setSubjectColorMode("single");
+    expect(
+      selectActiveProject(store.getState())?.design.subjectColors,
+    ).toMatchObject({
+      mode: "single",
+      singleColor: automatic[0],
+    });
+    store.getState().setSingleSubjectColor("#A98BD1");
+    store.getState().setSubjectColorMode("automatic");
+    store.getState().setSubjectColorMode("single");
+    expect(
+      selectActiveProject(store.getState())?.design.subjectColors.singleColor,
+    ).toBe("#A98BD1");
+
+    store.getState().setSubjectColorMode("custom");
+    let colors = selectActiveProject(store.getState())!.design.subjectColors;
+    expect(colors.bySubjectId).toMatchObject({
+      [firstId]: automatic[0],
+      [secondId]: automatic[1],
+    });
+    store.getState().setCustomSubjectColor(firstId, "#123456");
+    store.getState().setSubjectEnabled(firstId, false);
+    store.getState().setTheme("midnight");
+    colors = selectActiveProject(store.getState())!.design.subjectColors;
+    expect(colors.bySubjectId[firstId]).toBe("#123456");
+    expect(colors.singleColor).toBe("#A98BD1");
+
+    const thirdId = store.getState().addSubject({ code: "FFP.1n" })!;
+    const midnight = resolveWallpaperTheme("midnight", "cards").subjectPalette;
+    colors = selectActiveProject(store.getState())!.design.subjectColors;
+    expect(colors.bySubjectId[firstId]).toBe("#123456");
+    expect(colors.bySubjectId[thirdId]).toBe(midnight[2]);
+
+    const historyBeforeReset = store.getState().history.past.length;
+    store.getState().resetCustomSubjectColors();
+    expect(store.getState().history.past).toHaveLength(historyBeforeReset + 1);
+    expect(
+      selectActiveProject(store.getState())?.design.subjectColors.bySubjectId[
+        firstId
+      ],
+    ).toBe(midnight[0]);
+    store.getState().undo();
+    expect(
+      selectActiveProject(store.getState())?.design.subjectColors.bySubjectId[
+        firstId
+      ],
+    ).toBe("#123456");
+
+    const after = selectActiveProject(store.getState())!;
+    expect(after.design.background).toEqual(before.design.background);
+    expect(after.design.typography).toEqual(before.design.typography);
+    expect(after.deviceVariants).toEqual(before.deviceVariants);
+    await store.getState().flushAutosave();
+    const saved = await projects.read(after.id);
+    expect(
+      saved.status === "found"
+        ? saved.project.design.subjectColors.bySubjectId[firstId]
+        : null,
+    ).toBe("#123456");
+  });
+
   it("switches layouts as one undoable, redoable autosaved project change", async () => {
     const { store, projects } = createTestStore();
     store.getState().createProject();
@@ -150,7 +238,7 @@ describe("design and device slices", () => {
       dimensions: { width: 1080, height: 2400 },
     })!;
     store.getState().setTheme("midnight");
-    store.getState().setSubjectColor("subject-one", "#123456");
+    store.getState().setCustomSubjectColor("subject-one", "#123456");
     store.getState().setSchedulePosition(variantId, { x: 0.24, y: 0.71 });
     store.getState().addSticker(variantId, "capy-reading");
     const before = structuredClone(selectActiveProject(store.getState())!);
@@ -319,12 +407,12 @@ describe("design and device slices", () => {
 
     await store.getState().flushAutosave();
     const saved = await projects.read(store.getState().activeProjectId!);
-    expect(saved.status === "found" ? saved.project.design : null).toMatchObject(
-      {
-        themeId: "matcha-study",
-        customPalette: { basedOnPaletteId: "matcha-study", accent: "#123456" },
-      },
-    );
+    expect(
+      saved.status === "found" ? saved.project.design : null,
+    ).toMatchObject({
+      themeId: "matcha-study",
+      customPalette: { basedOnPaletteId: "matcha-study", accent: "#123456" },
+    });
   });
 
   it("seeds first-time Custom from the active preset and coalesces picker edits", () => {
@@ -368,7 +456,7 @@ describe("design and device slices", () => {
       dimensions: { width: 1920, height: 1080 },
     })!;
     const subjectId = store.getState().addSubject({ code: "CS.412" })!;
-    store.getState().setSubjectColor(subjectId, "#ABCDEF");
+    store.getState().setCustomSubjectColor(subjectId, "#ABCDEF");
     store.getState().addPhoto("photo-one");
     store.getState().setPhotoTransform(phoneId, "hero", "photo-one", {
       position: { x: 0.3, y: 0.7 },
