@@ -32,11 +32,10 @@ async function openTargetPicker(page: Page) {
 
 async function choosePreset(
   page: Page,
-  category: "Phone" | "Desktop",
+  _category: "Phone" | "Desktop",
   name: RegExp,
 ) {
   await openTargetPicker(page);
-  await page.getByRole("radio", { name: category, exact: true }).click();
   await page.getByRole("button", { name }).click();
 }
 
@@ -201,7 +200,7 @@ test("Image adjustment has explicit controls and independent phone and desktop c
   expect(desktopX).not.toBe(0.5);
   await page.getByRole("button", { name: "Done", exact: true }).click();
 
-  await choosePreset(page, "Phone", /Generic FHD\+ Portrait/);
+  await choosePreset(page, "Phone", /Android Phone/);
   await expect(preview).toHaveAttribute("data-target-width", "1080");
   await expect(preview).toHaveAttribute("data-background-position-x", "0.5");
   await expect(preview).toHaveAttribute("data-background-position-y", "0.5");

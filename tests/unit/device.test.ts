@@ -44,7 +44,15 @@ describe("device category and screen matching", () => {
           guideAssetId: null,
         },
       }),
-    ).toMatchObject({ category: "phone", dimensionSource: "custom" });
+    ).toMatchObject({
+      category: "phone",
+      dimensionSource: "custom",
+      scheduleSize: {
+        widthRatio: null,
+        heightRatio: null,
+        lockAspectRatio: true,
+      },
+    });
     expect(
       deviceVariantSchema.parse({
         id: "tablet-custom",
@@ -110,16 +118,20 @@ describe("device category and screen matching", () => {
     expect(() => inferScreenMatch(1080.5, 1920)).toThrow(RangeError);
   });
 
-  it("provides only generic validated presets for every target family", () => {
+  it("provides a concise validated preset list for every target family", () => {
     expect(
       new Set(devicePresetRegistry.map((preset) => preset.category)),
     ).toEqual(new Set(["phone", "tablet", "laptop", "desktop", "square"]));
-    expect(devicePresetRegistry).toHaveLength(13);
-    expect(
-      devicePresetRegistry.every(
-        (preset) => !/iphone|ipad|samsung/i.test(preset.displayName),
-      ),
-    ).toBe(true);
+    expect(devicePresetRegistry.map((preset) => preset.displayName)).toEqual([
+      "iPhone",
+      "Android Phone",
+      "iPad Portrait",
+      "iPad Landscape",
+      "Laptop 16:9",
+      "MacBook 16:10",
+      "Desktop Full HD",
+      "Square 1080",
+    ]);
   });
 
   it("enforces edge and sixteen-megapixel canvas safety", () => {

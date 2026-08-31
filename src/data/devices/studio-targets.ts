@@ -1,9 +1,9 @@
-import { devicePresetById } from "./registry";
+import { DEVICE_PRESET_IDS, devicePresetById } from "./registry";
 import type { DeviceVariant, Orientation } from "@/domain/device/types";
 import type { LayoutId } from "@/domain/design/types";
 
 export const INITIAL_STUDIO_PRESET_IDS = [
-  "generic-phone-1080x2400",
+  DEVICE_PRESET_IDS.android,
   "desktop-1920x1080",
 ] as const;
 export type StudioTargetId = "phone" | "desktop";
@@ -73,7 +73,7 @@ export function studioTargetForVariant(variant: DeviceVariant) {
       variant.orientation,
     ),
     filename:
-      variant.presetId === "generic-phone-1080x2400"
+      variant.presetId === DEVICE_PRESET_IDS.android
         ? "adzu-schedule-phone.png"
         : variant.presetId === "desktop-1920x1080"
           ? "adzu-schedule-desktop.png"

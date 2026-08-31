@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { DEVICE_PRESET_IDS } from "@/data/devices/registry";
 import {
   emojiById,
   emojiCatalog,
@@ -72,6 +73,7 @@ import type { Subject } from "@/domain/schedule/types";
 import {
   createDefaultBackgroundPattern,
   type LayoutDetailCapabilities,
+  type Rect,
 } from "@/domain/render";
 import { StoreSubjectList } from "@/features/classes/class-editor";
 import { fontRegistry } from "@/lib/font-registry";
@@ -220,6 +222,7 @@ function ImageDropField({
     <div
       className="sb-dropzone flex min-h-36 flex-col items-center justify-center rounded-md px-4 py-5 text-center"
       data-dragging={dragging}
+      role="group"
       aria-label={`${label} drop zone`}
       onDragEnter={onDragEnter}
       onDragOver={(event) => {
@@ -362,9 +365,9 @@ function StickerInspectorSection({
       aria-labelledby="stickers-heading"
     >
       <div className="flex items-center justify-between gap-3">
-        <h3 id="stickers-heading" className="sb-inspector-heading">
+        <h4 id="stickers-heading" className="sb-inspector-heading">
           Stickers
-        </h3>
+        </h4>
         <Button
           type="button"
           size="sm"
@@ -599,26 +602,23 @@ function PhotoCompositionControl({
   onComposition(value: AvailablePhotoComposition): void;
 }) {
   return (
-    <div>
-      <span className="sb-inspector-field-label">Composition</span>
-      <div
-        role="radiogroup"
-        aria-label="Photo composition"
-        className="grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
-      >
-        {PHOTO_COMPOSITIONS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={composition === value}
-            className={`min-h-9 min-w-0 rounded-sm px-1 text-xs font-semibold capitalize transition-colors ${composition === value ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground"}`}
-            onClick={() => onComposition(value)}
-          >
-            {value}
-          </button>
-        ))}
-      </div>
+    <div
+      role="radiogroup"
+      aria-label="Photo composition"
+      className="grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
+    >
+      {PHOTO_COMPOSITIONS.map((value) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={composition === value}
+          className={`min-h-9 min-w-0 cursor-pointer rounded-sm px-1 text-xs font-semibold capitalize transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${composition === value ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
+          onClick={() => onComposition(value)}
+        >
+          {value}
+        </button>
+      ))}
     </div>
   );
 }
@@ -685,9 +685,9 @@ function PhotoInspectorSection({
       className="sb-inspector-major-section"
       aria-labelledby="photo-heading"
     >
-      <h3 id="photo-heading" className="sb-inspector-heading">
+      <h4 id="photo-heading" className="sb-inspector-heading">
         Photos
-      </h3>
+      </h4>
       <div className="sb-inspector-children">
         <input
           ref={inputRef}
@@ -922,11 +922,14 @@ function StyleInspectorSection({
   );
   return (
     <section className="sb-inspector-major-section">
-      <h3 className="sb-inspector-heading">Style</h3>
+      <h4 className="sb-inspector-heading">Style</h4>
       <div
         role="radiogroup"
         aria-label={`${layout} layout style`}
-        className="sb-inspector-children grid grid-cols-2 rounded-sm border border-border bg-muted/40 p-1"
+        className="sb-inspector-children grid rounded-sm border border-border bg-muted/40 p-1"
+        style={{
+          gridTemplateColumns: `repeat(${styles.length}, minmax(0, 1fr))`,
+        }}
       >
         {styles.map((style) => (
           <button
@@ -957,7 +960,7 @@ function TypographyInspectorSection({
   const selected = resolveTypographyPreset(value);
   return (
     <section className="sb-inspector-major-section">
-      <h3 className="sb-inspector-heading">Typography</h3>
+      <h4 className="sb-inspector-heading">Typography</h4>
       <details
         ref={detailsRef}
         className="sb-inspector-children group relative"
@@ -1093,8 +1096,12 @@ function ColorInputRow({
     return color;
   };
   return (
-    <div className="grid grid-cols-[minmax(5rem,1fr)_2rem_6.8rem] items-center gap-2">
-      <label className="text-xs font-medium" htmlFor={`${id}-hex`}>
+    <div className="grid min-w-0 grid-cols-[minmax(4.5rem,1fr)_2rem_minmax(5.75rem,6.8rem)] items-center gap-1.5">
+      <label
+        className="min-w-0 truncate text-xs font-medium"
+        htmlFor={`${id}-hex`}
+        title={label}
+      >
         {label}
       </label>
       <input
@@ -1197,7 +1204,7 @@ function SubjectColorsInspectorSection({
   ] as const;
   return (
     <section className="sb-inspector-major-section">
-      <h3 className="sb-inspector-heading">Subject Colors</h3>
+      <h4 className="sb-inspector-heading">Subject Colors</h4>
       <div
         role="radiogroup"
         aria-label="Subject color mode"
@@ -1223,20 +1230,20 @@ function SubjectColorsInspectorSection({
           </p>
           <div
             aria-label={`${baseTheme?.name ?? "Clean Slate"} automatic subject colors`}
-            className="flex gap-2"
+            className="flex flex-wrap gap-1"
           >
             {theme.subjectPalette.map((color, index) => (
               <span
                 key={`${color}-${index}`}
                 aria-hidden="true"
-                className="size-7 rounded-sm border border-border"
+                className="size-6 rounded-sm border border-border"
                 style={{ backgroundColor: color }}
               />
             ))}
           </div>
         </div>
       ) : design.subjectColors.mode === "single" ? (
-        <div className="sb-inspector-children mt-2 rounded-sm border border-border bg-muted/25 p-2">
+        <div className="sb-inspector-children mt-2">
           <ColorInputRow
             id="subject-single"
             label="Color"
@@ -1258,7 +1265,7 @@ function SubjectColorsInspectorSection({
           />
         </div>
       ) : (
-        <div className="sb-inspector-children mt-2 space-y-2 rounded-sm border border-border bg-muted/25 p-2">
+        <div className="sb-inspector-children mt-2 space-y-2">
           {activeSubjects.length ? (
             activeSubjects.map((subject) => {
               const value =
@@ -1331,6 +1338,7 @@ function ColorPaletteInspectorSection({
   onPickerEnd?(role: CustomPaletteColorRole, color: string | null): void;
   onReset?(): void;
 }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const baseId =
     design.themeId === "custom"
       ? (design.customPalette?.basedOnPaletteId ?? "clean-slate")
@@ -1341,81 +1349,127 @@ function ColorPaletteInspectorSection({
       ? design.customPalette
       : createCustomPalette(baseId);
   const customPreview = design.customPalette;
+  const selectedLabel = design.themeId === "custom" ? "Custom" : baseTheme.name;
+  const selectedPreview =
+    design.themeId === "custom" && customPreview
+      ? [customPreview.primary, customPreview.accent]
+      : [baseTheme.previewColors.foreground, baseTheme.previewColors.accent];
   return (
     <section className="sb-inspector-major-section">
-      <h3 className="sb-inspector-heading">Color Palette</h3>
-      <div
-        role="radiogroup"
-        aria-label="Color palette"
-        className="sb-inspector-children grid grid-cols-3 rounded-sm border border-border bg-muted/40 p-1"
+      <h4 className="sb-inspector-heading">Color Palette</h4>
+      <details
+        ref={detailsRef}
+        className="sb-inspector-children group relative"
       >
-        {availableThemes.map((theme) => (
-          <button
-            key={theme.id}
-            type="button"
-            role="radio"
-            aria-checked={design.themeId === theme.id}
-            title={theme.description}
-            className={`min-h-12 min-w-0 cursor-pointer rounded-sm px-2 py-1.5 text-left text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${design.themeId === theme.id ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
-            onClick={() => onTheme?.(theme.id)}
-          >
-            <span className="flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="flex size-5 shrink-0 overflow-hidden rounded-full border border-border"
-              >
-                <span
-                  className="h-full flex-1"
-                  style={{ backgroundColor: theme.previewColors.foreground }}
-                />
-                <span
-                  className="h-full flex-1"
-                  style={{ backgroundColor: theme.previewColors.accent }}
-                />
-              </span>
-              <span>{theme.name}</span>
-            </span>
-          </button>
-        ))}
-        <button
-          type="button"
-          role="radio"
-          aria-checked={design.themeId === "custom"}
-          className={`min-h-12 min-w-0 cursor-pointer rounded-sm px-2 py-1.5 text-left text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${design.themeId === "custom" ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface hover:text-foreground active:bg-muted"}`}
-          onClick={() => onTheme?.("custom")}
-        >
-          <span className="flex items-center gap-2">
+        <summary className="sb-control flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30">
+          <span className="flex min-w-0 items-center gap-2.5">
             <span
               aria-hidden="true"
-              className="flex size-5 shrink-0 overflow-hidden rounded-full border border-border bg-muted"
+              className="grid shrink-0 grid-cols-2 gap-1"
             >
-              {customPreview ? (
-                <>
-                  <span
-                    className="h-full flex-1"
-                    style={{ backgroundColor: customPreview.primary }}
-                  />
-                  <span
-                    className="h-full flex-1"
-                    style={{ backgroundColor: customPreview.accent }}
-                  />
-                </>
+              {selectedPreview.map((color, index) => (
+                <span
+                  key={`${color}-${index}`}
+                  className="size-5 rounded-sm border border-border"
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </span>
+            <span className="min-w-0 text-left">
+              <span className="block truncate text-sm font-semibold">
+                {selectedLabel}
+              </span>
+              {design.themeId === "custom" ? (
+                <span className="block truncate text-[11px] text-text-muted">
+                  Based on {baseTheme.name}
+                </span>
               ) : null}
             </span>
-            <span>Custom</span>
           </span>
-        </button>
-      </div>
-      <div className="sb-inspector-children mt-2 text-xs leading-5 text-text-muted">
-        {design.themeId === "custom" ? (
-          <>
-            <p className="font-semibold text-foreground">Custom</p>
-            <p>Based on {baseTheme.name}</p>
-          </>
-        ) : (
-          <p>{baseTheme.description}</p>
-        )}
-      </div>
+          <ChevronDown
+            aria-hidden="true"
+            className="size-4 shrink-0 transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div
+          role="radiogroup"
+          aria-label="Color palette"
+          className="z-20 mt-2 max-h-80 overflow-y-auto rounded-md border border-border bg-surface-elevated p-1 shadow-lg sm:absolute sm:right-0 sm:left-0"
+        >
+          {availableThemes.map((theme) => {
+            const checked = design.themeId === theme.id;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                role="radio"
+                aria-checked={checked}
+                title={theme.description}
+                className={`flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-sm px-2 py-1.5 text-left text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${checked ? "bg-brand/8 text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground active:bg-muted"}`}
+                onClick={() => {
+                  onTheme?.(theme.id);
+                  detailsRef.current?.removeAttribute("open");
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="grid shrink-0 grid-cols-2 gap-1"
+                >
+                  {[
+                    theme.previewColors.foreground,
+                    theme.previewColors.accent,
+                  ].map((color, index) => (
+                    <span
+                      key={`${color}-${index}`}
+                      className="size-5 rounded-sm border border-border"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{theme.name}</span>
+                <Check
+                  aria-hidden="true"
+                  className={`size-4 shrink-0 ${checked ? "opacity-100" : "opacity-0"}`}
+                />
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={design.themeId === "custom"}
+            className={`flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-sm px-2 py-1.5 text-left text-xs font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/30 motion-reduce:transition-none ${design.themeId === "custom" ? "bg-brand/8 text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground active:bg-muted"}`}
+            onClick={() => {
+              onTheme?.("custom");
+              detailsRef.current?.removeAttribute("open");
+            }}
+          >
+            <span
+              aria-hidden="true"
+              className="grid shrink-0 grid-cols-2 gap-1"
+            >
+              {(customPreview
+                ? [customPreview.primary, customPreview.accent]
+                : [
+                    baseTheme.previewColors.foreground,
+                    baseTheme.previewColors.accent,
+                  ]
+              ).map((color, index) => (
+                <span
+                  key={`${color}-${index}`}
+                  className="size-5 rounded-sm border border-border"
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </span>
+            <span className="min-w-0 flex-1 truncate">Custom</span>
+            <Check
+              aria-hidden="true"
+              className={`size-4 shrink-0 ${design.themeId === "custom" ? "opacity-100" : "opacity-0"}`}
+            />
+          </button>
+        </div>
+      </details>
       <details className="sb-inspector-children group mt-3">
         <summary className="sb-control flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30">
           <span>Customize palette</span>
@@ -1912,7 +1966,7 @@ function BackgroundInspectorSection({
   };
   return (
     <section className="sb-inspector-major-section">
-      <h3 className="sb-inspector-heading">Background</h3>
+      <h4 className="sb-inspector-heading">Background</h4>
       <input
         ref={fileInput}
         className="sr-only"
@@ -2507,6 +2561,25 @@ function BackgroundInspectorSection({
   );
 }
 
+function InspectorGroup({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="sb-inspector-group" aria-labelledby={id}>
+      <h3 id={id} className="sb-inspector-group-label">
+        {label}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
 export function DesignStudioPanel({
   design,
   visibleFields,
@@ -2651,30 +2724,14 @@ export function DesignStudioPanel({
 }) {
   return (
     <section aria-labelledby="studio-design-heading">
-      <header className="sticky -top-5 z-10 -mx-5 border-b border-border bg-surface-elevated/95 px-5 pt-1 pb-4 backdrop-blur-md">
+      <header className="sticky -top-5 z-10 -mx-5 border-b border-border bg-surface-elevated/95 px-5 pt-1 pb-3 backdrop-blur-md">
         <h2 id="studio-design-heading" className="sb-section-title">
           Design
         </h2>
-        <p className="mt-1 text-xs leading-5 text-text-muted">
-          Shape the layout, color, content, and finishing touches.
-        </p>
       </header>
-      <div className="sb-inspector-group">
-        <div className="sb-inspector-group-header">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
-            1
-          </span>
-          <div>
-            <h3 className="text-sm font-bold">Start with structure</h3>
-            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
-              {activeLayout === "photo"
-                ? "Choose a composition, then add the photos it needs."
-                : "Choose how your schedule is arranged."}
-            </p>
-          </div>
-        </div>
+      <InspectorGroup id="design-structure-heading" label="Structure">
         <section className="sb-inspector-major-section">
-          <h3 className="sb-inspector-heading">Layout</h3>
+          <h4 className="sb-inspector-heading">Layout</h4>
           <div
             role="radiogroup"
             aria-label="Schedule layout"
@@ -2704,7 +2761,7 @@ export function DesignStudioPanel({
         {activeLayout === "photo" ? (
           <>
             <section className="sb-inspector-major-section">
-              <h3 className="sb-inspector-heading">Composition</h3>
+              <h4 className="sb-inspector-heading">Composition</h4>
               <div className="sb-inspector-children">
                 <PhotoCompositionControl
                   composition={photoComposition}
@@ -2712,6 +2769,12 @@ export function DesignStudioPanel({
                 />
               </div>
             </section>
+            <StyleInspectorSection
+              design={design}
+              layout="photo"
+              composition={photoComposition}
+              onStyle={onStyle}
+            />
             <PhotoInspectorSection
               photos={photos}
               composition={photoComposition}
@@ -2729,27 +2792,10 @@ export function DesignStudioPanel({
               onMove={onPhotoMove}
               onCaption={onPhotoCaption}
             />
-            <StyleInspectorSection
-              design={design}
-              layout="photo"
-              composition={photoComposition}
-              onStyle={onStyle}
-            />
           </>
         ) : null}
-      </div>
-      <div className="sb-inspector-group">
-        <div className="sb-inspector-group-header">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
-            2
-          </span>
-          <div>
-            <h3 className="text-sm font-bold">Create the look</h3>
-            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
-              Set the mood with color, type, and background.
-            </p>
-          </div>
-        </div>
+      </InspectorGroup>
+      <InspectorGroup id="design-appearance-heading" label="Appearance">
         <ColorPaletteInspectorSection
           design={design}
           {...(onTheme ? { onTheme } : {})}
@@ -2788,45 +2834,10 @@ export function DesignStudioPanel({
           value={design.typography.presetId}
           {...(onTypography ? { onChange: onTypography } : {})}
         />
-        <SubjectColorsInspectorSection
-          design={design}
-          layout={activeLayout}
-          subjects={subjects}
-          {...(onSubjectColorMode ? { onMode: onSubjectColorMode } : {})}
-          {...(onSingleSubjectColor
-            ? { onSingleColor: onSingleSubjectColor }
-            : {})}
-          {...(onCustomSubjectColor
-            ? { onCustomColor: onCustomSubjectColor }
-            : {})}
-          {...(onSubjectColorPickerPreview
-            ? { onPickerPreview: onSubjectColorPickerPreview }
-            : {})}
-          {...(onSubjectColorPickerStart
-            ? { onPickerStart: onSubjectColorPickerStart }
-            : {})}
-          {...(onSubjectColorPickerEnd
-            ? { onPickerEnd: onSubjectColorPickerEnd }
-            : {})}
-          {...(onResetCustomSubjectColors
-            ? { onResetCustom: onResetCustomSubjectColors }
-            : {})}
-        />
-      </div>
-      <div className="sb-inspector-group">
-        <div className="sb-inspector-group-header">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
-            3
-          </span>
-          <div>
-            <h3 className="text-sm font-bold">Tune the content</h3>
-            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
-              Decide what students can see at a glance.
-            </p>
-          </div>
-        </div>
+      </InspectorGroup>
+      <InspectorGroup id="design-schedule-heading" label="Schedule">
         <section className="sb-inspector-major-section">
-          <h3 className="sb-inspector-heading">Wallpaper title</h3>
+          <h4 className="sb-inspector-heading">Title</h4>
           <div className="sb-inspector-children space-y-3">
             <label className="sb-setting-row">
               <span className="font-medium">Show title</span>
@@ -2851,7 +2862,7 @@ export function DesignStudioPanel({
           </div>
         </section>
         <section className="sb-inspector-major-section">
-          <h3 className="sb-inspector-heading">Days</h3>
+          <h4 className="sb-inspector-heading">Days</h4>
           <div className="sb-inspector-children">
             <label className="sb-setting-row">
               <span className="font-medium">Hide days without classes</span>
@@ -2870,9 +2881,9 @@ export function DesignStudioPanel({
         <section
           className="sb-inspector-major-section"
           role="group"
-          aria-label="Class details"
+          aria-label="Class Details"
         >
-          <h3 className="sb-inspector-heading">Class details</h3>
+          <h4 className="sb-inspector-heading">Class Details</h4>
           <div className="sb-inspector-children">
             <div className="flex min-h-11 items-center justify-between gap-3 px-2 py-2 text-sm">
               <span className="font-medium">Subject code</span>
@@ -2880,10 +2891,8 @@ export function DesignStudioPanel({
                 Always shown
               </span>
             </div>
-            {INSPECTOR_FIELD_ORDER.map((field) => {
-              const available =
-                detailCapabilities.fields[field] === "available";
-              return available ? (
+            {INSPECTOR_FIELD_ORDER.map((field) =>
+              detailCapabilities.fields[field] === "available" ? (
                 <label key={field} className="sb-setting-row">
                   <span>{FIELD_LABELS[field]}</span>
                   <input
@@ -2893,35 +2902,39 @@ export function DesignStudioPanel({
                     onChange={(event) => onField(field, event.target.checked)}
                   />
                 </label>
-              ) : (
-                <div
-                  key={field}
-                  aria-disabled="true"
-                  aria-label={`${FIELD_LABELS[field]}. Available on larger Grid devices.`}
-                  className="flex min-h-11 items-center justify-between gap-3 px-2 py-2 text-sm"
-                >
-                  <span className="font-medium">{FIELD_LABELS[field]}</span>
-                  <span className="max-w-36 text-right text-xs leading-4 text-text-muted">
-                    Larger Grid devices only
-                  </span>
-                </div>
-              );
-            })}
+              ) : null,
+            )}
           </div>
         </section>
-      </div>
-      <div className="sb-inspector-group">
-        <div className="sb-inspector-group-header">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-xs font-bold text-brand">
-            4
-          </span>
-          <div>
-            <h3 className="text-sm font-bold">Make it yours</h3>
-            <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
-              Add playful finishing touches.
-            </p>
-          </div>
-        </div>
+        <SubjectColorsInspectorSection
+          design={design}
+          layout={activeLayout}
+          subjects={subjects}
+          {...(onSubjectColorMode ? { onMode: onSubjectColorMode } : {})}
+          {...(onSingleSubjectColor
+            ? { onSingleColor: onSingleSubjectColor }
+            : {})}
+          {...(onCustomSubjectColor
+            ? { onCustomColor: onCustomSubjectColor }
+            : {})}
+          {...(onSubjectColorPickerPreview
+            ? { onPickerPreview: onSubjectColorPickerPreview }
+            : {})}
+          {...(onSubjectColorPickerStart
+            ? { onPickerStart: onSubjectColorPickerStart }
+            : {})}
+          {...(onSubjectColorPickerEnd
+            ? { onPickerEnd: onSubjectColorPickerEnd }
+            : {})}
+          {...(onResetCustomSubjectColors
+            ? { onResetCustom: onResetCustomSubjectColors }
+            : {})}
+        />
+      </InspectorGroup>
+      <InspectorGroup
+        id="design-media-decoration-heading"
+        label="Media & Decoration"
+      >
         <StickerInspectorSection
           stickers={stickers}
           selectedId={selectedStickerId}
@@ -2933,18 +2946,64 @@ export function DesignStudioPanel({
           onLayer={onStickerLayer}
           onStack={onStickerStack}
         />
-      </div>
+      </InspectorGroup>
     </section>
   );
+}
+
+type PreviewOption = readonly [
+  mode: DeviceVariant["preview"]["mode"],
+  label: string,
+];
+
+const IPHONE_PREVIEW_OPTIONS = [
+  ["clean", "Wallpaper"],
+  ["lock-screen", "iPhone lock screen"],
+] as const satisfies readonly PreviewOption[];
+const ANDROID_PREVIEW_OPTIONS = [
+  ["clean", "Wallpaper"],
+  ["lock-screen", "Android lock screen"],
+] as const satisfies readonly PreviewOption[];
+const PHONE_PREVIEW_OPTIONS = [
+  ["clean", "Wallpaper"],
+  ["lock-screen", "Lock screen"],
+  ["home-screen", "Home screen"],
+] as const satisfies readonly PreviewOption[];
+const WALLPAPER_ONLY_PREVIEW_OPTIONS = [
+  ["clean", "Wallpaper"],
+] as const satisfies readonly PreviewOption[];
+const WINDOWS_PREVIEW_OPTIONS = [
+  ["clean", "Wallpaper"],
+  ["windows-desktop", "Windows desktop"],
+] as const satisfies readonly PreviewOption[];
+
+function previewOptionsFor(variant: DeviceVariant): readonly PreviewOption[] {
+  if (variant.presetId === DEVICE_PRESET_IDS.iphone)
+    return IPHONE_PREVIEW_OPTIONS;
+  if (variant.presetId === DEVICE_PRESET_IDS.android)
+    return ANDROID_PREVIEW_OPTIONS;
+  if (variant.category === "phone") return PHONE_PREVIEW_OPTIONS;
+  if (variant.category === "tablet") return WALLPAPER_ONLY_PREVIEW_OPTIONS;
+  if (variant.category === "square") return WALLPAPER_ONLY_PREVIEW_OPTIONS;
+  if (variant.presetId === DEVICE_PRESET_IDS.macbook)
+    return WALLPAPER_ONLY_PREVIEW_OPTIONS;
+  return WINDOWS_PREVIEW_OPTIONS;
 }
 
 export function DeviceStudioPanel({
   targetLabel,
   variant,
+  scheduleBounds,
+  scheduleSizeLimits,
   onChangeTarget,
   onPosition,
   onPositionStart,
   onPositionEnd,
+  onSize,
+  onSizeStart,
+  onSizeEnd,
+  onAspectLock,
+  onResetSize,
   onReset,
   onSnapping,
   onPreviewMode,
@@ -2958,10 +3017,22 @@ export function DeviceStudioPanel({
 }: {
   targetLabel: string;
   variant: DeviceVariant;
+  scheduleBounds: Rect;
+  scheduleSizeLimits: {
+    minWidth: number;
+    maxWidth: number;
+    minHeight: number;
+    maxHeight: number;
+  };
   onChangeTarget(): void;
   onPosition(position: { x: number; y: number }): void;
   onPositionStart(): void;
   onPositionEnd(): void;
+  onSize(axis: "width" | "height", value: number): void;
+  onSizeStart(): void;
+  onSizeEnd(): void;
+  onAspectLock(locked: boolean): void;
+  onResetSize(): void;
   onReset(): void;
   onSnapping(enabled: boolean): void;
   onPreviewMode(mode: DeviceVariant["preview"]["mode"]): void;
@@ -2973,25 +3044,7 @@ export function DeviceStudioPanel({
   onRemoveGuide(): void;
   targetTriggerRef?: RefObject<HTMLButtonElement | null>;
 }) {
-  const previewOptions =
-    variant.category === "phone"
-      ? ([
-          ["clean", "Wallpaper"],
-          ["lock-screen", "Lock screen"],
-          ["home-screen", "Home screen"],
-        ] as const)
-      : variant.category === "tablet"
-        ? ([
-            ["clean", "Wallpaper"],
-            ["tablet-interface", "Lock / home"],
-          ] as const)
-        : variant.category === "square"
-          ? ([["clean", "Wallpaper"]] as const)
-          : ([
-              ["clean", "Wallpaper"],
-              ["windows-desktop", "Windows"],
-              ["macos-desktop", "macOS"],
-            ] as const);
+  const previewOptions = previewOptionsFor(variant);
   const canSwitchOrientation = supportsOrientationSwitch(variant.category);
   return (
     <section aria-labelledby="studio-device-heading">
@@ -3000,7 +3053,7 @@ export function DeviceStudioPanel({
           Device
         </h2>
         <p className="mt-1 text-sm text-text-secondary">
-          Choose a device. ScheduleBud remembers its position.
+          Choose a device. ScheduleBud remembers its position and size.
         </p>
       </div>
       <section className="sb-inspector-major-section">
@@ -3032,6 +3085,70 @@ export function DeviceStudioPanel({
               </Button>
             ) : null}
           </div>
+        </div>
+      </section>
+      <section className="sb-inspector-major-section">
+        <h3 className="sb-inspector-heading">Schedule size</h3>
+        <div className="sb-inspector-children space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {(["width", "height"] as const).map((axis) => {
+              const label = axis === "width" ? "Width" : "Height";
+              const limits =
+                axis === "width"
+                  ? {
+                      min: scheduleSizeLimits.minWidth,
+                      max: scheduleSizeLimits.maxWidth,
+                    }
+                  : {
+                      min: scheduleSizeLimits.minHeight,
+                      max: scheduleSizeLimits.maxHeight,
+                    };
+              return (
+                <label key={axis} className="block">
+                  <span className="mb-1 block text-xs font-semibold text-text-secondary">
+                    {label}
+                  </span>
+                  <div className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 focus-within:ring-2 focus-within:ring-ring">
+                    <input
+                      aria-label={`Schedule ${axis}`}
+                      className="min-w-0 flex-1 bg-transparent py-2 font-mono text-sm outline-none"
+                      type="number"
+                      min={Math.ceil(limits.min)}
+                      max={Math.floor(limits.max)}
+                      step="1"
+                      value={Math.round(scheduleBounds[axis])}
+                      onFocus={onSizeStart}
+                      onBlur={onSizeEnd}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                      }}
+                      onChange={(event) =>
+                        onSize(axis, Number(event.target.value))
+                      }
+                    />
+                    <span className="text-[11px] font-semibold text-text-muted">
+                      px
+                    </span>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <label className="sb-setting-row">
+            <span className="font-medium">Lock proportions</span>
+            <Switch
+              aria-label="Lock schedule proportions"
+              checked={variant.scheduleSize.lockAspectRatio}
+              onChange={(event) => onAspectLock(event.target.checked)}
+            />
+          </label>
+          <p className="text-xs leading-5 text-text-muted">
+            Drag corner or side handles on the schedule. Text keeps its natural
+            proportions and photos recrop to fit.
+          </p>
+          <Button type="button" variant="outline" onClick={onResetSize}>
+            Reset size
+          </Button>
         </div>
       </section>
       <section className="sb-inspector-major-section">

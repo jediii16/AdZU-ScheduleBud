@@ -30,9 +30,11 @@ import {
   safeAreaSnapAnchors,
 } from "@/domain/device/safe-areas";
 import {
+  DEFAULT_SCHEDULE_SIZE,
   inferOrientation,
   type BackgroundImageTransform,
   type DeviceCategory,
+  type NormalizedPoint,
   type PhotoTransform,
 } from "@/domain/device/types";
 import {
@@ -46,6 +48,9 @@ import {
   resolveLayoutVisibleFields,
   resolveAlignmentSnap,
   resolveProjectLayout,
+  scheduleSizeFromPixels,
+  scheduleSizeLimits,
+  type Rect,
 } from "@/domain/render";
 import type { CustomPaletteColorRole } from "@/domain/project";
 import { detectConflicts } from "@/domain/schedule/conflicts";
@@ -61,6 +66,7 @@ import {
   type ExportStatus,
 } from "@/features/export/png-export";
 import { ScheduleArtboard } from "@/renderer/konva/artboard";
+import type { ScheduleResizeHandle } from "@/renderer/konva/editor-overlay/schedule-overlay";
 import {
   loadRenderAssetSources,
   renderAssetLoadSignature,
@@ -78,6 +84,19 @@ import {
 import type { StoredAsset } from "@/storage/types";
 
 const EMPTY_PHOTO_ASSET_IDS: readonly string[] = [];
+
+async function waitForExportStage(
+  stageRef: { current: Konva.Stage | null },
+  timeoutMs = 5_000,
+): Promise<Konva.Stage> {
+  const deadline = performance.now() + timeoutMs;
+  while (performance.now() < deadline) {
+    if (stageRef.current) return stageRef.current;
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 16));
+  }
+  throw new Error("The wallpaper is still preparing.");
+}
+
 import { useScheduleBudStore, useScheduleBudStoreApi } from "@/state/react";
 import type { EditorState } from "@/state/types";
 import {
@@ -638,6 +657,7 @@ export function StudioExperience() {
     activePhotoComposition,
   );
   const photoExportBlocked = photoExportIssue !== null;
+  const scheduleLimits = scheduleSizeLimits(renderResult);
 
   const setSection = (section: NonNullable<EditorState["activeSection"]>) => {
     store.getState().setActiveEditorSection(section);
@@ -691,6 +711,137 @@ export function StudioExperience() {
       horizontalCenter: false,
     });
     store.getState().commitHistoryTransaction();
+  };
+  const beginResize = () => {
+    if (!store.getState().history.transaction)
+      store.getState().beginHistoryTransaction("Resize schedule");
+    store.getState().setDragging(true);
+    store.getState().setAlignmentGuides({
+      verticalCenter: false,
+      horizontalCenter: false,
+    });
+  };
+  const finishResize = () => {
+    store.getState().setDragging(false);
+    store.getState().setAlignmentGuides({
+      verticalCenter: false,
+      horizontalCenter: false,
+    });
+    store.getState().commitHistoryTransaction();
+  };
+  const setSchedulePixels = (
+    pixels: { width: number; height: number },
+    position?: NormalizedPoint,
+  ) =>
+    store
+      .getState()
+      .setScheduleSize(
+        activeVariant.id,
+        scheduleSizeFromPixels(
+          renderResult.model,
+          pixels,
+          activeVariant.scheduleSize.lockAspectRatio,
+        ),
+        position,
+      );
+  const setScheduleSizeFromRect = (
+    handle: ScheduleResizeHandle,
+    proposed: Rect,
+  ) => {
+    const clamp = (value: number, minimum: number, maximum: number) =>
+      Math.min(maximum, Math.max(minimum, value));
+    let width = proposed.width;
+    let height = proposed.height;
+    if (activeVariant.scheduleSize.lockAspectRatio) {
+      const shrink = Math.min(
+        1,
+        scheduleLimits.maxWidth / Math.max(1, width),
+        scheduleLimits.maxHeight / Math.max(1, height),
+      );
+      width *= shrink;
+      height *= shrink;
+      const grow = Math.max(
+        1,
+        scheduleLimits.minWidth / Math.max(1, width),
+        scheduleLimits.minHeight / Math.max(1, height),
+      );
+      width *= grow;
+      height *= grow;
+    } else {
+      width = clamp(width, scheduleLimits.minWidth, scheduleLimits.maxWidth);
+      height = clamp(
+        height,
+        scheduleLimits.minHeight,
+        scheduleLimits.maxHeight,
+      );
+    }
+    width = Math.min(scheduleLimits.maxWidth, width);
+    height = Math.min(scheduleLimits.maxHeight, height);
+    const proposedRight = proposed.x + proposed.width;
+    const proposedBottom = proposed.y + proposed.height;
+    const proposedCenter = {
+      x: proposed.x + proposed.width / 2,
+      y: proposed.y + proposed.height / 2,
+    };
+    const anchoredX = handle.includes("west")
+      ? proposedRight - width
+      : handle.includes("east")
+        ? proposed.x
+        : proposedCenter.x - width / 2;
+    const anchoredY = handle.includes("north")
+      ? proposedBottom - height
+      : handle.includes("south")
+        ? proposed.y
+        : proposedCenter.y - height / 2;
+    const minX = renderResult.positionRange.minX;
+    const maxX = minX + scheduleLimits.maxWidth - width;
+    const minY = renderResult.positionRange.minY;
+    const maxY = minY + scheduleLimits.maxHeight - height;
+    const x = clamp(anchoredX, minX, maxX);
+    const y = clamp(anchoredY, minY, maxY);
+    const normalize = (value: number, minimum: number, maximum: number) =>
+      maximum === minimum ? 0.5 : (value - minimum) / (maximum - minimum);
+    setSchedulePixels(
+      { width, height },
+      {
+        x: normalize(x, minX, maxX),
+        y: normalize(y, minY, maxY),
+      },
+    );
+  };
+  const setScheduleAxisSize = (axis: "width" | "height", requested: number) => {
+    if (!Number.isFinite(requested)) return;
+    const current = renderResult.scheduleBounds;
+    let width = current.width;
+    let height = current.height;
+    if (activeVariant.scheduleSize.lockAspectRatio) {
+      const factor =
+        axis === "width"
+          ? requested / Math.max(1, current.width)
+          : requested / Math.max(1, current.height);
+      const constrainedFactor = Math.min(
+        Math.max(
+          factor,
+          scheduleLimits.minWidth / current.width,
+          scheduleLimits.minHeight / current.height,
+        ),
+        scheduleLimits.maxWidth / current.width,
+        scheduleLimits.maxHeight / current.height,
+      );
+      width *= constrainedFactor;
+      height *= constrainedFactor;
+    } else if (axis === "width") {
+      width = Math.min(
+        scheduleLimits.maxWidth,
+        Math.max(scheduleLimits.minWidth, requested),
+      );
+    } else {
+      height = Math.min(
+        scheduleLimits.maxHeight,
+        Math.max(scheduleLimits.minHeight, requested),
+      );
+    }
+    setSchedulePixels({ width, height });
   };
   const switchTarget = (id: string) => {
     const variant = project.deviceVariants.find((item) => item.id === id);
@@ -927,10 +1078,9 @@ export function StudioExperience() {
     if (!gate.allowed) return;
     setExportError(null);
     const result = await exportCoordinator.current.run(async () => {
-      const stage = exportStageRef.current;
-      if (!stage) throw new Error("The wallpaper is still preparing.");
       setExportStatus("preparing");
       await document.fonts.ready;
+      const stage = await waitForExportStage(exportStageRef);
       setExportStatus("exporting");
       await exportStagePng(stage, renderResult.model, target.filename);
       setExportStatus("downloaded");
@@ -953,6 +1103,8 @@ export function StudioExperience() {
       <DeviceStudioPanel
         targetLabel={target.label}
         variant={activeVariant}
+        scheduleBounds={renderResult.scheduleBounds}
+        scheduleSizeLimits={scheduleLimits}
         targetTriggerRef={targetPickerTriggerRef}
         onChangeTarget={() => setTargetPickerOpen(true)}
         onPosition={(position) =>
@@ -960,6 +1112,19 @@ export function StudioExperience() {
         }
         onPositionStart={beginMove}
         onPositionEnd={finishMove}
+        onSize={setScheduleAxisSize}
+        onSizeStart={beginResize}
+        onSizeEnd={finishResize}
+        onAspectLock={(locked) =>
+          store
+            .getState()
+            .setScheduleAspectRatioLocked(activeVariant.id, locked)
+        }
+        onResetSize={() =>
+          store
+            .getState()
+            .setScheduleSize(activeVariant.id, DEFAULT_SCHEDULE_SIZE)
+        }
         onReset={() =>
           store
             .getState()
@@ -1449,16 +1614,27 @@ export function StudioExperience() {
               setPositionFromOrigin(x, y, previewScale);
               finishMove();
             }}
+            onResizeStart={() => beginResize()}
+            onResizeMove={(handle, bounds) =>
+              setScheduleSizeFromRect(handle, bounds)
+            }
+            onResizeEnd={(handle, bounds) => {
+              setScheduleSizeFromRect(handle, bounds);
+              finishResize();
+            }}
           />
           {activeVariant.preview.showWarnings &&
-          safeCollision.status !== "clear" ? (
+          (safeCollision.status !== "clear" ||
+            renderResult.scheduleResize?.readabilityWarning) ? (
             <div
               role="status"
               className="absolute top-3 left-1/2 z-10 -translate-x-1/2 border border-warning/35 bg-surface-elevated px-3 py-2 text-xs font-semibold text-foreground shadow-sm"
             >
               {safeCollision.status === "blocked"
                 ? "Part of your schedule is in a blocked system area."
-                : "Part of your schedule may be covered by screen content."}
+                : safeCollision.status === "caution"
+                  ? "Part of your schedule may be covered by screen content."
+                  : "The schedule is very small. Check text readability before exporting."}
             </div>
           ) : null}
           <div className="mb-16 flex h-12 shrink-0 items-center justify-between border-t border-border bg-background px-3 text-xs text-text-secondary lg:mb-0">

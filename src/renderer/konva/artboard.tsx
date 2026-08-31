@@ -4,16 +4,23 @@ import type Konva from "konva";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Stage } from "react-konva";
 
-import type { ScheduleRenderResult } from "@/domain/render";
-import type { AlignmentGuides } from "@/domain/render";
+import type {
+  AlignmentGuides,
+  Rect as ModelRect,
+  ScheduleRenderResult,
+} from "@/domain/render";
 import type { DeviceVariant } from "@/domain/device/types";
 import type { SafeAreaModel } from "@/domain/device/safe-areas";
+import { deviceArtworkToneForModel } from "./editor-overlay/device-preview-assets";
 import { PreviewEnvironmentOverlay } from "./editor-overlay/preview-environment";
 import {
   PhotoEditorOverlay,
   PolaroidPlaceholderOverlay,
 } from "./editor-overlay/photo-overlay";
-import { ScheduleEditorOverlay } from "./editor-overlay/schedule-overlay";
+import {
+  ScheduleEditorOverlay,
+  type ScheduleResizeHandle,
+} from "./editor-overlay/schedule-overlay";
 import {
   StickerEditorOverlay,
   type StickerEditorInteraction,
@@ -48,6 +55,9 @@ export function ScheduleArtboard({
   onDragStart,
   onDragMove,
   onDragEnd,
+  onResizeStart,
+  onResizeMove,
+  onResizeEnd,
   dragging,
   guides,
   variant,
@@ -65,6 +75,17 @@ export function ScheduleArtboard({
   onDragStart(): void;
   onDragMove(x: number, y: number, previewScale: number): void;
   onDragEnd(x: number, y: number, previewScale: number): void;
+  onResizeStart(handle: ScheduleResizeHandle): void;
+  onResizeMove(
+    handle: ScheduleResizeHandle,
+    bounds: ModelRect,
+    previewScale: number,
+  ): void;
+  onResizeEnd(
+    handle: ScheduleResizeHandle,
+    bounds: ModelRect,
+    previewScale: number,
+  ): void;
   dragging: boolean;
   guides: AlignmentGuides;
   variant: DeviceVariant;
@@ -80,6 +101,7 @@ export function ScheduleArtboard({
   const [space, setSpace] = useState({ width: 720, height: 720 });
   const [scheduleSelected, setScheduleSelected] = useState(false);
   const [scheduleHovered, setScheduleHovered] = useState(false);
+  const [scheduleResizing, setScheduleResizing] = useState(false);
   const [photoDragging, setPhotoDragging] = useState(false);
   const [backgroundDragging, setBackgroundDragging] = useState(false);
   const fontSignature = renderModelFontSignature(result.model);
@@ -115,6 +137,7 @@ export function ScheduleArtboard({
   }, [fontSignature]);
   const fontState =
     fontReadiness.signature === fontSignature ? fontReadiness.state : "loading";
+  const artworkTone = deviceArtworkToneForModel(result.model);
   const fit = Math.min(
     (space.width - 32) / result.model.width,
     (space.height - 32) / result.model.height,
@@ -139,6 +162,7 @@ export function ScheduleArtboard({
         data-schedule-width={result.scheduleBounds.width}
         data-schedule-height={result.scheduleBounds.height}
         data-dragging={dragging ? "true" : "false"}
+        data-resizing={scheduleResizing ? "true" : "false"}
         data-schedule-selected={scheduleSelected ? "true" : "false"}
         data-guide-vertical={guides.verticalCenter ? "true" : "false"}
         data-guide-horizontal={guides.horizontalCenter ? "true" : "false"}
@@ -208,11 +232,12 @@ export function ScheduleArtboard({
             }
           }
           const bounds = result.scheduleBounds;
+          const scheduleHitSlop = 12 / scale;
           setScheduleSelected(
-            point.x >= bounds.x &&
-              point.x <= bounds.x + bounds.width &&
-              point.y >= bounds.y &&
-              point.y <= bounds.y + bounds.height,
+            point.x >= bounds.x - scheduleHitSlop &&
+              point.x <= bounds.x + bounds.width + scheduleHitSlop &&
+              point.y >= bounds.y - scheduleHitSlop &&
+              point.y <= bounds.y + bounds.height + scheduleHitSlop,
           );
         }}
         onPointerMove={(event) => {
@@ -278,7 +303,9 @@ export function ScheduleArtboard({
             }
           }}
         >
-          <ScheduleScene model={result.model} assets={assetImages} />
+          {fontState === "ready" ? (
+            <ScheduleScene model={result.model} assets={assetImages} />
+          ) : null}
           <PreviewEnvironmentOverlay
             variant={variant}
             safeAreas={safeAreas}
@@ -286,6 +313,7 @@ export function ScheduleArtboard({
             guideImage={guideImage}
             guideOpacity={guideOpacity}
             previewScale={scale}
+            artworkTone={artworkTone}
           />
           {result.photoPlaceholders?.length ? (
             <PolaroidPlaceholderOverlay
@@ -322,6 +350,18 @@ export function ScheduleArtboard({
               onDragStart={onDragStart}
               onDragMove={(x, y) => onDragMove(x, y, scale)}
               onDragEnd={(x, y) => onDragEnd(x, y, scale)}
+              lockAspectRatio={variant.scheduleSize.lockAspectRatio}
+              onResizeStart={(handle) => {
+                setScheduleResizing(true);
+                onResizeStart(handle);
+              }}
+              onResizeMove={(handle, bounds) =>
+                onResizeMove(handle, bounds, scale)
+              }
+              onResizeEnd={(handle, bounds) => {
+                onResizeEnd(handle, bounds, scale);
+                setScheduleResizing(false);
+              }}
             />
           ) : null}
           {!photoEditor?.adjusting &&
@@ -363,13 +403,15 @@ export function ScheduleArtboard({
         aria-hidden="true"
         className="pointer-events-none fixed top-0 -left-[20000px]"
       >
-        <Stage
-          ref={exportStageRef}
-          width={result.model.width}
-          height={result.model.height}
-        >
-          <ScheduleScene model={result.model} assets={assetImages} />
-        </Stage>
+        {fontState === "ready" ? (
+          <Stage
+            ref={exportStageRef}
+            width={result.model.width}
+            height={result.model.height}
+          >
+            <ScheduleScene model={result.model} assets={assetImages} />
+          </Stage>
+        ) : null}
       </div>
     </div>
   );

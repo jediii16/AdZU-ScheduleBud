@@ -17,6 +17,7 @@ import { applyLayoutStyle, resolveLayoutStyle } from "./layout-style";
 import { applyTypographyPreset } from "./typography";
 import { applyBackground } from "./background";
 import { applyScheduleBudWatermark } from "./watermark";
+import { applyScheduleSize } from "./schedule-resize";
 
 export function resolveProjectLayout(
   project: ScheduleProject,
@@ -51,20 +52,23 @@ export function buildScheduleRenderModel(
       composition,
     });
     return applyStickers(
-      applyScheduleBudWatermark(
-        {
-          ...result,
-          model: applyTypographyPreset(
-            applyLayoutStyle(
-              applyBackground(result, project, variant, theme).model,
-              style.tokens,
-              theme,
+      applyScheduleSize(
+        applyScheduleBudWatermark(
+          {
+            ...result,
+            model: applyTypographyPreset(
+              applyLayoutStyle(
+                applyBackground(result, project, variant, theme).model,
+                style.tokens,
+                theme,
+              ),
+              project.design.typography.presetId,
             ),
-            project.design.typography.presetId,
-          ),
-          resolvedStyle: style.tokens,
-        },
-        theme,
+            resolvedStyle: style.tokens,
+          },
+          theme,
+        ),
+        variant,
       ),
       variant,
     ) as T;

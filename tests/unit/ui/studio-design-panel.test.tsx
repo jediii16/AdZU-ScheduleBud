@@ -6,6 +6,62 @@ import { resolveLayoutDetailCapabilities } from "@/domain/render";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 describe("layout design inspector", () => {
+  it("uses the compact four-group hierarchy without numbered cards or promotional copy", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    render(
+      <DesignStudioPanel
+        design={project.design}
+        subjects={project.schedule}
+        visibleFields={project.design.visibleFields}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    const structure = screen.getByRole("region", { name: "Structure" });
+    const appearance = screen.getByRole("region", { name: "Appearance" });
+    const schedule = screen.getByRole("region", { name: "Schedule" });
+    const media = screen.getByRole("region", {
+      name: "Media & Decoration",
+    });
+    expect(
+      structure.compareDocumentPosition(appearance) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      appearance.compareDocumentPosition(schedule) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      schedule.compareDocumentPosition(media) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      within(structure).getByRole("heading", { name: "Layout" }),
+    ).toBeVisible();
+    expect(
+      within(structure).getByRole("heading", { name: "Style" }),
+    ).toBeVisible();
+    expect(
+      within(appearance).getByRole("heading", { name: "Color Palette" }),
+    ).toBeVisible();
+    expect(
+      within(schedule).getByRole("heading", { name: "Subject Colors" }),
+    ).toBeVisible();
+    expect(
+      within(media).getByRole("heading", { name: "Stickers" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Start with structure")).toBeNull();
+    expect(screen.queryByText("Make it yours")).toBeNull();
+    expect(screen.queryByText(/Shape the layout, color, content/)).toBeNull();
+  });
+
   it("offers compact Subject Colors modes and custom controls only for Cards and Grid", () => {
     const project = visualScheduleProject();
     const onMode = vi.fn();
@@ -92,6 +148,158 @@ describe("layout design inspector", () => {
     expect(
       screen.queryByRole("heading", { name: "Subject Colors" }),
     ).toBeNull();
+  });
+
+  it("shows only active controls for title and compact Grid details", () => {
+    const project = visualScheduleProject();
+    const phone = project.deviceVariants[0]!;
+    const common = {
+      visibleFields: project.design.visibleFields,
+      activeLayout: "grid" as const,
+      detailCapabilities: resolveLayoutDetailCapabilities("grid", phone),
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+    };
+    const { rerender } = render(
+      <DesignStudioPanel
+        {...common}
+        design={{
+          ...project.design,
+          wallpaperTitle: { ...project.design.wallpaperTitle, visible: false },
+        }}
+      />,
+    );
+
+    expect(screen.queryByLabelText("Title")).toBeNull();
+    expect(screen.getByText("Subject code")).toBeVisible();
+    expect(screen.getByText("Always shown")).toBeVisible();
+    expect(screen.queryByRole("checkbox", { name: "Section" })).toBeNull();
+    expect(screen.queryByText("Larger Grid devices only")).toBeNull();
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        design={{
+          ...project.design,
+          wallpaperTitle: {
+            ...project.design.wallpaperTitle,
+            visible: true,
+            text: "Second Semester",
+          },
+        }}
+      />,
+    );
+    expect(screen.getByLabelText("Title")).toHaveValue("Second Semester");
+  });
+
+  it("does not reset preserved Design state when contextual sections unmount and return", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    const subjectId = project.schedule[0]!.id;
+    const onTheme = vi.fn();
+    const onTypography = vi.fn();
+    const onSubjectColorMode = vi.fn();
+    const onBackground = vi.fn();
+    const preservedDesign = {
+      ...project.design,
+      themeId: "custom" as const,
+      customPalette: {
+        basedOnPaletteId: "matcha-study" as const,
+        canvas: "#F5F3E9",
+        primary: "#2F4634",
+        secondary: "#DDE5D3",
+        accent: "#8FA276",
+        surface: "#FBFAF4",
+        border: "#BCC8B0",
+      },
+      typography: { presetId: "playfair-inter" as const },
+      background: {
+        mode: "gradient" as const,
+        gradient: {
+          color1: "#112233",
+          color2: "#AABBCC",
+          direction: 45 as const,
+        },
+      },
+      subjectColors: {
+        mode: "custom" as const,
+        singleColor: null,
+        bySubjectId: { [subjectId]: "#123456" },
+      },
+    };
+    const common = {
+      design: preservedDesign,
+      subjects: project.schedule,
+      visibleFields: project.design.visibleFields,
+      onTheme,
+      onTypography,
+      onSubjectColorMode,
+      onBackground,
+      onLayout: vi.fn(),
+      onTitleVisible: vi.fn(),
+      onTitleText: vi.fn(),
+      onField: vi.fn(),
+      onDayVisibility: vi.fn(),
+    };
+    const { rerender } = render(
+      <DesignStudioPanel
+        {...common}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+      />,
+    );
+    expect(screen.getByLabelText("CS.412 HEX")).toHaveValue("#123456");
+    expect(
+      screen.getByText("Playfair Display + Inter", {
+        selector: "summary span",
+      }),
+    ).toBeVisible();
+    expect(screen.getByText("Based on Matcha Study")).toBeVisible();
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        activeLayout="minimal"
+        detailCapabilities={resolveLayoutDetailCapabilities("minimal", variant)}
+      />,
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Subject Colors" }),
+    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Photos" })).toBeNull();
+    expect(screen.getByText("To bottom-right")).toBeVisible();
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photos={[{ id: "photo-one", filename: "campus.jpg", caption: "" }]}
+      />,
+    );
+    const structure = screen.getByRole("region", { name: "Structure" });
+    expect(
+      within(structure).getByRole("heading", { name: "Photos" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Subject Colors" }),
+    ).toBeNull();
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+      />,
+    );
+    expect(screen.getByLabelText("CS.412 HEX")).toHaveValue("#123456");
+    expect(onTheme).not.toHaveBeenCalled();
+    expect(onTypography).not.toHaveBeenCalled();
+    expect(onSubjectColorMode).not.toHaveBeenCalled();
+    expect(onBackground).not.toHaveBeenCalled();
   });
 
   it("selects a compact paired typography option with a non-color selected state", () => {
@@ -260,11 +468,11 @@ describe("layout design inspector", () => {
     expect(onDelete).toHaveBeenCalledWith(instance.instanceId);
   });
 
-  it("offers all production themes in a compact immediate selector", () => {
+  it("keeps the active Color Palette compact and opens the full choice list on demand", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
     const onTheme = vi.fn();
-    render(
+    const { rerender } = render(
       <DesignStudioPanel
         design={project.design}
         visibleFields={project.design.visibleFields}
@@ -279,6 +487,19 @@ describe("layout design inspector", () => {
       />,
     );
 
+    const paletteSummary = screen
+      .getByText("Clean Slate", { selector: "summary span" })
+      .closest("summary")!;
+    expect(paletteSummary).toBeVisible();
+    const paletteDetails = paletteSummary.closest("details")!;
+    const paletteChoices = screen.getByRole("radiogroup", {
+      name: "Color palette",
+    });
+    expect(paletteDetails).not.toHaveAttribute("open");
+    expect(paletteChoices).not.toBeVisible();
+    fireEvent.click(paletteSummary);
+    expect(paletteDetails).toHaveAttribute("open");
+    expect(paletteChoices).toBeVisible();
     expect(screen.getByRole("radio", { name: "Clean Slate" })).toHaveAttribute(
       "aria-checked",
       "true",
@@ -318,7 +539,25 @@ describe("layout design inspector", () => {
     fireEvent.click(pinkDiary);
     expect(onTheme).toHaveBeenCalledOnce();
     expect(onTheme).toHaveBeenCalledWith("pink-diary");
-    expect(screen.getByText("Malinis")).toBeVisible();
+    expect(paletteDetails).not.toHaveAttribute("open");
+    expect(paletteChoices).not.toBeVisible();
+    rerender(
+      <DesignStudioPanel
+        design={{ ...project.design, themeId: "pink-diary" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="cards"
+        detailCapabilities={resolveLayoutDetailCapabilities("cards", variant)}
+        onTheme={onTheme}
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("Pink Diary", { selector: "summary span" }),
+    ).toBeVisible();
   });
 
   it("opens palette customization without selecting Custom and applies only valid HEX", () => {
@@ -681,7 +920,11 @@ describe("layout design inspector", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      photosHeading.compareDocumentPosition(styleHeading) &
+      compositionHeading.compareDocumentPosition(styleHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      styleHeading.compareDocumentPosition(photosHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "split" }));

@@ -458,6 +458,14 @@ describe("paired typography", () => {
       ),
     ).toBe(baseline);
 
+    const resizedModel = structuredClone(
+      buildScheduleRenderModel(project, variant).model,
+    );
+    for (const layer of resizedModel.layers)
+      for (const node of layer.nodes)
+        if (node.kind === "text") node.fontSize *= 0.73;
+    expect(renderModelFontSignature(resizedModel)).toBe(baseline);
+
     const typographyProject = {
       ...project,
       design: {

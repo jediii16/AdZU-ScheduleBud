@@ -113,6 +113,14 @@ export type ScheduleRenderResult = {
   overlay: EditorOverlayModel;
   scheduleBounds: Rect;
   positionRange: { minX: number; maxX: number; minY: number; maxY: number };
+  scheduleResize?: {
+    naturalBounds: Rect;
+    scaleX: number;
+    scaleY: number;
+    fontScale: number;
+    constrained: boolean;
+    readabilityWarning: boolean;
+  };
   photoFrame?: Rect;
   photoAssetId?: string | null;
   photoFrames?: readonly {

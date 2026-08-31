@@ -12,6 +12,7 @@ export * from "./layout-style";
 export * from "./typography";
 export * from "./text-fit";
 export * from "./alignment-guides";
+export * from "./schedule-resize";
 export * from "./layout-capabilities";
 export * from "./stickers";
 export * from "./background";

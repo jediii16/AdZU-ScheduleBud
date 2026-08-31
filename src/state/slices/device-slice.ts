@@ -1,4 +1,6 @@
 import {
+  DEFAULT_SCHEDULE_SIZE,
+  clampScheduleSize,
   clampNormalizedPoint,
   inferOrientation,
   supportsOrientationSwitch,
@@ -56,6 +58,7 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         schedulePosition: clampNormalizedPoint(
           input.schedulePosition ?? { x: 0.5, y: 0.5 },
         ),
+        scheduleSize: DEFAULT_SCHEDULE_SIZE,
         layoutOverride: null,
         densityOverride: null,
         visibleFieldsOverride: null,
@@ -230,6 +233,24 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         ...variant,
         schedulePosition: clampNormalizedPoint(position),
       })),
+    setScheduleSize: (id, size, position) =>
+      edit("Resize schedule", id, (variant) => ({
+        ...variant,
+        scheduleSize: clampScheduleSize(size),
+        schedulePosition: position
+          ? clampNormalizedPoint(position)
+          : variant.schedulePosition,
+      })),
+    setScheduleAspectRatioLocked: (id, lockAspectRatio) =>
+      edit(
+        "Lock schedule proportions",
+        id,
+        (variant) => ({
+          ...variant,
+          scheduleSize: { ...variant.scheduleSize, lockAspectRatio },
+        }),
+        false,
+      ),
     setComposition: (id, compositionId) =>
       edit("Change composition", id, (variant) => ({
         ...variant,

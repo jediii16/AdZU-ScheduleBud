@@ -11,6 +11,7 @@ import type {
   Orientation,
   PhotoTransform,
   PreviewPreferences,
+  ScheduleSize,
   VisibleFields,
 } from "@/domain/device/types";
 import type { AlignmentGuides } from "@/domain/render";
@@ -194,6 +195,12 @@ export interface DeviceSlice {
   setSnappingEnabled(variantId: string, enabled: boolean): void;
   setGuideAsset(variantId: string, assetId: string | null): void;
   setSchedulePosition(variantId: string, position: NormalizedPoint): void;
+  setScheduleSize(
+    variantId: string,
+    size: ScheduleSize,
+    position?: NormalizedPoint,
+  ): void;
+  setScheduleAspectRatioLocked(variantId: string, locked: boolean): void;
   setComposition(variantId: string, compositionId: string): void;
   setDeviceOverrides(
     variantId: string,

@@ -61,10 +61,9 @@ async function choosePreset(
 
 async function choosePresetFromOpenPicker(
   page: Page,
-  category: "Phone" | "Tablet" | "Laptop" | "Desktop" | "Square",
+  _category: "Phone" | "Tablet" | "Laptop" | "Desktop" | "Square",
   name: RegExp,
 ) {
-  await page.getByRole("radio", { name: category, exact: true }).click();
   await page.getByRole("button", { name }).click();
 }
 
@@ -290,7 +289,7 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   await expect(preview).toHaveAttribute("data-target-height", "1080");
   await horizontal.fill("20");
   await page.getByRole("button", { name: "Change device" }).click();
-  await choosePresetFromOpenPicker(page, "Phone", /Generic FHD\+ Portrait/);
+  await choosePresetFromOpenPicker(page, "Phone", /Android Phone/);
   await expect(switchOrientation).toBeVisible();
   await expect(horizontal).toHaveValue("80");
   await page.getByRole("button", { name: "Change device" }).click();
@@ -423,6 +422,225 @@ test("Studio schedule selection appears on interaction and clears outside", asyn
     },
   });
   await expect(preview).toHaveAttribute("data-schedule-selected", "false");
+});
+
+test("Studio resizes a schedule with locked and freeform dimensions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page, "RESIZE 1", ["Mon", "Tue", "Wed"]);
+  const preview = page.getByTestId("artboard-preview");
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  const widthInput = page.getByLabel("Schedule width");
+  const heightInput = page.getByLabel("Schedule height");
+  const original = {
+    width: Number(await widthInput.inputValue()),
+    height: Number(await heightInput.inputValue()),
+  };
+  await expect(page.getByLabel("Lock schedule proportions")).toBeChecked();
+
+  await widthInput.fill(String(Math.round(original.width * 0.8)));
+  await widthInput.blur();
+  await expect
+    .poll(async () => Number(await heightInput.inputValue()))
+    .toBeCloseTo(original.height * 0.8, -1);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect
+    .poll(async () => Number(await widthInput.inputValue()))
+    .toBeCloseTo(original.width, 0);
+  await expect
+    .poll(async () => Number(await heightInput.inputValue()))
+    .toBeCloseTo(original.height, 0);
+
+  await page.getByLabel("Lock schedule proportions").uncheck();
+  await widthInput.fill(String(Math.round(original.width * 0.74)));
+  await widthInput.blur();
+  await expect
+    .poll(async () => Number(await heightInput.inputValue()))
+    .toBeCloseTo(original.height, 0);
+
+  const geometry = await preview.evaluate((element) => {
+    const number = (name: string) =>
+      Number(element.getAttribute(`data-${name}`) ?? "0");
+    return {
+      scale: number("preview-scale"),
+      x: number("schedule-x"),
+      y: number("schedule-y"),
+      width: number("schedule-width"),
+      height: number("schedule-height"),
+    };
+  });
+  const previewBox = await preview.boundingBox();
+  expect(previewBox).not.toBeNull();
+  await preview.click({
+    position: {
+      x: (geometry.x + geometry.width / 2) * geometry.scale,
+      y: (geometry.y + geometry.height / 2) * geometry.scale,
+    },
+  });
+  const eastHandle = {
+    x: previewBox!.x + (geometry.x + geometry.width) * geometry.scale,
+    y: previewBox!.y + (geometry.y + geometry.height / 2) * geometry.scale,
+  };
+  await page.mouse.move(eastHandle.x, eastHandle.y);
+  await page.mouse.down();
+  await page.mouse.move(
+    eastHandle.x - geometry.width * geometry.scale * 0.12,
+    eastHandle.y,
+    { steps: 6 },
+  );
+  await expect(preview).toHaveAttribute("data-resizing", "true");
+  await page.mouse.up();
+  await expect(preview).toHaveAttribute("data-resizing", "false");
+  await expect
+    .poll(async () => Number(await widthInput.inputValue()))
+    .toBeLessThan(geometry.width - 5);
+  await expect
+    .poll(async () => Number(await heightInput.inputValue()))
+    .toBeCloseTo(original.height, 0);
+
+  for (const corner of [
+    { horizontal: "west", vertical: "north", dx: 0.08, dy: 0.08 },
+    { horizontal: "east", vertical: "north", dx: -0.08, dy: 0.08 },
+    { horizontal: "west", vertical: "south", dx: 0.08, dy: -0.08 },
+    { horizontal: "east", vertical: "south", dx: -0.08, dy: -0.08 },
+  ] as const) {
+    const beforeCorner = await preview.evaluate((element) => {
+      const number = (name: string) =>
+        Number(element.getAttribute(`data-${name}`) ?? "0");
+      return {
+        scale: number("preview-scale"),
+        x: number("schedule-x"),
+        y: number("schedule-y"),
+        width: number("schedule-width"),
+        height: number("schedule-height"),
+      };
+    });
+    const currentPreviewBox = await preview.boundingBox();
+    expect(currentPreviewBox).not.toBeNull();
+    await preview.click({
+      position: {
+        x: (beforeCorner.x + beforeCorner.width / 2) * beforeCorner.scale,
+        y: (beforeCorner.y + beforeCorner.height / 2) * beforeCorner.scale,
+      },
+    });
+    const handle = {
+      x:
+        currentPreviewBox!.x +
+        (beforeCorner.x +
+          (corner.horizontal === "east" ? beforeCorner.width : 0)) *
+          beforeCorner.scale,
+      y:
+        currentPreviewBox!.y +
+        (beforeCorner.y +
+          (corner.vertical === "south" ? beforeCorner.height : 0)) *
+          beforeCorner.scale,
+    };
+    await page.mouse.move(handle.x, handle.y);
+    await page.mouse.down();
+    await page.mouse.move(
+      handle.x + beforeCorner.width * beforeCorner.scale * corner.dx,
+      handle.y + beforeCorner.height * beforeCorner.scale * corner.dy,
+      { steps: 6 },
+    );
+    await expect(preview).toHaveAttribute("data-resizing", "true");
+    await expect(page.getByText("Loading type…", { exact: true })).toBeHidden();
+    await page.mouse.up();
+    await expect(preview).toHaveAttribute("data-resizing", "false");
+    await expect
+      .poll(async () => Number(await widthInput.inputValue()))
+      .toBeLessThan(beforeCorner.width - 5);
+    await expect
+      .poll(async () => Number(await heightInput.inputValue()))
+      .toBeLessThan(beforeCorner.height - 5);
+    await page.getByRole("button", { name: "Undo" }).click();
+  }
+
+  for (const corner of [
+    { horizontal: "west", vertical: "north", xDirection: 1, yDirection: 1 },
+    { horizontal: "east", vertical: "north", xDirection: -1, yDirection: 1 },
+    { horizontal: "west", vertical: "south", xDirection: 1, yDirection: -1 },
+    { horizontal: "east", vertical: "south", xDirection: -1, yDirection: -1 },
+  ] as const) {
+    const beforeNearCorner = await preview.evaluate((element) => {
+      const number = (name: string) =>
+        Number(element.getAttribute(`data-${name}`) ?? "0");
+      return {
+        scale: number("preview-scale"),
+        x: number("schedule-x"),
+        y: number("schedule-y"),
+        width: number("schedule-width"),
+        height: number("schedule-height"),
+      };
+    });
+    const currentPreviewBox = await preview.boundingBox();
+    expect(currentPreviewBox).not.toBeNull();
+    await preview.click({
+      position: {
+        x:
+          (beforeNearCorner.x + beforeNearCorner.width / 2) *
+          beforeNearCorner.scale,
+        y:
+          (beforeNearCorner.y + beforeNearCorner.height / 2) *
+          beforeNearCorner.scale,
+      },
+    });
+    const visibleCorner = {
+      x:
+        currentPreviewBox!.x +
+        (beforeNearCorner.x +
+          (corner.horizontal === "east" ? beforeNearCorner.width : 0)) *
+          beforeNearCorner.scale,
+      y:
+        currentPreviewBox!.y +
+        (beforeNearCorner.y +
+          (corner.vertical === "south" ? beforeNearCorner.height : 0)) *
+          beforeNearCorner.scale,
+    };
+    const humanGrab = {
+      x: visibleCorner.x + corner.xDirection * 12,
+      y: visibleCorner.y + corner.yDirection * 8,
+    };
+    await page.mouse.move(humanGrab.x, humanGrab.y);
+    await page.mouse.down();
+    await page.mouse.move(
+      humanGrab.x + corner.xDirection * 24,
+      humanGrab.y + corner.yDirection * 16,
+      { steps: 6 },
+    );
+    await expect(preview).toHaveAttribute("data-resizing", "true");
+    await expect(page.getByText("Loading type…", { exact: true })).toBeHidden();
+    await page.mouse.up();
+    await expect(preview).toHaveAttribute("data-resizing", "false");
+    await expect
+      .poll(async () => Number(await widthInput.inputValue()))
+      .toBeLessThan(beforeNearCorner.width - 5);
+    await expect
+      .poll(async () => Number(await heightInput.inputValue()))
+      .toBeLessThan(beforeNearCorner.height - 5);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect
+      .poll(async () => Number(await widthInput.inputValue()))
+      .toBeCloseTo(beforeNearCorner.width, 0);
+    await expect
+      .poll(async () => Number(await heightInput.inputValue()))
+      .toBeCloseTo(beforeNearCorner.height, 0);
+  }
+
+  const resizedDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export|Download again/i }).click();
+  expect(await pngDimensions(await resizedDownload)).toEqual({
+    width: 1080,
+    height: 2400,
+  });
+
+  await page.getByRole("button", { name: "Reset size" }).click();
+  await expect
+    .poll(async () => Number(await widthInput.inputValue()))
+    .toBeCloseTo(original.width, 0);
+  await expect
+    .poll(async () => Number(await heightInput.inputValue()))
+    .toBeCloseTo(original.height, 0);
 });
 
 test("long class editing cannot scroll the Studio shell out of the viewport", async ({
@@ -618,8 +836,7 @@ test("multi-device picker creates Tablet and custom Phone variants and preserves
 }) => {
   await createStudioSchedule(page, "TARGET 1", ["Mon", "Tue", "Wed"]);
   await openTargetPicker(page);
-  await page.getByRole("radio", { name: "Tablet" }).click();
-  await page.getByRole("button", { name: /Generic 4:3 Portrait/ }).click();
+  await page.getByRole("button", { name: /iPad Portrait/ }).click();
   await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
     "data-target-width",
     "1536",
@@ -627,7 +844,7 @@ test("multi-device picker creates Tablet and custom Phone variants and preserves
   await page.getByLabel("Horizontal schedule position").fill("25");
 
   await page.getByRole("button", { name: "Change device" }).click();
-  await page.getByRole("radio", { name: "Phone", exact: true }).click();
+  await page.getByLabel("Custom screen type").selectOption("phone");
   await page.getByLabel("Custom width").fill("1170");
   await page.getByLabel("Custom height").fill("2532");
   await page.getByRole("button", { name: "Use custom size" }).click();
@@ -636,7 +853,7 @@ test("multi-device picker creates Tablet and custom Phone variants and preserves
     "1170",
   );
   await page.getByRole("button", { name: "Change device" }).click();
-  await choosePresetFromOpenPicker(page, "Tablet", /Generic 4:3 Portrait/);
+  await choosePresetFromOpenPicker(page, "Tablet", /iPad Portrait/);
   await expect(page.getByLabel("Horizontal schedule position")).toHaveValue(
     "25",
   );
@@ -682,8 +899,7 @@ test("generic lock-screen safe areas report overlap and Tablet exports exact dim
   await page.getByLabel("Vertical schedule position").fill("0");
   await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
   await page.getByRole("button", { name: "Change device" }).click();
-  await page.getByRole("radio", { name: "Tablet" }).click();
-  await page.getByRole("button", { name: /Generic 4:3 Landscape/ }).click();
+  await page.getByRole("button", { name: /iPad Landscape/ }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await download)).toEqual({
@@ -699,7 +915,6 @@ test("mobile target picker remains a usable sheet", async ({ page }) => {
   await expect(
     page.getByRole("dialog", { name: "Choose a device" }),
   ).toBeVisible();
-  await page.getByRole("radio", { name: "Square" }).click();
   await expect(page.getByRole("button", { name: /Square 1080/ })).toBeVisible();
   expect(
     await page.evaluate(
@@ -740,27 +955,27 @@ test("device preview environments remain visually restrained", async ({
   });
 
   await page.getByRole("button", { name: "Change device" }).click();
-  await page.getByRole("radio", { name: "Tablet" }).click();
-  await page.getByRole("button", { name: /Generic 4:3 Portrait/ }).click();
+  await page.getByRole("button", { name: /iPad Portrait/ }).click();
   await expect(preview).toHaveScreenshot("tablet-cards-preview.png", {
     animations: "disabled",
   });
 
   await page.getByRole("button", { name: "Change device" }).click();
   await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
-  await page.getByRole("button", { name: "Windows" }).click();
+  await page.getByRole("button", { name: "Windows desktop" }).click();
   await expect(preview).toHaveScreenshot("desktop-windows-preview.png", {
     animations: "disabled",
   });
-  await page.getByRole("button", { name: "macOS" }).click();
-  await expect(preview).toHaveScreenshot("desktop-macos-preview.png", {
-    animations: "disabled",
-  });
+  await page.getByRole("button", { name: "Change device" }).click();
+  await choosePresetFromOpenPicker(page, "Laptop", /MacBook 16:10/);
+  await expect(page.getByRole("button", { name: "macOS desktop" })).toHaveCount(
+    0,
+  );
 
   await page.getByRole("button", { name: "Change device" }).click();
   await page.getByRole("button", { name: "Match My Screen" }).click();
   await page
-    .getByLabel("Screen screenshot")
+    .getByLabel("Screen screenshot", { exact: true })
     .setInputFiles(
       resolve(
         "tests/e2e/creation.spec.ts-snapshots/phone-cards-clean-5-days-title-target-chromium-win32.png",
@@ -861,7 +1076,7 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
   await page.getByLabel("Vertical schedule position").fill("0");
   await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
 
-  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await choosePreset(page, "Tablet", /iPad Portrait/);
   await expect(preview).toHaveAttribute("data-target-width", "1536");
   await choosePreset(page, "Square", /Square 1080/);
   await expect(preview).toHaveAttribute("data-target-width", "1080");
@@ -874,10 +1089,10 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
     height: 1080,
   });
 
-  await choosePreset(page, "Phone", /Generic FHD\+ Portrait/);
+  await choosePreset(page, "Phone", /Android Phone/);
   await page.getByRole("button", { name: "Device", exact: true }).click();
   await page.getByRole("button", { name: "Change device" }).click();
-  await page.getByRole("radio", { name: "Phone", exact: true }).click();
+  await page.getByLabel("Custom screen type").selectOption("phone");
   await page.getByLabel("Custom width").fill("1170");
   await page.getByLabel("Custom height").fill("2532");
   await page.getByRole("button", { name: "Use custom size" }).click();
@@ -931,7 +1146,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await choosePreset(page, "Tablet", /iPad Portrait/);
   await expect(preview).toHaveScreenshot("tablet-portrait-minimal-clean.png", {
     animations: "disabled",
   });
@@ -943,7 +1158,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
   expect(tabletPortraitTarget).toMatchSnapshot(
     "tablet-portrait-minimal-clean-target.png",
   );
-  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await choosePreset(page, "Tablet", /iPad Landscape/);
   await expect(preview).toHaveScreenshot("tablet-landscape-minimal-clean.png", {
     animations: "disabled",
   });
@@ -1009,7 +1224,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
     "Sat",
   ]);
   await switchToMinimal(page);
-  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await choosePreset(page, "Tablet", /iPad Landscape/);
   await expect(preview).toHaveScreenshot(
     "tablet-landscape-minimal-clean-6-days.png",
     { animations: "disabled" },
@@ -1192,9 +1407,9 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   await page.getByLabel("Vertical schedule position").fill("0");
   await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
 
-  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await choosePreset(page, "Tablet", /iPad Portrait/);
   await expect(preview).toHaveAttribute("data-target-width", "1536");
-  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await choosePreset(page, "Tablet", /iPad Landscape/);
   await expect(preview).toHaveAttribute("data-target-width", "2048");
   await openTargetPicker(page);
   await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
@@ -1425,12 +1640,12 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await choosePreset(page, "Tablet", /iPad Portrait/);
   await expect(preview).toHaveScreenshot(
     "tablet-portrait-grid-clean-5-days.png",
     { animations: "disabled" },
   );
-  await choosePreset(page, "Tablet", /Generic 4:3 Landscape/);
+  await choosePreset(page, "Tablet", /iPad Landscape/);
   await expect(preview).toHaveScreenshot(
     "tablet-landscape-grid-clean-5-days.png",
     { animations: "disabled" },
@@ -1463,7 +1678,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
     animations: "disabled",
   });
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await choosePreset(page, "Tablet", /Generic 4:3 Portrait/);
+  await choosePreset(page, "Tablet", /iPad Portrait/);
   await expect(preview).toHaveScreenshot(
     "tablet-portrait-grid-clean-6-days.png",
     { animations: "disabled" },

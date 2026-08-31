@@ -21,14 +21,14 @@ function renderModelFontDescriptors(model: RenderModel): readonly string[] {
     for (const node of layer.nodes)
       if (node.kind === "text")
         descriptors.add(
-          `${node.fontId}|${node.fontWeight ?? 400}|${node.fontSize}`,
+          `${node.fontId}|${node.fontWeight ?? 400}|${node.fontStyle ?? "normal"}`,
         );
   return [...descriptors].sort();
 }
 
 function fontRequestForDescriptor(descriptor: string): string {
-  const [fontId, weight, size] = descriptor.split("|");
-  return `${weight} ${size}px ${fontFamilyForId(fontId as FontId)}`;
+  const [fontId, weight, style] = descriptor.split("|");
+  return `${style} ${weight} 16px ${fontFamilyForId(fontId as FontId)}`;
 }
 
 export function renderModelFontRequests(model: RenderModel): readonly string[] {

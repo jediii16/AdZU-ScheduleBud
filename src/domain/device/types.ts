@@ -34,6 +34,51 @@ export function clampNormalizedPoint(point: {
   };
 }
 
+// This is only a technical floor that keeps transform math and handles usable.
+// Readability is intentionally enforced with a warning rather than a hard
+// restriction so sparse schedules can still be made compact.
+export const MIN_SCHEDULE_SIZE_RATIO = 0.02;
+export const MAX_SCHEDULE_SIZE_RATIO = 1;
+export const scheduleSizeSchema = z.object({
+  widthRatio: z
+    .number()
+    .finite()
+    .min(MIN_SCHEDULE_SIZE_RATIO)
+    .max(MAX_SCHEDULE_SIZE_RATIO)
+    .nullable(),
+  heightRatio: z
+    .number()
+    .finite()
+    .min(MIN_SCHEDULE_SIZE_RATIO)
+    .max(MAX_SCHEDULE_SIZE_RATIO)
+    .nullable(),
+  lockAspectRatio: z.boolean(),
+});
+export type ScheduleSize = z.infer<typeof scheduleSizeSchema>;
+export const DEFAULT_SCHEDULE_SIZE: ScheduleSize = {
+  widthRatio: null,
+  heightRatio: null,
+  lockAspectRatio: true,
+};
+
+export function clampScheduleSize(size: ScheduleSize): ScheduleSize {
+  const clampRatio = (value: number | null) =>
+    value === null
+      ? null
+      : Math.min(
+          MAX_SCHEDULE_SIZE_RATIO,
+          Math.max(
+            MIN_SCHEDULE_SIZE_RATIO,
+            Number.isFinite(value) ? value : MIN_SCHEDULE_SIZE_RATIO,
+          ),
+        );
+  return {
+    widthRatio: clampRatio(size.widthRatio),
+    heightRatio: clampRatio(size.heightRatio),
+    lockAspectRatio: size.lockAspectRatio,
+  };
+}
+
 export const MIN_CANVAS_EDGE = 320;
 export const MAX_CANVAS_EDGE = 5120;
 export const MAX_CANVAS_AREA = 16_000_000;
@@ -143,6 +188,7 @@ export const deviceVariantSchema = z
     orientation: orientationSchema,
     compositionId: z.string().min(1),
     schedulePosition: normalizedPointSchema,
+    scheduleSize: scheduleSizeSchema.default(DEFAULT_SCHEDULE_SIZE),
     layoutOverride: layoutIdSchema.nullable(),
     densityOverride: densitySchema.nullable(),
     visibleFieldsOverride: visibleFieldsSchema.partial().nullable(),

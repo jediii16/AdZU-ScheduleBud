@@ -624,6 +624,74 @@ describe("design and device slices", () => {
     });
   });
 
+  it("keeps and persists schedule size per device while coalescing resize history", async () => {
+    const { store, projects } = createTestStore();
+    store.getState().createProject();
+    const phone = store.getState().createDeviceVariant({
+      category: "phone",
+      dimensions: { width: 1080, height: 2400 },
+    })!;
+    const tablet = store.getState().createDeviceVariant({
+      category: "tablet",
+      dimensions: { width: 1536, height: 2048 },
+    })!;
+
+    store.getState().beginHistoryTransaction("Resize schedule");
+    store.getState().setScheduleSize(phone, {
+      widthRatio: 0.75,
+      heightRatio: 0.45,
+      lockAspectRatio: false,
+    });
+    store.getState().setScheduleSize(phone, {
+      widthRatio: 0.68,
+      heightRatio: 0.4,
+      lockAspectRatio: false,
+    });
+    store.getState().commitHistoryTransaction();
+
+    const project = selectActiveProject(store.getState())!;
+    expect(
+      project.deviceVariants.find((variant) => variant.id === phone)
+        ?.scheduleSize,
+    ).toEqual({
+      widthRatio: 0.68,
+      heightRatio: 0.4,
+      lockAspectRatio: false,
+    });
+    expect(
+      project.deviceVariants.find((variant) => variant.id === tablet)
+        ?.scheduleSize,
+    ).toEqual({
+      widthRatio: null,
+      heightRatio: null,
+      lockAspectRatio: true,
+    });
+
+    await store.getState().flushAutosave();
+    const saved = await projects.read(store.getState().activeProjectId!);
+    expect(
+      saved.status === "found"
+        ? saved.project.deviceVariants.find((variant) => variant.id === phone)
+            ?.scheduleSize
+        : null,
+    ).toEqual({
+      widthRatio: 0.68,
+      heightRatio: 0.4,
+      lockAspectRatio: false,
+    });
+
+    store.getState().undo();
+    expect(
+      selectActiveProject(store.getState())?.deviceVariants.find(
+        (variant) => variant.id === phone,
+      )?.scheduleSize,
+    ).toEqual({
+      widthRatio: null,
+      heightRatio: null,
+      lockAspectRatio: true,
+    });
+  });
+
   it("changes orientation only for Phone and Tablet variants", () => {
     const { store } = createTestStore();
     store.getState().createProject();

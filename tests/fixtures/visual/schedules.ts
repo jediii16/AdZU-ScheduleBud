@@ -11,6 +11,11 @@ const phone: DeviceVariant = {
   orientation: "portrait",
   compositionId: "cards-phone",
   schedulePosition: { x: 0.5, y: 0.42 },
+  scheduleSize: {
+    widthRatio: null,
+    heightRatio: null,
+    lockAspectRatio: true,
+  },
   layoutOverride: null,
   densityOverride: null,
   visibleFieldsOverride: null,
