@@ -774,7 +774,6 @@ function PhotoInspectorSection({
             <div className="space-y-3">
               {composition === "polaroid" || composition === "split" ? (
                 <div className="space-y-3">
-                  <p className="sb-inspector-field-label">Photos</p>
                   <p className="text-xs text-text-muted">
                     {photos.length} of 4 photos
                     {composition === "polaroid" ? " · Looks best with 3–4" : ""}
@@ -1470,6 +1469,11 @@ function ColorPaletteInspectorSection({
           </button>
         </div>
       </details>
+      <p className="sb-inspector-children mt-2 text-xs leading-5 text-text-muted">
+        {design.themeId === "custom"
+          ? `Custom colors based on ${baseTheme.name}. ${baseTheme.description}`
+          : baseTheme.description}
+      </p>
       <details className="sb-inspector-children group mt-3">
         <summary className="sb-control flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30">
           <span>Customize palette</span>
@@ -3048,159 +3052,207 @@ export function DeviceStudioPanel({
   const canSwitchOrientation = supportsOrientationSwitch(variant.category);
   return (
     <section aria-labelledby="studio-device-heading">
-      <div className="pb-3">
+      <header className="sticky -top-5 z-10 -mx-5 border-b border-border bg-surface-elevated/95 px-5 pt-1 pb-3 backdrop-blur-md">
         <h2 id="studio-device-heading" className="sb-section-title">
           Device
         </h2>
-        <p className="mt-1 text-sm text-text-secondary">
-          Choose a device. ScheduleBud remembers its position and size.
-        </p>
-      </div>
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Current device</h3>
-        <div className="sb-inspector-children">
-          <p className="font-semibold">{targetLabel}</p>
-          <p className="mt-1 font-mono text-xs text-text-muted">
-            {variant.dimensions.width} × {variant.dimensions.height} ·{" "}
-            {variant.orientation}
-          </p>
-          <div className="mt-3 flex flex-nowrap gap-2">
+      </header>
+      <InspectorGroup id="device-target-heading" label="Target">
+        <section className="sb-inspector-major-section">
+          <h4 className="sb-inspector-heading">Current device</h4>
+          <div className="sb-inspector-children">
+            <p className="font-semibold">{targetLabel}</p>
+            <p className="mt-1 font-mono text-xs text-text-muted">
+              {variant.dimensions.width} × {variant.dimensions.height} ·{" "}
+              {variant.orientation}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                ref={targetTriggerRef}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onChangeTarget}
+              >
+                Change device
+              </Button>
+              {canSwitchOrientation ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={onOrientation}
+                >
+                  Switch orientation
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </section>
+        <section className="sb-inspector-major-section">
+          <h4 className="sb-inspector-heading">Preview</h4>
+          <div className="sb-inspector-children">
+            <div
+              role="group"
+              aria-label="Device preview"
+              className="flex flex-wrap gap-2"
+            >
+              {previewOptions.map(([mode, label]) => (
+                <Button
+                  key={mode}
+                  size="sm"
+                  variant={
+                    variant.preview.mode === mode ? "default" : "outline"
+                  }
+                  aria-pressed={variant.preview.mode === mode}
+                  onClick={() => onPreviewMode(mode)}
+                >
+                  {label}
+                </Button>
+              ))}
+              {variant.preview.guideAssetId ? (
+                <Button
+                  size="sm"
+                  variant={
+                    variant.preview.mode === "uploaded-guide"
+                      ? "default"
+                      : "outline"
+                  }
+                  aria-pressed={variant.preview.mode === "uploaded-guide"}
+                  onClick={() => onPreviewMode("uploaded-guide")}
+                >
+                  My screen
+                </Button>
+              ) : null}
+            </div>
+            {variant.preview.mode === "uploaded-guide" ? (
+              <label className="mt-3 block text-xs font-semibold text-text-secondary">
+                Guide opacity
+                <input
+                  aria-label="Guide opacity"
+                  className="mt-1 w-full accent-[var(--brand)]"
+                  type="range"
+                  min="15"
+                  max="65"
+                  value={Math.round(guideOpacity * 100)}
+                  onChange={(event) =>
+                    onGuideOpacity(Number(event.target.value) / 100)
+                  }
+                />
+              </label>
+            ) : null}
+          </div>
+        </section>
+      </InspectorGroup>
+      <InspectorGroup id="device-schedule-heading" label="Schedule">
+        <section className="sb-inspector-major-section">
+          <h4 className="sb-inspector-heading">Size</h4>
+          <div className="sb-inspector-children space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              {(["width", "height"] as const).map((axis) => {
+                const label = axis === "width" ? "Width" : "Height";
+                const limits =
+                  axis === "width"
+                    ? {
+                        min: scheduleSizeLimits.minWidth,
+                        max: scheduleSizeLimits.maxWidth,
+                      }
+                    : {
+                        min: scheduleSizeLimits.minHeight,
+                        max: scheduleSizeLimits.maxHeight,
+                      };
+                return (
+                  <label key={axis} className="block">
+                    <span className="mb-1 block text-xs font-semibold text-text-secondary">
+                      {label}
+                    </span>
+                    <div className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 focus-within:ring-2 focus-within:ring-ring">
+                      <input
+                        aria-label={`Schedule ${axis}`}
+                        className="min-w-0 flex-1 bg-transparent py-2 font-mono text-sm outline-none"
+                        type="number"
+                        min={Math.ceil(limits.min)}
+                        max={Math.floor(limits.max)}
+                        step="1"
+                        value={Math.round(scheduleBounds[axis])}
+                        onFocus={onSizeStart}
+                        onBlur={onSizeEnd}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.currentTarget.blur();
+                        }}
+                        onChange={(event) =>
+                          onSize(axis, Number(event.target.value))
+                        }
+                      />
+                      <span className="text-[11px] font-semibold text-text-muted">
+                        px
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <label className="sb-setting-row">
+              <span className="font-medium">Lock proportions</span>
+              <Switch
+                aria-label="Lock schedule proportions"
+                checked={variant.scheduleSize.lockAspectRatio}
+                onChange={(event) => onAspectLock(event.target.checked)}
+              />
+            </label>
+            <p className="text-xs leading-5 text-text-muted">
+              Drag the canvas handles or enter exact dimensions.
+            </p>
             <Button
-              ref={targetTriggerRef}
               type="button"
               size="sm"
               variant="outline"
-              onClick={onChangeTarget}
+              onClick={onResetSize}
             >
-              Change device
+              Reset size
             </Button>
-            {canSwitchOrientation ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={onOrientation}
-              >
-                Switch orientation
-              </Button>
-            ) : null}
           </div>
-        </div>
-      </section>
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Schedule size</h3>
-        <div className="sb-inspector-children space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            {(["width", "height"] as const).map((axis) => {
-              const label = axis === "width" ? "Width" : "Height";
-              const limits =
-                axis === "width"
-                  ? {
-                      min: scheduleSizeLimits.minWidth,
-                      max: scheduleSizeLimits.maxWidth,
-                    }
-                  : {
-                      min: scheduleSizeLimits.minHeight,
-                      max: scheduleSizeLimits.maxHeight,
-                    };
-              return (
-                <label key={axis} className="block">
-                  <span className="mb-1 block text-xs font-semibold text-text-secondary">
-                    {label}
+        </section>
+        <section className="sb-inspector-major-section">
+          <h4 className="sb-inspector-heading">Position</h4>
+          <div className="sb-inspector-children space-y-3">
+            {(["x", "y"] as const).map((axis) => (
+              <label key={axis} className="block">
+                <span className="mb-1 flex justify-between text-xs font-semibold text-text-secondary">
+                  <span>{axis === "x" ? "Horizontal" : "Vertical"}</span>
+                  <span className="font-mono">
+                    {Math.round(variant.schedulePosition[axis] * 100)}%
                   </span>
-                  <div className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 focus-within:ring-2 focus-within:ring-ring">
-                    <input
-                      aria-label={`Schedule ${axis}`}
-                      className="min-w-0 flex-1 bg-transparent py-2 font-mono text-sm outline-none"
-                      type="number"
-                      min={Math.ceil(limits.min)}
-                      max={Math.floor(limits.max)}
-                      step="1"
-                      value={Math.round(scheduleBounds[axis])}
-                      onFocus={onSizeStart}
-                      onBlur={onSizeEnd}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") event.currentTarget.blur();
-                      }}
-                      onChange={(event) =>
-                        onSize(axis, Number(event.target.value))
-                      }
-                    />
-                    <span className="text-[11px] font-semibold text-text-muted">
-                      px
-                    </span>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-          <label className="sb-setting-row">
-            <span className="font-medium">Lock proportions</span>
-            <Switch
-              aria-label="Lock schedule proportions"
-              checked={variant.scheduleSize.lockAspectRatio}
-              onChange={(event) => onAspectLock(event.target.checked)}
-            />
-          </label>
-          <p className="text-xs leading-5 text-text-muted">
-            Drag corner or side handles on the schedule. Text keeps its natural
-            proportions and photos recrop to fit.
-          </p>
-          <Button type="button" variant="outline" onClick={onResetSize}>
-            Reset size
-          </Button>
-        </div>
-      </section>
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Preview</h3>
-        <div className="sb-inspector-children">
-          <div className="flex flex-wrap gap-2">
-            {previewOptions.map(([mode, label]) => (
-              <Button
-                key={mode}
-                size="sm"
-                variant={variant.preview.mode === mode ? "default" : "outline"}
-                onClick={() => onPreviewMode(mode)}
-              >
-                {label}
-              </Button>
+                </span>
+                <input
+                  aria-label={`${axis === "x" ? "Horizontal" : "Vertical"} schedule position`}
+                  className="w-full accent-[var(--brand)]"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={Math.round(variant.schedulePosition[axis] * 100)}
+                  onPointerDown={onPositionStart}
+                  onPointerUp={onPositionEnd}
+                  onChange={(event) =>
+                    onPosition({
+                      ...variant.schedulePosition,
+                      [axis]: Number(event.target.value) / 100,
+                    })
+                  }
+                />
+              </label>
             ))}
-            {variant.preview.guideAssetId ? (
-              <Button
-                size="sm"
-                variant={
-                  variant.preview.mode === "uploaded-guide"
-                    ? "default"
-                    : "outline"
-                }
-                onClick={() => onPreviewMode("uploaded-guide")}
-              >
-                My screen
-              </Button>
-            ) : null}
+            <Button type="button" size="sm" variant="outline" onClick={onReset}>
+              Reset to balanced
+            </Button>
           </div>
-          {variant.preview.mode === "uploaded-guide" ? (
-            <label className="mt-3 block text-xs font-semibold text-text-secondary">
-              Guide opacity
-              <input
-                aria-label="Guide opacity"
-                className="mt-1 w-full accent-[var(--brand)]"
-                type="range"
-                min="15"
-                max="65"
-                value={Math.round(guideOpacity * 100)}
-                onChange={(event) =>
-                  onGuideOpacity(Number(event.target.value) / 100)
-                }
-              />
-            </label>
-          ) : null}
-        </div>
-      </section>
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Guides</h3>
-        <div className="sb-inspector-children">
-          <div className="space-y-0.5">
+        </section>
+      </InspectorGroup>
+      <InspectorGroup id="device-guides-heading" label="Guides">
+        <section className="sb-inspector-major-section">
+          <h4 className="sb-inspector-heading">Display &amp; snapping</h4>
+          <div className="sb-inspector-children space-y-0.5">
             {(
               [
                 ["Show safe areas", variant.preview.showSafeAreas, onSafeAreas],
@@ -3221,54 +3273,19 @@ export function DeviceStudioPanel({
                 />
               </label>
             ))}
+            {variant.preview.guideAssetId ? (
+              <Button
+                className="mt-3"
+                size="sm"
+                variant="ghost"
+                onClick={onRemoveGuide}
+              >
+                Remove screen guide
+              </Button>
+            ) : null}
           </div>
-          {variant.preview.guideAssetId ? (
-            <Button
-              className="mt-3"
-              size="sm"
-              variant="ghost"
-              onClick={onRemoveGuide}
-            >
-              Remove screen guide
-            </Button>
-          ) : null}
-        </div>
-      </section>
-      <section className="sb-inspector-major-section">
-        <h3 className="sb-inspector-heading">Schedule position</h3>
-        <div className="sb-inspector-children space-y-4">
-          {(["x", "y"] as const).map((axis) => (
-            <label key={axis} className="block">
-              <span className="mb-1 flex justify-between text-xs font-semibold text-text-secondary">
-                <span>{axis === "x" ? "Horizontal" : "Vertical"}</span>
-                <span className="font-mono">
-                  {Math.round(variant.schedulePosition[axis] * 100)}%
-                </span>
-              </span>
-              <input
-                aria-label={`${axis === "x" ? "Horizontal" : "Vertical"} schedule position`}
-                className="w-full accent-[var(--brand)]"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={Math.round(variant.schedulePosition[axis] * 100)}
-                onPointerDown={onPositionStart}
-                onPointerUp={onPositionEnd}
-                onChange={(event) =>
-                  onPosition({
-                    ...variant.schedulePosition,
-                    [axis]: Number(event.target.value) / 100,
-                  })
-                }
-              />
-            </label>
-          ))}
-          <Button type="button" variant="outline" onClick={onReset}>
-            Reset to balanced
-          </Button>
-        </div>
-      </section>
+        </section>
+      </InspectorGroup>
     </section>
   );
 }

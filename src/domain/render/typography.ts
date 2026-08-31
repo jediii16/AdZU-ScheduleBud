@@ -15,6 +15,7 @@ import type {
 export function isWallpaperTitleNode(node: TextRenderNode): boolean {
   return (
     node.id === "wallpaper-title" ||
+    node.id === "planner-title" ||
     /^photo-(hero|split|polaroid)-title$/.test(node.id)
   );
 }

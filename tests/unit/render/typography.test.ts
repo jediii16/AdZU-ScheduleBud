@@ -147,6 +147,29 @@ describe("paired typography", () => {
     ).toMatchObject({ fontId: "caption-hand" });
   });
 
+  it("applies Allura to the Planner title and Manrope to its schedule text", () => {
+    const project = visualScheduleProject();
+    project.design.layoutId = "planner";
+    project.design.typography = { presetId: "allura-manrope" };
+    const text = buildScheduleRenderModel(
+      project,
+      project.deviceVariants[1]!,
+    ).model.layers.flatMap((layer) =>
+      layer.nodes.filter((node) => node.kind === "text"),
+    );
+
+    expect(text.find((node) => node.id === "planner-title")).toMatchObject({
+      fontId: "allura",
+      fontWeight: 400,
+    });
+    expect(
+      text.find((node) => node.id.startsWith("planner-day-")),
+    ).toMatchObject({ fontId: "manrope" });
+    expect(
+      text.find((node) => node.id.startsWith("planner-code-")),
+    ).toMatchObject({ fontId: "manrope" });
+  });
+
   it.each(EXPECTED_SCHEDULE_FONTS)(
     "%s applies the exact %s family to every functional text node",
     (presetId, expectedFontId, expectedFamily) => {

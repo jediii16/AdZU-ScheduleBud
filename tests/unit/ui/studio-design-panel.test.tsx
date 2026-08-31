@@ -491,6 +491,7 @@ describe("layout design inspector", () => {
       .getByText("Clean Slate", { selector: "summary span" })
       .closest("summary")!;
     expect(paletteSummary).toBeVisible();
+    expect(screen.getByText("Malinis")).toBeVisible();
     const paletteDetails = paletteSummary.closest("details")!;
     const paletteChoices = screen.getByRole("radiogroup", {
       name: "Color palette",
@@ -557,6 +558,11 @@ describe("layout design inspector", () => {
     );
     expect(
       screen.getByText("Pink Diary", { selector: "summary span" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "For schedules that deserve a little main-character energy.",
+      ),
     ).toBeVisible();
   });
 
@@ -1022,6 +1028,7 @@ describe("layout design inspector", () => {
       />,
     );
     const zone = screen.getByLabelText("Add your main photo drop zone");
+    expect(zone).toHaveAttribute("role", "group");
     const file = new File(["image"], "friends.webp", {
       type: "image/webp",
     });
@@ -1191,6 +1198,7 @@ describe("layout design inspector", () => {
     );
 
     expect(screen.getByText("2 of 4 photos")).toBeVisible();
+    expect(screen.getAllByText("Photos")).toHaveLength(1);
     expect(screen.getByText("1. one.jpg")).toBeVisible();
     expect(screen.getByText("2. two.jpg")).toBeVisible();
     expect(screen.getAllByRole("button", { name: "Adjust" })).toHaveLength(2);

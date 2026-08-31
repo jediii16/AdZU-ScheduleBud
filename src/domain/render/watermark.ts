@@ -1,4 +1,5 @@
 import type { WallpaperThemeTokens } from "./themes/types";
+import type { DeviceVariant } from "@/domain/device/types";
 import type { ImageRenderNode, ScheduleRenderResult } from "./types";
 
 export const SCHEDULEBUD_WATERMARK_ASSET_ID = "brand:schedulebud-watermark";
@@ -19,11 +20,19 @@ function isDark(color: string): boolean {
 export function resolveScheduleBudWatermarkNode(
   result: ScheduleRenderResult,
   theme: WallpaperThemeTokens,
+  variant?: Pick<DeviceVariant, "preview">,
 ): ImageRenderNode {
   const shortestEdge = Math.min(result.model.width, result.model.height);
-  const width = shortestEdge * 0.09;
+  const hasWindowsTaskbar =
+    variant?.preview.mode === "windows-desktop" ||
+    variant?.preview.mode === "desktop";
+  const width = shortestEdge * (hasWindowsTaskbar ? 0.055 : 0.09);
   const height = width / LOGO_ASPECT_RATIO;
-  const inset = shortestEdge * 0.035;
+  const horizontalInset = shortestEdge * 0.035;
+  const verticalInset = shortestEdge * (hasWindowsTaskbar ? 0.012 : 0.035);
+  const windowsTaskbarHeight = hasWindowsTaskbar
+    ? Math.min(result.model.height * 0.08, (result.model.width * 49) / 1500)
+    : 0;
 
   return {
     id: "schedulebud-watermark",
@@ -33,8 +42,8 @@ export function resolveScheduleBudWatermarkNode(
       ? "/brand/schedulebud-logo-on-dark.svg"
       : "/brand/schedulebud-logo-on-light.svg",
     geometry: {
-      x: result.model.width - inset - width,
-      y: result.model.height - inset - height,
+      x: result.model.width - horizontalInset - width,
+      y: result.model.height - windowsTaskbarHeight - verticalInset - height,
       width,
       height,
     },
@@ -46,6 +55,7 @@ export function resolveScheduleBudWatermarkNode(
 export function applyScheduleBudWatermark<T extends ScheduleRenderResult>(
   result: T,
   theme: WallpaperThemeTokens,
+  variant?: Pick<DeviceVariant, "preview">,
 ): T {
   const [background, scenery, photos, schedule, foreground] =
     result.model.layers;
@@ -64,7 +74,7 @@ export function applyScheduleBudWatermark<T extends ScheduleRenderResult>(
             ...foreground.nodes.filter(
               (node) => node.id !== "schedulebud-watermark",
             ),
-            resolveScheduleBudWatermarkNode(result, theme),
+            resolveScheduleBudWatermarkNode(result, theme, variant),
           ],
         },
       ],

@@ -67,4 +67,31 @@ describe("ScheduleBud watermark", () => {
       ),
     ).toMatchObject({ source: "/brand/schedulebud-logo-on-dark.svg" });
   });
+
+  it("keeps the Windows watermark above the taskbar artwork", () => {
+    const project = visualScheduleProject();
+    const desktop = {
+      ...project.deviceVariants[1]!,
+      preview: {
+        ...project.deviceVariants[1]!.preview,
+        mode: "windows-desktop" as const,
+      },
+    };
+    const result = buildScheduleRenderModel(project, desktop);
+    const watermark = result.model.layers[4].nodes.find(
+      (node) => node.id === "schedulebud-watermark",
+    );
+    if (watermark?.kind !== "image") throw new Error("Missing watermark");
+    const taskbarHeight = Math.min(
+      result.model.height * 0.08,
+      (result.model.width * 49) / 1500,
+    );
+    const shortestEdge = Math.min(result.model.width, result.model.height);
+    const verticalInset = shortestEdge * 0.012;
+
+    expect(
+      watermark.geometry.y + watermark.geometry.height + verticalInset,
+    ).toBeCloseTo(result.model.height - taskbarHeight);
+    expect(watermark.geometry.width).toBeCloseTo(shortestEdge * 0.055);
+  });
 });

@@ -6,6 +6,7 @@ import { Circle, Group, Layer, Line, Rect } from "react-konva";
 import type { AlignmentGuides } from "@/domain/render";
 import type { DeviceVariant } from "@/domain/device/types";
 import { stickerPixelGeometry } from "@/domain/stickers/geometry";
+import type { ClientPoint } from "@/features/studio/sticker-trash-drop-zone";
 
 export type StickerEditorInteraction = {
   selectedId: string | null;
@@ -18,8 +19,26 @@ export type StickerEditorInteraction = {
   ): void;
   onResize(instanceId: string, width: number): void;
   onRotate(instanceId: string, rotation: number): void;
+  onMoveStart?(instanceId: string, point: ClientPoint | null): void;
+  onMovePointer?(point: ClientPoint): void;
+  onMoveEnd?(instanceId: string, point: ClientPoint | null): void;
   onTransformEnd(): void;
 };
+
+function eventClientPoint(
+  event: Konva.KonvaEventObject<Event>,
+): ClientPoint | null {
+  const source = event.evt as Event & {
+    clientX?: number;
+    clientY?: number;
+    touches?: ArrayLike<{ clientX: number; clientY: number }>;
+    changedTouches?: ArrayLike<{ clientX: number; clientY: number }>;
+  };
+  if (Number.isFinite(source.clientX) && Number.isFinite(source.clientY))
+    return { x: source.clientX!, y: source.clientY! };
+  const touch = source.touches?.[0] ?? source.changedTouches?.[0];
+  return touch ? { x: touch.clientX, y: touch.clientY } : null;
+}
 
 export function StickerEditorOverlay({
   variant,
@@ -105,6 +124,10 @@ export function StickerEditorOverlay({
               stop(event);
               interaction.onSelect(instance.instanceId);
               interaction.onTransformStart("Move sticker");
+              interaction.onMoveStart?.(
+                instance.instanceId,
+                eventClientPoint(event),
+              );
             }}
             onDragMove={(event) => {
               stop(event);
@@ -113,6 +136,8 @@ export function StickerEditorOverlay({
                 { x: event.target.x(), y: event.target.y() },
                 previewScale,
               );
+              const point = eventClientPoint(event);
+              if (point) interaction.onMovePointer?.(point);
             }}
             onDragEnd={(event) => {
               stop(event);
@@ -120,6 +145,10 @@ export function StickerEditorOverlay({
                 instance.instanceId,
                 { x: event.target.x(), y: event.target.y() },
                 previewScale,
+              );
+              interaction.onMoveEnd?.(
+                instance.instanceId,
+                eventClientPoint(event),
               );
               interaction.onTransformEnd();
             }}

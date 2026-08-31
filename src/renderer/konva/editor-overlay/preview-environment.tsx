@@ -19,7 +19,13 @@ const COLORS = {
 };
 
 const EMPTY_ASSETS: RenderAssetImages = new Map();
-const DEVICE_CHROME_OPACITY = 0.48;
+export const DEVICE_CHROME_OPACITY = 0.28;
+
+function neutralChromeColor(tone: DeviceArtworkTone, opacity: number) {
+  return tone === "light"
+    ? `rgba(255,255,255,${opacity})`
+    : `rgba(16,35,58,${opacity})`;
+}
 
 function useDevicePreviewAssets(
   variant: DeviceVariant,
@@ -212,7 +218,7 @@ export function PreviewEnvironmentOverlay({
           align="center"
           fontSize={Math.max(28, width * 0.055)}
           lineHeight={1.35}
-          fill="rgba(16,35,58,0.42)"
+          fill={neutralChromeColor(artworkTone, DEVICE_CHROME_OPACITY)}
           fontStyle="600"
         />
       ) : null}
@@ -223,7 +229,7 @@ export function PreviewEnvironmentOverlay({
           width={width * 0.6}
           height={height * 0.045}
           cornerRadius={height * 0.02}
-          fill="rgba(16,35,58,0.13)"
+          fill={neutralChromeColor(artworkTone, 0.11)}
         />
       ) : null}
       {variant.preview.mode === "windows-desktop" ||
@@ -243,7 +249,7 @@ export function PreviewEnvironmentOverlay({
             y={height * 0.94}
             width={width}
             height={height * 0.06}
-            fill="rgba(16,35,58,0.16)"
+            fill={neutralChromeColor(artworkTone, 0.1)}
           />
         )
       ) : null}

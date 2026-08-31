@@ -897,7 +897,12 @@ test("generic lock-screen safe areas report overlap and Tablet exports exact dim
   await page.getByRole("button", { name: "Lock screen" }).click();
   await page.getByLabel("Show safe areas").check();
   await page.getByLabel("Vertical schedule position").fill("0");
-  await expect(page.getByText(/covered|blocked system area/)).toBeVisible();
+  const coverageWarning = page.getByText(/covered|blocked system area/);
+  await expect(coverageWarning).toBeVisible();
+  await expect(coverageWarning).toHaveAttribute("data-fading", "true", {
+    timeout: 5_000,
+  });
+  await expect(coverageWarning).toBeHidden({ timeout: 6_000 });
   await page.getByRole("button", { name: "Change device" }).click();
   await page.getByRole("button", { name: /iPad Landscape/ }).click();
   const download = page.waitForEvent("download");
@@ -906,6 +911,34 @@ test("generic lock-screen safe areas report overlap and Tablet exports exact dim
     width: 2048,
     height: 1536,
   });
+});
+
+test("top navigation switches existing devices and opens device management", async ({
+  page,
+}) => {
+  await createStudioSchedule(page, "NAV DEVICE 1");
+  const preview = page.getByTestId("artboard-preview");
+  const deviceSelector = page.getByLabel(/^Current device:/);
+
+  await deviceSelector.click();
+  const choices = page.getByRole("radiogroup", {
+    name: "Active preview device",
+  });
+  await expect(choices).toBeVisible();
+  await choices.getByRole("radio", { name: /Desktop Full HD/ }).click();
+  await expect(preview).toHaveAttribute("data-target-width", "1920");
+  await expect(
+    page.getByLabel("Current device: Desktop Full HD"),
+  ).toBeVisible();
+
+  await page.getByLabel("Current device: Desktop Full HD").click();
+  await expect(
+    choices.getByRole("radio", { name: /Desktop Full HD/ }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("button", { name: "Add or match a device" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Choose a device" }),
+  ).toBeVisible();
 });
 
 test("mobile target picker remains a usable sheet", async ({ page }) => {
@@ -1308,6 +1341,50 @@ test("mobile Studio switches between Cards and Minimal without horizontal overfl
         document.documentElement.clientWidth,
     ),
   ).toBe(true);
+});
+
+test("dragging a sticker to the trash target removes it and Undo restores it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page, "STICKER TRASH", ["Mon", "Tue"]);
+  await page.getByRole("button", { name: "Design", exact: true }).click();
+  await page.getByRole("button", { name: "Add sticker" }).click();
+  await page.getByRole("button", { name: "Add Reading Capybara" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+
+  const preview = page.getByTestId("artboard-preview");
+  const previewBox = await preview.boundingBox();
+  expect(previewBox).not.toBeNull();
+  const start = {
+    x: previewBox!.x + previewBox!.width / 2,
+    y: previewBox!.y + previewBox!.height / 2,
+  };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 14, start.y + 14);
+
+  const trash = page.getByTestId("sticker-trash-drop-zone");
+  await expect(trash).toHaveAttribute("data-visible", "true");
+  await expect(trash).toContainText("Drag here to remove");
+  const trashBox = await trash.boundingBox();
+  expect(trashBox).not.toBeNull();
+  await page.mouse.move(
+    trashBox!.x + trashBox!.width / 2,
+    trashBox!.y + trashBox!.height / 2,
+  );
+  await expect(trash).toHaveAttribute("data-active", "true");
+  await expect(trash).toContainText("Release to remove");
+  await page.mouse.up();
+
+  await expect(trash).toHaveAttribute("data-visible", "false");
+  await expect(
+    page.getByRole("button", { name: "Reading Capybara In front" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(
+    page.getByRole("button", { name: "Reading Capybara In front" }),
+  ).toBeVisible();
 });
 
 test("Grid shares Studio controls, history, guides, safe areas, and exact export", async ({

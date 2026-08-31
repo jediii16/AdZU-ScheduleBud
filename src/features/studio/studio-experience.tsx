@@ -5,6 +5,7 @@ import type Konva from "konva";
 import {
   BookOpen,
   Check,
+  ChevronDown,
   Download,
   Minus,
   Palette,
@@ -65,6 +66,11 @@ import {
   photoExportBlockReason,
   type ExportStatus,
 } from "@/features/export/png-export";
+import {
+  pointIsInsideRect,
+  StickerTrashDropZone,
+  type ClientPoint,
+} from "@/features/studio/sticker-trash-drop-zone";
 import { ScheduleArtboard } from "@/renderer/konva/artboard";
 import type { ScheduleResizeHandle } from "@/renderer/konva/editor-overlay/schedule-overlay";
 import {
@@ -128,6 +134,31 @@ function exportCopy(status: ExportStatus): string {
   return "Export PNG";
 }
 
+function TransientPreviewWarning({ message }: { message: string }) {
+  const [visible, setVisible] = useState(true);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const fadeTimer = window.setTimeout(() => setFading(true), 3_400);
+    const hideTimer = window.setTimeout(() => setVisible(false), 4_200);
+    return () => {
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, []);
+
+  if (!visible) return null;
+  return (
+    <div
+      role="status"
+      data-fading={fading ? "true" : "false"}
+      className={`absolute top-3 left-1/2 z-10 -translate-x-1/2 border border-warning/35 bg-surface-elevated px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition-opacity duration-700 ease-out motion-reduce:transition-none ${fading ? "opacity-0" : "opacity-100"}`}
+    >
+      {message}
+    </div>
+  );
+}
+
 export function StudioExperience() {
   const store = useScheduleBudStoreApi();
   const activeId = useScheduleBudStore((state) => state.activeProjectId);
@@ -143,6 +174,10 @@ export function StudioExperience() {
   const initializedProject = useRef<string | null>(null);
   const exportStageRef = useRef<Konva.Stage | null>(null);
   const targetPickerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const targetPickerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const deviceMenuRef = useRef<HTMLDetailsElement | null>(null);
+  const deviceMenuTriggerRef = useRef<HTMLElement | null>(null);
+  const stickerTrashRef = useRef<HTMLDivElement | null>(null);
   const exportCoordinator = useRef(new PngExportCoordinator());
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [exportError, setExportError] = useState<string | null>(null);
@@ -151,6 +186,8 @@ export function StudioExperience() {
   const [guideOpacity, setGuideOpacity] = useState(0.35);
   const [photoAdjusting, setPhotoAdjusting] = useState(false);
   const [backgroundAdjusting, setBackgroundAdjusting] = useState(false);
+  const [draggedStickerId, setDraggedStickerId] = useState<string | null>(null);
+  const [stickerOverTrash, setStickerOverTrash] = useState(false);
   const [palettePreview, setPalettePreview] = useState<{
     role: CustomPaletteColorRole;
     color: string;
@@ -178,6 +215,11 @@ export function StudioExperience() {
   }>(() => ({ signature: "[]", images: new Map() }));
   const photoPanStart = useRef<PhotoTransform | null>(null);
   const backgroundPanStart = useRef<BackgroundImageTransform | null>(null);
+
+  const pointIsOverStickerTrash = (point: ClientPoint | null) => {
+    const rect = stickerTrashRef.current?.getBoundingClientRect();
+    return Boolean(point && rect && pointIsInsideRect(point, rect));
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -1096,6 +1138,15 @@ export function StudioExperience() {
       );
     });
   };
+  const previewWarningMessage = !activeVariant.preview.showWarnings
+    ? null
+    : safeCollision.status === "blocked"
+      ? "Part of your schedule is in a blocked system area."
+      : safeCollision.status === "caution"
+        ? "Part of your schedule may be covered by screen content."
+        : renderResult.scheduleResize?.readabilityWarning
+          ? "The schedule is very small. Check text readability before exporting."
+          : null;
   const panel =
     editor.activeSection === "classes" ? (
       <ClassesStudioPanel />
@@ -1106,7 +1157,10 @@ export function StudioExperience() {
         scheduleBounds={renderResult.scheduleBounds}
         scheduleSizeLimits={scheduleLimits}
         targetTriggerRef={targetPickerTriggerRef}
-        onChangeTarget={() => setTargetPickerOpen(true)}
+        onChangeTarget={() => {
+          targetPickerReturnFocusRef.current = targetPickerTriggerRef.current;
+          setTargetPickerOpen(true);
+        }}
         onPosition={(position) =>
           store.getState().setSchedulePosition(activeVariant.id, position)
         }
@@ -1413,6 +1467,74 @@ export function StudioExperience() {
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text-secondary">
           {project.metadata.title}
         </p>
+        <details ref={deviceMenuRef} className="group relative shrink-0">
+          <summary
+            ref={deviceMenuTriggerRef}
+            aria-label={`Current device: ${target.label}`}
+            className="flex h-9 max-w-[11rem] cursor-pointer list-none items-center gap-2 rounded-sm border border-border bg-background px-2.5 text-xs font-semibold text-text-secondary transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-[14rem]"
+          >
+            <Smartphone aria-hidden="true" className="size-4 shrink-0" />
+            <span className="hidden min-w-0 flex-1 truncate sm:block">
+              {target.label}
+            </span>
+            <span className="sm:hidden">Device</span>
+            <ChevronDown
+              aria-hidden="true"
+              className="size-3.5 shrink-0 transition-transform group-open:rotate-180"
+            />
+          </summary>
+          <div className="absolute top-[calc(100%+0.5rem)] right-0 z-40 w-[min(20rem,calc(100vw-1rem))] rounded-md border border-border bg-surface-elevated p-2 shadow-xl">
+            <p className="px-2 pt-1 pb-2 text-[11px] font-bold tracking-[0.08em] text-text-muted uppercase">
+              Preview device
+            </p>
+            <div role="radiogroup" aria-label="Active preview device">
+              {project.deviceVariants.map((variant) => {
+                const item = studioTargetForVariant(variant);
+                const checked = variant.id === activeVariant.id;
+                return (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={checked}
+                    className={`flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${checked ? "bg-brand/8 text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground"}`}
+                    onClick={() => {
+                      store.getState().setActiveDeviceVariant(variant.id);
+                      deviceMenuRef.current?.removeAttribute("open");
+                    }}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">
+                        {item.label}
+                      </span>
+                      <span className="block font-mono text-[11px] text-text-muted">
+                        {variant.dimensions.width} × {variant.dimensions.height}
+                      </span>
+                    </span>
+                    <Check
+                      aria-hidden="true"
+                      className={`size-4 shrink-0 ${checked ? "opacity-100" : "opacity-0"}`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="mt-1 w-full justify-start border-t border-border"
+              onClick={() => {
+                targetPickerReturnFocusRef.current =
+                  deviceMenuTriggerRef.current;
+                deviceMenuRef.current?.removeAttribute("open");
+                setTargetPickerOpen(true);
+              }}
+            >
+              Add or match a device
+            </Button>
+          </div>
+        </details>
         <div className="flex items-center gap-1">
           <Button
             aria-label="Undo"
@@ -1564,6 +1686,24 @@ export function StudioExperience() {
                   horizontalCenter: false,
                 });
               },
+              onMoveStart: (instanceId, point) => {
+                setDraggedStickerId(instanceId);
+                setStickerOverTrash(pointIsOverStickerTrash(point));
+              },
+              onMovePointer: (point) => {
+                const overTrash = pointIsOverStickerTrash(point);
+                setStickerOverTrash((current) =>
+                  current === overTrash ? current : overTrash,
+                );
+              },
+              onMoveEnd: (instanceId, point) => {
+                if (pointIsOverStickerTrash(point)) {
+                  store.getState().deleteSticker(activeVariant.id, instanceId);
+                  store.getState().setSelectedSticker(null);
+                }
+                setDraggedStickerId(null);
+                setStickerOverTrash(false);
+              },
               onMove: (instanceId, center, previewScale) => {
                 const threshold = 8 / previewScale;
                 const xCenter = renderResult.model.width / 2;
@@ -1623,19 +1763,16 @@ export function StudioExperience() {
               finishResize();
             }}
           />
-          {activeVariant.preview.showWarnings &&
-          (safeCollision.status !== "clear" ||
-            renderResult.scheduleResize?.readabilityWarning) ? (
-            <div
-              role="status"
-              className="absolute top-3 left-1/2 z-10 -translate-x-1/2 border border-warning/35 bg-surface-elevated px-3 py-2 text-xs font-semibold text-foreground shadow-sm"
-            >
-              {safeCollision.status === "blocked"
-                ? "Part of your schedule is in a blocked system area."
-                : safeCollision.status === "caution"
-                  ? "Part of your schedule may be covered by screen content."
-                  : "The schedule is very small. Check text readability before exporting."}
-            </div>
+          <StickerTrashDropZone
+            ref={stickerTrashRef}
+            visible={draggedStickerId !== null}
+            active={stickerOverTrash}
+          />
+          {previewWarningMessage ? (
+            <TransientPreviewWarning
+              key={previewWarningMessage}
+              message={previewWarningMessage}
+            />
           ) : null}
           <div className="mb-16 flex h-12 shrink-0 items-center justify-between border-t border-border bg-background px-3 text-xs text-text-secondary lg:mb-0">
             <span className="font-mono">
@@ -1733,7 +1870,7 @@ export function StudioExperience() {
         open={targetPickerOpen}
         variants={project.deviceVariants}
         activeVariantId={activeVariant.id}
-        returnFocusRef={targetPickerTriggerRef}
+        returnFocusRef={targetPickerReturnFocusRef}
         onClose={() => setTargetPickerOpen(false)}
         onPreset={createPresetTarget}
         onCustom={(category, width, height) =>
