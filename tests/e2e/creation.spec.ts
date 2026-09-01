@@ -1370,6 +1370,13 @@ test("dragging a sticker to the trash target removes it and Undo restores it", a
   const trashBox = await trash.boundingBox();
   expect(trashBox).not.toBeNull();
   await page.mouse.move(
+    trashBox!.x - 32,
+    trashBox!.y + trashBox!.height / 2,
+  );
+  await expect(trash).toHaveAttribute("data-nearby", "true");
+  await expect(trash).toHaveAttribute("data-active", "false");
+  await expect(trash).toContainText("Drop inside the target");
+  await page.mouse.move(
     trashBox!.x + trashBox!.width / 2,
     trashBox!.y + trashBox!.height / 2,
   );
@@ -1385,6 +1392,62 @@ test("dragging a sticker to the trash target removes it and Undo restores it", a
   await expect(
     page.getByRole("button", { name: "Reading Capybara In front" }),
   ).toBeVisible();
+});
+
+test("right-clicking a sticker opens compact actions outside the inspector", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await createStudioSchedule(page, "STICKER MENU", ["Mon", "Tue"]);
+  await page.getByRole("button", { name: "Design", exact: true }).click();
+  await page.getByRole("button", { name: "Add sticker" }).click();
+  await page.getByRole("button", { name: "Add Reading Capybara" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+
+  const inspector = page.getByTestId("studio-inspector");
+  await expect(
+    inspector.getByRole("button", { name: /Delete sticker/ }),
+  ).toHaveCount(0);
+
+  const preview = page.getByTestId("artboard-preview");
+  const previewBox = await preview.boundingBox();
+  expect(previewBox).not.toBeNull();
+  await page.mouse.click(
+    previewBox!.x + previewBox!.width / 2,
+    previewBox!.y + previewBox!.height / 2,
+    { button: "right" },
+  );
+
+  const menu = page.getByRole("menu", { name: "Sticker actions" });
+  await expect(menu).toBeVisible();
+  const menuBox = await menu.boundingBox();
+  expect(menuBox).not.toBeNull();
+  expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox!.y).toBeGreaterThanOrEqual(0);
+  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(1440);
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(1000);
+
+  await menu
+    .getByRole("menuitem", { name: "Behind schedule", exact: true })
+    .click();
+  await expect(
+    inspector.getByRole("button", {
+      name: "Reading Capybara Behind schedule",
+    }),
+  ).toBeVisible();
+
+  await inspector
+    .getByRole("button", { name: "More actions for Reading Capybara" })
+    .click();
+  await page
+    .getByRole("menu", { name: "Sticker actions" })
+    .getByRole("menuitem", { name: /^Duplicate/ })
+    .click();
+  await expect(
+    inspector.getByRole("button", {
+      name: "Reading Capybara Behind schedule",
+    }),
+  ).toHaveCount(2);
 });
 
 test("Grid shares Studio controls, history, guides, safe areas, and exact export", async ({

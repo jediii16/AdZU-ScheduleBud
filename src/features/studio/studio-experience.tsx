@@ -15,7 +15,14 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { BrandLockup } from "@/components/shared/brand-lockup";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -68,9 +75,14 @@ import {
 } from "@/features/export/png-export";
 import {
   pointIsInsideRect,
+  pointIsNearRect,
   StickerTrashDropZone,
   type ClientPoint,
 } from "@/features/studio/sticker-trash-drop-zone";
+import {
+  StickerContextMenu,
+  type StickerMenuPoint,
+} from "@/features/studio/sticker-context-menu";
 import { ScheduleArtboard } from "@/renderer/konva/artboard";
 import type { ScheduleResizeHandle } from "@/renderer/konva/editor-overlay/schedule-overlay";
 import {
@@ -178,6 +190,7 @@ export function StudioExperience() {
   const deviceMenuRef = useRef<HTMLDetailsElement | null>(null);
   const deviceMenuTriggerRef = useRef<HTMLElement | null>(null);
   const stickerTrashRef = useRef<HTMLDivElement | null>(null);
+  const stickerMenuReturnFocusRef = useRef<HTMLElement | null>(null);
   const exportCoordinator = useRef(new PngExportCoordinator());
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [exportError, setExportError] = useState<string | null>(null);
@@ -187,7 +200,12 @@ export function StudioExperience() {
   const [photoAdjusting, setPhotoAdjusting] = useState(false);
   const [backgroundAdjusting, setBackgroundAdjusting] = useState(false);
   const [draggedStickerId, setDraggedStickerId] = useState<string | null>(null);
+  const [stickerNearTrash, setStickerNearTrash] = useState(false);
   const [stickerOverTrash, setStickerOverTrash] = useState(false);
+  const [stickerMenu, setStickerMenu] = useState<{
+    instanceId: string;
+    point: StickerMenuPoint;
+  } | null>(null);
   const [palettePreview, setPalettePreview] = useState<{
     role: CustomPaletteColorRole;
     color: string;
@@ -220,6 +238,31 @@ export function StudioExperience() {
     const rect = stickerTrashRef.current?.getBoundingClientRect();
     return Boolean(point && rect && pointIsInsideRect(point, rect));
   };
+  const pointIsNearStickerTrash = (point: ClientPoint | null) => {
+    const rect = stickerTrashRef.current?.getBoundingClientRect();
+    return Boolean(point && rect && pointIsNearRect(point, rect));
+  };
+  const closeStickerMenu = useCallback((restoreFocus = false) => {
+    setStickerMenu(null);
+    const returnFocus = stickerMenuReturnFocusRef.current;
+    stickerMenuReturnFocusRef.current = null;
+    if (restoreFocus && returnFocus)
+      window.requestAnimationFrame(() =>
+        returnFocus.focus({ preventScroll: true }),
+      );
+  }, []);
+  const openStickerMenu = useCallback(
+    (
+      instanceId: string,
+      point: StickerMenuPoint,
+      returnFocus?: HTMLElement,
+    ) => {
+      stickerMenuReturnFocusRef.current = returnFocus ?? null;
+      store.getState().setSelectedSticker(instanceId);
+      setStickerMenu({ instanceId, point });
+    },
+    [store],
+  );
 
   useEffect(() => {
     const root = document.documentElement;
@@ -655,6 +698,11 @@ export function StudioExperience() {
     );
 
   const activeLayout = resolveProjectLayout(project, activeVariant);
+  const stickerMenuInstance = stickerMenu
+    ? activeVariant.stickers.find(
+        (sticker) => sticker.instanceId === stickerMenu.instanceId,
+      )
+    : undefined;
   const detailCapabilities = resolveLayoutDetailCapabilities(
     activeLayout,
     activeVariant,
@@ -887,7 +935,11 @@ export function StudioExperience() {
   };
   const switchTarget = (id: string) => {
     const variant = project.deviceVariants.find((item) => item.id === id);
-    if (variant) store.getState().setActiveDeviceVariant(variant.id);
+    if (variant) {
+      setStickerMenu(null);
+      stickerMenuReturnFocusRef.current = null;
+      store.getState().setActiveDeviceVariant(variant.id);
+    }
   };
   const createTarget = (
     category: DeviceCategory,
@@ -895,6 +947,8 @@ export function StudioExperience() {
     source: "preset" | "custom" | "matched-screen",
     presetId: string | null = null,
   ) => {
+    setStickerMenu(null);
+    stickerMenuReturnFocusRef.current = null;
     store.getState().createDeviceVariant({
       category,
       dimensions,
@@ -1426,27 +1480,7 @@ export function StudioExperience() {
           setPhotoAdjusting(false);
           store.getState().setSelectedSticker(instanceId);
         }}
-        onStickerDelete={(instanceId) => {
-          store.getState().deleteSticker(activeVariant.id, instanceId);
-          store.getState().setSelectedSticker(null);
-        }}
-        onStickerDuplicate={(instanceId) => {
-          const duplicateId = store
-            .getState()
-            .duplicateSticker(activeVariant.id, instanceId);
-          if (duplicateId) store.getState().setSelectedSticker(duplicateId);
-        }}
-        onStickerReset={(instanceId) =>
-          store.getState().resetStickerTransform(activeVariant.id, instanceId)
-        }
-        onStickerLayer={(instanceId, layer) =>
-          store.getState().setStickerLayer(activeVariant.id, instanceId, layer)
-        }
-        onStickerStack={(instanceId, direction) =>
-          store
-            .getState()
-            .moveStickerInStack(activeVariant.id, instanceId, direction)
-        }
+        onStickerMenu={openStickerMenu}
       />
     );
 
@@ -1499,6 +1533,8 @@ export function StudioExperience() {
                     aria-checked={checked}
                     className={`flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${checked ? "bg-brand/8 text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground"}`}
                     onClick={() => {
+                      setStickerMenu(null);
+                      stickerMenuReturnFocusRef.current = null;
                       store.getState().setActiveDeviceVariant(variant.id);
                       deviceMenuRef.current?.removeAttribute("open");
                     }}
@@ -1677,7 +1713,9 @@ export function StudioExperience() {
               selectedId: editor.selectedStickerId,
               onSelect: (instanceId) =>
                 store.getState().setSelectedSticker(instanceId),
+              onContextMenu: openStickerMenu,
               onTransformStart: (label) => {
+                setStickerMenu(null);
                 if (!store.getState().history.transaction)
                   store.getState().beginHistoryTransaction(label);
                 store.getState().setDragging(true);
@@ -1688,10 +1726,15 @@ export function StudioExperience() {
               },
               onMoveStart: (instanceId, point) => {
                 setDraggedStickerId(instanceId);
+                setStickerNearTrash(pointIsNearStickerTrash(point));
                 setStickerOverTrash(pointIsOverStickerTrash(point));
               },
               onMovePointer: (point) => {
+                const nearTrash = pointIsNearStickerTrash(point);
                 const overTrash = pointIsOverStickerTrash(point);
+                setStickerNearTrash((current) =>
+                  current === nearTrash ? current : nearTrash,
+                );
                 setStickerOverTrash((current) =>
                   current === overTrash ? current : overTrash,
                 );
@@ -1702,6 +1745,7 @@ export function StudioExperience() {
                   store.getState().setSelectedSticker(null);
                 }
                 setDraggedStickerId(null);
+                setStickerNearTrash(false);
                 setStickerOverTrash(false);
               },
               onMove: (instanceId, center, previewScale) => {
@@ -1766,6 +1810,7 @@ export function StudioExperience() {
           <StickerTrashDropZone
             ref={stickerTrashRef}
             visible={draggedStickerId !== null}
+            nearby={stickerNearTrash}
             active={stickerOverTrash}
           />
           {previewWarningMessage ? (
@@ -1878,6 +1923,37 @@ export function StudioExperience() {
         }
         onMatched={createMatchedTarget}
       />
+      {stickerMenu && stickerMenuInstance ? (
+        <StickerContextMenu
+          instanceId={stickerMenuInstance.instanceId}
+          layer={stickerMenuInstance.layer}
+          point={stickerMenu.point}
+          onClose={closeStickerMenu}
+          onDelete={(instanceId) => {
+            store.getState().deleteSticker(activeVariant.id, instanceId);
+            store.getState().setSelectedSticker(null);
+          }}
+          onDuplicate={(instanceId) => {
+            const duplicateId = store
+              .getState()
+              .duplicateSticker(activeVariant.id, instanceId);
+            if (duplicateId) store.getState().setSelectedSticker(duplicateId);
+          }}
+          onReset={(instanceId) =>
+            store.getState().resetStickerTransform(activeVariant.id, instanceId)
+          }
+          onLayer={(instanceId, layer) =>
+            store
+              .getState()
+              .setStickerLayer(activeVariant.id, instanceId, layer)
+          }
+          onStack={(instanceId, direction) =>
+            store
+              .getState()
+              .moveStickerInStack(activeVariant.id, instanceId, direction)
+          }
+        />
+      ) : null}
     </main>
   );
 }

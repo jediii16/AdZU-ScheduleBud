@@ -381,7 +381,7 @@ describe("layout design inspector", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
     const onAdd = vi.fn();
-    const onDelete = vi.fn();
+    const onMenu = vi.fn();
     const instance = {
       instanceId: "sticker-one",
       stickerId: "capy-reading",
@@ -401,7 +401,7 @@ describe("layout design inspector", () => {
         stickers={[instance]}
         selectedStickerId={instance.instanceId}
         onStickerAdd={onAdd}
-        onStickerDelete={onDelete}
+        onStickerMenu={onMenu}
         onLayout={vi.fn()}
         onTitleVisible={vi.fn()}
         onTitleText={vi.fn()}
@@ -463,9 +463,17 @@ describe("layout design inspector", () => {
       screen.getByRole("button", { name: "Add Reading Capybara" }),
     );
     expect(onAdd).toHaveBeenCalledWith("capy-reading");
-    expect(screen.getAllByText("In front")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: /Delete sticker/ }));
-    expect(onDelete).toHaveBeenCalledWith(instance.instanceId);
+    expect(screen.getByText("In front")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Delete sticker/ })).toBeNull();
+    const moreButton = screen.getByRole("button", {
+      name: "More actions for Reading Capybara",
+    });
+    fireEvent.click(moreButton);
+    expect(onMenu).toHaveBeenCalledWith(
+      instance.instanceId,
+      { x: 0, y: 0 },
+      moreButton,
+    );
   });
 
   it("keeps the active Color Palette compact and opens the full choice list on demand", () => {

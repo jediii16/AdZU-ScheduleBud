@@ -14,13 +14,11 @@ import {
   ArrowRight as DirectionArrow,
   Check,
   ChevronDown,
-  Copy,
   FileImage,
   ImagePlus,
-  Layers,
+  MoreHorizontal,
   RotateCcw,
   Search,
-  Trash2,
   UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,7 +66,7 @@ import type {
   CustomPaletteColorRole,
   ProjectDesign,
 } from "@/domain/project";
-import type { StickerInstance, StickerLayer } from "@/domain/stickers/types";
+import type { StickerInstance } from "@/domain/stickers/types";
 import type { Subject } from "@/domain/schedule/types";
 import {
   createDefaultBackgroundPattern,
@@ -316,21 +314,17 @@ function StickerInspectorSection({
   selectedId,
   onAdd,
   onSelect,
-  onDelete,
-  onDuplicate,
-  onReset,
-  onLayer,
-  onStack,
+  onMenu,
 }: {
   stickers: readonly StickerInstance[];
   selectedId: string | null;
   onAdd(stickerId: string): void;
   onSelect(instanceId: string): void;
-  onDelete(instanceId: string): void;
-  onDuplicate(instanceId: string): void;
-  onReset(instanceId: string): void;
-  onLayer(instanceId: string, layer: StickerLayer): void;
-  onStack(instanceId: string, direction: "forward" | "backward"): void;
+  onMenu(
+    instanceId: string,
+    point: { x: number; y: number },
+    returnFocus?: HTMLElement,
+  ): void;
 }) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -339,7 +333,6 @@ function StickerInspectorSection({
     emojiCategories[0]?.id ?? "",
   );
   const [visibleLimit, setVisibleLimit] = useState(60);
-  const selected = stickers.find((item) => item.instanceId === selectedId);
   const normalizedQuery = normalizeEmojiSearch(query);
   const filtered = useMemo(() => {
     if (category === "Emojis" && normalizedQuery) {
@@ -485,110 +478,65 @@ function StickerInspectorSection({
               .sort((left, right) => right.order - left.order)
               .map((instance) => {
                 const definition = stickerById.get(instance.stickerId);
+                const label = definition?.label ?? "Unknown sticker";
                 const isSelected = instance.instanceId === selectedId;
                 return (
                   <li key={instance.instanceId}>
-                    <button
-                      type="button"
-                      aria-pressed={isSelected}
-                      className={`flex w-full items-center gap-2 rounded-sm border px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${isSelected ? "border-brand/40 bg-accent" : "border-transparent hover:bg-muted"}`}
-                      onClick={() => onSelect(instance.instanceId)}
+                    <div
+                      className={`flex w-full items-center rounded-sm border transition-colors ${isSelected ? "border-brand/40 bg-accent" : "border-transparent hover:bg-muted"}`}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        onSelect(instance.instanceId);
+                        onMenu(instance.instanceId, {
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }}
                     >
-                      <StickerThumbnail
-                        stickerId={instance.stickerId}
-                        size={36}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-semibold">
-                          {definition?.label ?? "Unknown sticker"}
+                      <button
+                        type="button"
+                        aria-pressed={isSelected}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                        onClick={() => onSelect(instance.instanceId)}
+                      >
+                        <StickerThumbnail
+                          stickerId={instance.stickerId}
+                          size={36}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-semibold">
+                            {label}
+                          </span>
+                          <span className="block text-[11px] text-text-muted">
+                            {instance.layer === "in-front"
+                              ? "In front"
+                              : "Behind schedule"}
+                          </span>
                         </span>
-                        <span className="block text-[11px] text-text-muted">
-                          {instance.layer === "in-front"
-                            ? "In front"
-                            : "Behind schedule"}
-                        </span>
-                      </span>
-                    </button>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`More actions for ${label}`}
+                        className="mr-1 flex size-9 shrink-0 items-center justify-center rounded-sm text-text-muted hover:bg-surface-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                        onClick={(event) => {
+                          onSelect(instance.instanceId);
+                          const rect =
+                            event.currentTarget.getBoundingClientRect();
+                          onMenu(
+                            instance.instanceId,
+                            { x: rect.right, y: rect.bottom },
+                            event.currentTarget,
+                          );
+                        }}
+                      >
+                        <MoreHorizontal aria-hidden="true" className="size-4" />
+                      </button>
+                    </div>
                   </li>
                 );
               })}
           </ol>
         )}
-        {selected ? (
-          <div className="mt-4 space-y-3 border-t border-border pt-4">
-            <div
-              role="radiogroup"
-              aria-label="Sticker layer"
-              className="grid grid-cols-2 rounded-sm border border-border bg-muted/40 p-1"
-            >
-              {(
-                [
-                  ["behind-schedule", "Behind schedule"],
-                  ["in-front", "In front"],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected.layer === value}
-                  className={`min-h-9 rounded-sm px-2 text-xs font-semibold ${selected.layer === value ? "bg-surface-elevated text-brand ring-1 ring-inset ring-brand/20" : "text-text-secondary hover:bg-surface"}`}
-                  onClick={() => onLayer(selected.instanceId, value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => onStack(selected.instanceId, "forward")}
-              >
-                <Layers aria-hidden="true" />
-                Bring forward
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => onStack(selected.instanceId, "backward")}
-              >
-                <Layers aria-hidden="true" />
-                Send backward
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => onDuplicate(selected.instanceId)}
-              >
-                <Copy aria-hidden="true" />
-                Duplicate
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => onReset(selected.instanceId)}
-              >
-                <RotateCcw aria-hidden="true" />
-                Reset
-              </Button>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="text-destructive"
-              onClick={() => onDelete(selected.instanceId)}
-            >
-              <Trash2 aria-hidden="true" />
-              Delete sticker
-            </Button>
-          </div>
-        ) : null}
       </div>
     </section>
   );
@@ -2645,11 +2593,7 @@ export function DesignStudioPanel({
   selectedStickerId = null,
   onStickerAdd = () => {},
   onStickerSelect = () => {},
-  onStickerDelete = () => {},
-  onStickerDuplicate = () => {},
-  onStickerReset = () => {},
-  onStickerLayer = () => {},
-  onStickerStack = () => {},
+  onStickerMenu = () => {},
 }: {
   design: ProjectDesign;
   visibleFields: VisibleFields;
@@ -2720,11 +2664,11 @@ export function DesignStudioPanel({
   selectedStickerId?: string | null;
   onStickerAdd?(stickerId: string): void;
   onStickerSelect?(instanceId: string): void;
-  onStickerDelete?(instanceId: string): void;
-  onStickerDuplicate?(instanceId: string): void;
-  onStickerReset?(instanceId: string): void;
-  onStickerLayer?(instanceId: string, layer: StickerLayer): void;
-  onStickerStack?(instanceId: string, direction: "forward" | "backward"): void;
+  onStickerMenu?(
+    instanceId: string,
+    point: { x: number; y: number },
+    returnFocus?: HTMLElement,
+  ): void;
 }) {
   return (
     <section aria-labelledby="studio-design-heading">
@@ -2944,11 +2888,7 @@ export function DesignStudioPanel({
           selectedId={selectedStickerId}
           onAdd={onStickerAdd}
           onSelect={onStickerSelect}
-          onDelete={onStickerDelete}
-          onDuplicate={onStickerDuplicate}
-          onReset={onStickerReset}
-          onLayer={onStickerLayer}
-          onStack={onStickerStack}
+          onMenu={onStickerMenu}
         />
       </InspectorGroup>
     </section>

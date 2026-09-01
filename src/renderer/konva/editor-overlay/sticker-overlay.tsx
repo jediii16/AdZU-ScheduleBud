@@ -22,6 +22,7 @@ export type StickerEditorInteraction = {
   onMoveStart?(instanceId: string, point: ClientPoint | null): void;
   onMovePointer?(point: ClientPoint): void;
   onMoveEnd?(instanceId: string, point: ClientPoint | null): void;
+  onContextMenu?(instanceId: string, point: ClientPoint): void;
   onTransformEnd(): void;
 };
 
@@ -119,6 +120,14 @@ export function StickerEditorOverlay({
             onTouchStart={(event) => {
               stop(event);
               interaction.onSelect(instance.instanceId);
+            }}
+            onContextMenu={(event) => {
+              stop(event);
+              event.evt.preventDefault();
+              const point = eventClientPoint(event);
+              if (!point) return;
+              interaction.onSelect(instance.instanceId);
+              interaction.onContextMenu?.(instance.instanceId, point);
             }}
             onDragStart={(event) => {
               stop(event);
