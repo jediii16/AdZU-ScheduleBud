@@ -127,7 +127,7 @@ function ProjectActionsMenu({
     <Menu.Root>
       <Menu.Trigger
         aria-label={`More actions for ${project.metadata.title}`}
-        className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-md text-text-muted opacity-100 transition-[opacity,background-color,color] hover:bg-muted hover:text-foreground data-pressed:bg-muted data-pressed:text-foreground motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:data-pressed:opacity-100"
+        className="absolute top-3 right-3 z-20 flex size-8 items-center justify-center rounded-md bg-background/85 text-text-muted opacity-100 shadow-sm backdrop-blur-sm transition-[opacity,background-color,color] hover:bg-background hover:text-foreground data-pressed:bg-background data-pressed:text-foreground motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:data-pressed:opacity-100"
       >
         <Ellipsis aria-hidden="true" className="size-4" />
       </Menu.Trigger>
@@ -191,11 +191,16 @@ function ProjectCard({
   };
 
   return (
-    <li className="group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-muted bg-background transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-[0_18px_44px_-28px_rgba(20,65,110,.65)] motion-reduce:transform-none motion-reduce:transition-none">
+    <li className="group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-muted bg-background transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-[0_18px_44px_-28px_rgba(20,65,110,.65)] focus-within:border-brand/45 focus-within:shadow-[0_18px_44px_-28px_rgba(20,65,110,.65)] motion-reduce:transform-none motion-reduce:transition-none">
       <div className="aspect-[16/9] w-full overflow-hidden border-b border-border-muted">
         <ProjectCanvasPreview project={project} />
       </div>
-      <div className="flex min-h-32 min-w-0 flex-1 flex-col items-start p-4 pr-12">
+      <div
+        className={cn(
+          "flex min-h-28 min-w-0 flex-1 flex-col items-start p-4 pr-12",
+          editing && "relative z-20 bg-background",
+        )}
+      >
         {editing ? (
           <form className="w-full" onSubmit={submitRename}>
             <label htmlFor={`project-title-${project.id}`} className="sr-only">
@@ -238,19 +243,17 @@ function ProjectCard({
                 {project.schedule.length === 1 ? "class" : "classes"}
               </span>
             </p>
-            <Button
-              type="button"
-              size="xs"
-              variant="ghost"
-              aria-label={`Open ${project.metadata.title}`}
-              onClick={onOpen}
-              className="mt-auto -ml-2 text-brand hover:bg-accent"
-            >
-              Open <ArrowRight aria-hidden="true" />
-            </Button>
           </>
         )}
       </div>
+      {!editing ? (
+        <button
+          type="button"
+          aria-label={`Open ${project.metadata.title}`}
+          onClick={onOpen}
+          className="absolute inset-0 z-10 cursor-pointer rounded-xl outline-hidden focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        />
+      ) : null}
       {!editing ? (
         <ProjectActionsMenu
           project={project}

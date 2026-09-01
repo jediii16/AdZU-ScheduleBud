@@ -7,6 +7,8 @@ import {
   Check,
   ChevronDown,
   Download,
+  Eye,
+  LocateFixed,
   Minus,
   Palette,
   Plus,
@@ -151,6 +153,7 @@ import {
   ClassesStudioPanel,
   DesignStudioPanel,
   DeviceStudioPanel,
+  previewOptionsFor,
 } from "./studio-panels";
 import { DeviceTargetPicker } from "./device-target-picker";
 import { studioShortcutAction } from "./studio-shortcuts";
@@ -782,6 +785,11 @@ export function StudioExperience() {
     );
 
   const activeLayout = resolveProjectLayout(project, activeVariant);
+  const alternatePreview = previewOptionsFor(activeVariant).find(
+    ([mode]) => mode !== "clean",
+  );
+  const alternatePreviewActive =
+    alternatePreview?.[0] === activeVariant.preview.mode;
   const stickerMenuInstance = stickerMenu
     ? activeVariant.stickers.find(
         (sticker) => sticker.instanceId === stickerMenu.instanceId,
@@ -800,6 +808,12 @@ export function StudioExperience() {
   const activePhotoComposition = resolveAvailablePhotoComposition(
     project.design.photoComposition,
   );
+  const activePhotoCompositionLabel =
+    activePhotoComposition === "hero"
+      ? "Hero"
+      : activePhotoComposition === "split"
+        ? "Split"
+        : "Polaroid";
   const activePhotoId =
     (activePhotoComposition === "polaroid" ||
       activePhotoComposition === "split") &&
@@ -1240,7 +1254,8 @@ export function StudioExperience() {
       const currentProject = state.activeProjectId
         ? state.projectsById[state.activeProjectId]
         : undefined;
-      if (!currentProject) throw new Error("The active wallpaper is unavailable.");
+      if (!currentProject)
+        throw new Error("The active wallpaper is unavailable.");
       const snapshotProject = structuredClone(currentProject);
       const activeSnapshotVariant = snapshotProject.deviceVariants.find(
         (variant) => variant.id === snapshotProject.activeDeviceVariantId,
@@ -1354,14 +1369,14 @@ export function StudioExperience() {
   };
   const previewWarningMessage =
     exportContent === "background" || !activeVariant.preview.showWarnings
-    ? null
-    : safeCollision.status === "blocked"
-      ? "Part of your schedule is in a blocked system area."
-      : safeCollision.status === "caution"
-        ? "Part of your schedule may be covered by screen content."
-        : renderResult.scheduleResize?.readabilityWarning
-          ? "The schedule is very small. Check text readability before exporting."
-          : null;
+      ? null
+      : safeCollision.status === "blocked"
+        ? "Part of your schedule is in a blocked system area."
+        : safeCollision.status === "caution"
+          ? "Part of your schedule may be covered by screen content."
+          : renderResult.scheduleResize?.readabilityWarning
+            ? "The schedule is very small. Check text readability before exporting."
+            : null;
   const panel =
     editor.activeSection === "classes" ? (
       <ClassesStudioPanel />
@@ -1374,7 +1389,9 @@ export function StudioExperience() {
         targetTriggerRef={targetPickerTriggerRef}
         onChangeTarget={() => {
           deviceMenuRef.current?.setAttribute("open", "");
-          window.requestAnimationFrame(() => deviceMenuTriggerRef.current?.focus());
+          window.requestAnimationFrame(() =>
+            deviceMenuTriggerRef.current?.focus(),
+          );
         }}
         onPosition={(position) =>
           store.getState().setSchedulePosition(activeVariant.id, position)
@@ -1650,19 +1667,19 @@ export function StudioExperience() {
       data-testid="studio-shell"
       className="fixed inset-0 flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden bg-background"
     >
-      <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface-elevated px-3 sm:px-4">
+      <header className="z-30 flex h-14 shrink-0 items-center gap-1.5 border-b border-border bg-surface-elevated px-2 sm:gap-3 sm:px-4">
         <Link
           href="/"
           aria-label="ScheduleBud home"
           className="shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
-          <BrandLockup className="gap-2 [&_img]:h-8" />
+          <BrandLockup className="gap-2 [&_img]:h-8 [&>span:last-child]:hidden sm:[&>span:last-child]:flex" />
         </Link>
         <span className="hidden h-5 w-px bg-border sm:block" />
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text-secondary">
-          {project.metadata.title}
-        </p>
-        <details ref={deviceMenuRef} className="group relative shrink-0">
+        <details
+          ref={deviceMenuRef}
+          className="group relative mr-auto min-w-0 shrink-0"
+        >
           <summary
             ref={deviceMenuTriggerRef}
             aria-label={`Current device: ${target.label}`}
@@ -1678,7 +1695,7 @@ export function StudioExperience() {
               className="size-3.5 shrink-0 transition-transform group-open:rotate-180"
             />
           </summary>
-          <div className="absolute top-[calc(100%+0.5rem)] right-0 z-40 max-h-[min(75dvh,32rem)] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-md border border-border bg-surface-elevated p-2 shadow-xl">
+          <div className="fixed top-16 right-2 left-2 z-40 max-h-[min(75dvh,32rem)] overflow-y-auto rounded-md border border-border bg-surface-elevated p-2 shadow-xl sm:absolute sm:top-[calc(100%+0.5rem)] sm:right-auto sm:left-0 sm:w-80">
             <p className="px-2 pt-1 pb-2 text-[11px] font-bold tracking-[0.08em] text-text-muted uppercase">
               Preview device
             </p>
@@ -1741,7 +1758,8 @@ export function StudioExperience() {
                           {item.label}
                         </span>
                         <span className="block font-mono text-[11px] text-text-muted">
-                          {variant.dimensions.width} × {variant.dimensions.height}
+                          {variant.dimensions.width} ×{" "}
+                          {variant.dimensions.height}
                         </span>
                       </span>
                       <Check
@@ -1770,11 +1788,26 @@ export function StudioExperience() {
         </details>
         <div className="flex items-center gap-1">
           <Button
+            aria-label="Center calendar"
+            title="Center calendar"
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            onClick={() =>
+              store
+                .getState()
+                .setSchedulePosition(activeVariant.id, { x: 0.5, y: 0.5 })
+            }
+          >
+            <LocateFixed aria-hidden="true" />
+          </Button>
+          <Button
             aria-label="Undo"
             aria-keyshortcuts="Control+Z Meta+Z"
             title="Undo (Ctrl/Cmd+Z)"
             variant="ghost"
             size="icon"
+            className="size-9"
             disabled={!canUndo}
             onClick={() => store.getState().undo()}
           >
@@ -1786,11 +1819,40 @@ export function StudioExperience() {
             title="Redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y)"
             variant="ghost"
             size="icon"
+            className="size-9"
             disabled={!canRedo}
             onClick={() => store.getState().redo()}
           >
             <Redo2 aria-hidden="true" />
           </Button>
+          {alternatePreview ? (
+            <Button
+              aria-label={
+                alternatePreviewActive
+                  ? "Show wallpaper only"
+                  : `Preview ${alternatePreview[1]}`
+              }
+              title={
+                alternatePreviewActive
+                  ? "Show wallpaper only"
+                  : `Preview ${alternatePreview[1]}`
+              }
+              aria-pressed={alternatePreviewActive}
+              variant={alternatePreviewActive ? "secondary" : "ghost"}
+              size="icon"
+              className="size-9"
+              onClick={() =>
+                store
+                  .getState()
+                  .setPreviewMode(
+                    activeVariant.id,
+                    alternatePreviewActive ? "clean" : alternatePreview[0],
+                  )
+              }
+            >
+              <Eye aria-hidden="true" />
+            </Button>
+          ) : null}
         </div>
         <p
           role="status"
@@ -1801,11 +1863,12 @@ export function StudioExperience() {
         <div ref={exportMenuRef} className="relative flex shrink-0">
           <Button
             onClick={() => guardedExport(exportContent)}
+            aria-label={exportCopy(exportStatus)}
             aria-busy={
               exportStatus === "preparing" || exportStatus === "exporting"
             }
             title={`Export ${EXPORT_CONTENT_OPTIONS.find((option) => option.id === exportContent)?.label.toLowerCase()} — ${renderResult.model.width} × ${renderResult.model.height}`}
-            className="rounded-r-none"
+            className="rounded-r-none px-2.5 sm:px-4"
             disabled={
               photoExportBlocked ||
               exportStatus === "preparing" ||
@@ -1818,11 +1881,6 @@ export function StudioExperience() {
               <Download aria-hidden="true" />
             )}
             <span className="hidden sm:inline">{exportCopy(exportStatus)}</span>
-            <span className="sm:hidden">
-              {exportStatus === "preparing" || exportStatus === "exporting"
-                ? "Preparing…"
-                : "Export"}
-            </span>
           </Button>
           <Button
             type="button"
@@ -1892,7 +1950,9 @@ export function StudioExperience() {
                   <Button
                     type="button"
                     className="w-full"
-                    disabled={photoExportBlocked && exportContent !== "schedule"}
+                    disabled={
+                      photoExportBlocked && exportContent !== "schedule"
+                    }
                     onClick={() => guardedExport(exportContent)}
                   >
                     <Download aria-hidden="true" />
@@ -1902,7 +1962,9 @@ export function StudioExperience() {
                     type="button"
                     variant="outline"
                     className="w-full"
-                    disabled={photoExportBlocked && exportContent !== "schedule"}
+                    disabled={
+                      photoExportBlocked && exportContent !== "schedule"
+                    }
                     onClick={() => guardedExport(exportContent, true)}
                   >
                     <Download aria-hidden="true" />
@@ -1925,8 +1987,8 @@ export function StudioExperience() {
           role="status"
           className="z-20 shrink-0 border-b border-border bg-surface px-4 py-2 text-xs text-text-secondary"
         >
-          Photo Hero needs a photo before export. Open Design and choose Add
-          photo.
+          Photo {activePhotoCompositionLabel} needs a photo before export. Open
+          Design and choose Add photo.
         </div>
       ) : null}
       {exportStatus === "success" ? (
@@ -1980,6 +2042,23 @@ export function StudioExperience() {
             guideImage={guideImage}
             guideOpacity={guideOpacity}
             assetImages={renderAssetImages}
+            splitPhotoPreview={
+              exportContent === "wallpaper" &&
+              activeLayout === "photo" &&
+              activePhotoComposition === "split" &&
+              photoAssetIds.length === 0 &&
+              renderResult.photoFrame
+                ? {
+                    frame: renderResult.photoFrame,
+                    portrait: activeVariant.orientation === "portrait",
+                    gap:
+                      "photoMosaicGap" in renderResult &&
+                      typeof renderResult.photoMosaicGap === "number"
+                        ? renderResult.photoMosaicGap
+                        : 8,
+                  }
+                : undefined
+            }
             photoEditor={
               exportContent !== "schedule" &&
               activeLayout === "photo" &&
@@ -2009,89 +2088,104 @@ export function StudioExperience() {
                   }
                 : undefined
             }
-            stickerEditor={exportContent === "schedule" ? undefined : {
-              selectedId: editor.selectedStickerId,
-              onSelect: (instanceId) =>
-                store.getState().setSelectedSticker(instanceId),
-              onContextMenu: openStickerMenu,
-              onTransformStart: (label) => {
-                setStickerMenu(null);
-                if (!store.getState().history.transaction)
-                  store.getState().beginHistoryTransaction(label);
-                store.getState().setDragging(true);
-                store.getState().setAlignmentGuides({
-                  verticalCenter: false,
-                  horizontalCenter: false,
-                });
-              },
-              onMoveStart: (instanceId, point) => {
-                setDraggedStickerId(instanceId);
-                setStickerNearTrash(pointIsNearStickerTrash(point));
-                setStickerOverTrash(pointIsOverStickerTrash(point));
-              },
-              onMovePointer: (point) => {
-                const nearTrash = pointIsNearStickerTrash(point);
-                const overTrash = pointIsOverStickerTrash(point);
-                setStickerNearTrash((current) =>
-                  current === nearTrash ? current : nearTrash,
-                );
-                setStickerOverTrash((current) =>
-                  current === overTrash ? current : overTrash,
-                );
-              },
-              onMoveEnd: (instanceId, point) => {
-                if (pointIsOverStickerTrash(point)) {
-                  store.getState().deleteSticker(activeVariant.id, instanceId);
-                  store.getState().setSelectedSticker(null);
-                }
-                setDraggedStickerId(null);
-                setStickerNearTrash(false);
-                setStickerOverTrash(false);
-              },
-              onMove: (instanceId, center, previewScale) => {
-                const threshold = 8 / previewScale;
-                const xCenter = renderResult.model.width / 2;
-                const yCenter = renderResult.model.height / 2;
-                const verticalCenter =
-                  activeVariant.preview.enableSnapping &&
-                  Math.abs(center.x - xCenter) <= threshold;
-                const horizontalCenter =
-                  activeVariant.preview.enableSnapping &&
-                  Math.abs(center.y - yCenter) <= threshold;
-                store.getState().updateSticker(activeVariant.id, instanceId, {
-                  xRatio:
-                    (verticalCenter ? xCenter : center.x) /
-                    renderResult.model.width,
-                  yRatio:
-                    (horizontalCenter ? yCenter : center.y) /
-                    renderResult.model.height,
-                });
-                store
-                  .getState()
-                  .setAlignmentGuides({ verticalCenter, horizontalCenter });
-              },
-              onResize: (instanceId, width) =>
-                store.getState().updateSticker(activeVariant.id, instanceId, {
-                  widthRatio: width / renderResult.model.width,
-                }),
-              onRotate: (instanceId, rotation) => {
-                const snapAngles = [-90, -45, -30, -15, 0, 15, 30, 45, 90];
-                const snapped = snapAngles.find(
-                  (angle) => Math.abs(angle - rotation) <= 3,
-                );
-                store.getState().updateSticker(activeVariant.id, instanceId, {
-                  rotation: snapped ?? rotation,
-                });
-              },
-              onTransformEnd: () => {
-                store.getState().setDragging(false);
-                store.getState().setAlignmentGuides({
-                  verticalCenter: false,
-                  horizontalCenter: false,
-                });
-                store.getState().commitHistoryTransaction();
-              },
-            }}
+            stickerEditor={
+              exportContent === "schedule"
+                ? undefined
+                : {
+                    selectedId: editor.selectedStickerId,
+                    onSelect: (instanceId) =>
+                      store.getState().setSelectedSticker(instanceId),
+                    onContextMenu: openStickerMenu,
+                    onTransformStart: (label) => {
+                      setStickerMenu(null);
+                      if (!store.getState().history.transaction)
+                        store.getState().beginHistoryTransaction(label);
+                      store.getState().setDragging(true);
+                      store.getState().setAlignmentGuides({
+                        verticalCenter: false,
+                        horizontalCenter: false,
+                      });
+                    },
+                    onMoveStart: (instanceId, point) => {
+                      setDraggedStickerId(instanceId);
+                      setStickerNearTrash(pointIsNearStickerTrash(point));
+                      setStickerOverTrash(pointIsOverStickerTrash(point));
+                    },
+                    onMovePointer: (point) => {
+                      const nearTrash = pointIsNearStickerTrash(point);
+                      const overTrash = pointIsOverStickerTrash(point);
+                      setStickerNearTrash((current) =>
+                        current === nearTrash ? current : nearTrash,
+                      );
+                      setStickerOverTrash((current) =>
+                        current === overTrash ? current : overTrash,
+                      );
+                    },
+                    onMoveEnd: (instanceId, point) => {
+                      if (pointIsOverStickerTrash(point)) {
+                        store
+                          .getState()
+                          .deleteSticker(activeVariant.id, instanceId);
+                        store.getState().setSelectedSticker(null);
+                      }
+                      setDraggedStickerId(null);
+                      setStickerNearTrash(false);
+                      setStickerOverTrash(false);
+                    },
+                    onMove: (instanceId, center, previewScale) => {
+                      const threshold = 8 / previewScale;
+                      const xCenter = renderResult.model.width / 2;
+                      const yCenter = renderResult.model.height / 2;
+                      const verticalCenter =
+                        activeVariant.preview.enableSnapping &&
+                        Math.abs(center.x - xCenter) <= threshold;
+                      const horizontalCenter =
+                        activeVariant.preview.enableSnapping &&
+                        Math.abs(center.y - yCenter) <= threshold;
+                      store
+                        .getState()
+                        .updateSticker(activeVariant.id, instanceId, {
+                          xRatio:
+                            (verticalCenter ? xCenter : center.x) /
+                            renderResult.model.width,
+                          yRatio:
+                            (horizontalCenter ? yCenter : center.y) /
+                            renderResult.model.height,
+                        });
+                      store.getState().setAlignmentGuides({
+                        verticalCenter,
+                        horizontalCenter,
+                      });
+                    },
+                    onResize: (instanceId, width) =>
+                      store
+                        .getState()
+                        .updateSticker(activeVariant.id, instanceId, {
+                          widthRatio: width / renderResult.model.width,
+                        }),
+                    onRotate: (instanceId, rotation) => {
+                      const snapAngles = [
+                        -90, -45, -30, -15, 0, 15, 30, 45, 90,
+                      ];
+                      const snapped = snapAngles.find(
+                        (angle) => Math.abs(angle - rotation) <= 3,
+                      );
+                      store
+                        .getState()
+                        .updateSticker(activeVariant.id, instanceId, {
+                          rotation: snapped ?? rotation,
+                        });
+                    },
+                    onTransformEnd: () => {
+                      store.getState().setDragging(false);
+                      store.getState().setAlignmentGuides({
+                        verticalCenter: false,
+                        horizontalCenter: false,
+                      });
+                      store.getState().commitHistoryTransaction();
+                    },
+                  }
+            }
             onDragStart={beginMove}
             onDragMove={setPositionFromOrigin}
             onDragEnd={(x, y, previewScale) => {

@@ -89,7 +89,9 @@ describe("landing and creation entry", () => {
       container.querySelector('img[src*="schedulebud-logo-on-light.svg"]'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /Import from AdZU Portal/i }),
+      screen.getByRole("link", {
+        name: /Import your schedule.*XLSX or PDF.*paste a schedule/i,
+      }),
     ).toHaveAttribute("href", "/create/portal");
     expect(
       screen.getByRole("link", { name: /Use curriculum/i }),
@@ -127,6 +129,7 @@ describe("landing and creation entry", () => {
       "href",
       "/create",
     );
+    expect(screen.queryByText(/^Open$/)).toBeNull();
     await user.click(
       screen.getByRole("button", { name: "Open First semester" }),
     );

@@ -17,6 +17,7 @@ import { PreviewEnvironmentOverlay } from "./editor-overlay/preview-environment"
 import {
   PhotoEditorOverlay,
   PolaroidPlaceholderOverlay,
+  SplitPlaceholderPreviewOverlay,
 } from "./editor-overlay/photo-overlay";
 import {
   ScheduleEditorOverlay,
@@ -69,6 +70,7 @@ export function ScheduleArtboard({
   guideOpacity,
   assetImages,
   photoEditor,
+  splitPhotoPreview,
   backgroundEditor,
   stickerEditor,
 }: {
@@ -102,6 +104,9 @@ export function ScheduleArtboard({
   guideOpacity: number;
   assetImages?: RenderAssetImages | undefined;
   photoEditor?: PhotoEditorInteraction | undefined;
+  splitPhotoPreview?:
+    | { frame: ModelRect; portrait: boolean; gap: number }
+    | undefined;
   backgroundEditor?: BackgroundEditorInteraction | undefined;
   stickerEditor?: StickerEditorInteraction | undefined;
 }) {
@@ -325,18 +330,18 @@ export function ScheduleArtboard({
           {fontState === "ready" ? (
             <ScheduleScene model={result.model} assets={assetImages} />
           ) : null}
-          <PreviewEnvironmentOverlay
-            variant={variant}
-            safeAreas={safeAreas}
-            showSafeAreas={variant.preview.showSafeAreas}
-            guideImage={guideImage}
-            guideOpacity={guideOpacity}
-            previewScale={scale}
-            artworkTone={artworkTone}
-          />
           {contentMode === "wallpaper" && result.photoPlaceholders?.length ? (
             <PolaroidPlaceholderOverlay
               placeholders={result.photoPlaceholders}
+              {...(result.photoPlaceholderSets
+                ? { placeholderSets: result.photoPlaceholderSets }
+                : {})}
+              previewScale={scale}
+            />
+          ) : null}
+          {contentMode === "wallpaper" && splitPhotoPreview ? (
+            <SplitPlaceholderPreviewOverlay
+              {...splitPhotoPreview}
               previewScale={scale}
             />
           ) : null}
@@ -351,6 +356,15 @@ export function ScheduleArtboard({
               previewScale={scale}
             />
           ) : null}
+          <PreviewEnvironmentOverlay
+            variant={variant}
+            safeAreas={safeAreas}
+            showSafeAreas={variant.preview.showSafeAreas}
+            guideImage={guideImage}
+            guideOpacity={guideOpacity}
+            previewScale={scale}
+            artworkTone={artworkTone}
+          />
           {contentMode !== "background" &&
           !photoEditor?.adjusting &&
           !backgroundEditor?.adjusting ? (

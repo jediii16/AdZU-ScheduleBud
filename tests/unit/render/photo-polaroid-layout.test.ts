@@ -470,6 +470,9 @@ describe("Clean Slate Photo Polaroid", () => {
     expect(emptyResult.photoPlaceholders?.map((item) => item.slot)).toEqual([
       1, 2, 3, 4,
     ]);
+    expect(
+      emptyResult.photoPlaceholderSets?.map((set) => set.length),
+    ).toEqual([1, 2, 3, 4]);
     expect(JSON.stringify(emptyResult.model)).not.toMatch(
       /polaroid-empty|Photo 1|placeholder/,
     );
@@ -477,6 +480,7 @@ describe("Clean Slate Photo Polaroid", () => {
     const partial = polaroidProject(2);
     const partialResult = buildPhotoPolaroidRenderModel(partial, phone);
     expect(partialResult.photoPlaceholders).toEqual([]);
+    expect(partialResult.photoPlaceholderSets).toEqual([]);
   });
 
   it.each([1, 2, 3, 4] as const)(

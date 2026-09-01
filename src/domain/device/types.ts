@@ -58,7 +58,7 @@ export type ScheduleSize = z.infer<typeof scheduleSizeSchema>;
 export const DEFAULT_SCHEDULE_SIZE: ScheduleSize = {
   widthRatio: null,
   heightRatio: null,
-  lockAspectRatio: true,
+  lockAspectRatio: false,
 };
 
 export function clampScheduleSize(size: ScheduleSize): ScheduleSize {

@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { DeviceStudioPanel } from "@/features/studio/studio-panels";
+import {
+  DeviceStudioPanel,
+  previewOptionsFor,
+} from "@/features/studio/studio-panels";
 import { visualScheduleProject } from "../../fixtures/visual/schedules";
 
 function renderDevicePanel() {
@@ -46,6 +49,35 @@ function renderDevicePanel() {
 }
 
 describe("device inspector", () => {
+  it("exposes an alternate header preview only for supported devices", () => {
+    const phone = visualScheduleProject().deviceVariants[0]!;
+    expect(previewOptionsFor(phone)).toEqual([
+      ["clean", "Wallpaper"],
+      ["lock-screen", "Android lock screen"],
+    ]);
+    expect(
+      previewOptionsFor({
+        ...phone,
+        category: "desktop",
+        presetId: "desktop-1920x1080",
+        dimensions: { width: 1920, height: 1080 },
+        orientation: "landscape",
+      }),
+    ).toEqual([
+      ["clean", "Wallpaper"],
+      ["windows-desktop", "Windows desktop"],
+    ]);
+    expect(
+      previewOptionsFor({
+        ...phone,
+        category: "square",
+        presetId: "square-1080",
+        dimensions: { width: 1080, height: 1080 },
+        orientation: "square",
+      }),
+    ).toEqual([["clean", "Wallpaper"]]);
+  });
+
   it("uses a compact three-group hierarchy with preview beside the target", () => {
     renderDevicePanel();
 

@@ -14,8 +14,9 @@ const methods = [
   {
     href: "/create/portal",
     icon: FileSpreadsheet,
-    title: "Import from AdZU Portal",
-    description: "Use the XLSX schedule downloaded from your Portal account.",
+    title: "Import your schedule",
+    description:
+      "Upload an XLSX or PDF file, or paste a schedule copied from your school portal.",
     note: "Recommended",
   },
   {

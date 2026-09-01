@@ -387,14 +387,18 @@ test("advanced export downloads full-size schedule/background PNGs and configure
     "schedulebud-my-schedule-desktop-full-hd-schedule.png",
   ]);
   expect(
-    pngBufferDimensions(Buffer.from(archive[
-      "schedulebud-my-schedule-android-phone-schedule.png"
-    ]!)),
+    pngBufferDimensions(
+      Buffer.from(
+        archive["schedulebud-my-schedule-android-phone-schedule.png"]!,
+      ),
+    ),
   ).toEqual({ width: 1080, height: 2400 });
   expect(
-    pngBufferDimensions(Buffer.from(archive[
-      "schedulebud-my-schedule-desktop-full-hd-schedule.png"
-    ]!)),
+    pngBufferDimensions(
+      Buffer.from(
+        archive["schedulebud-my-schedule-desktop-full-hd-schedule.png"]!,
+      ),
+    ),
   ).toEqual({ width: 1920, height: 1080 });
 });
 
@@ -531,7 +535,8 @@ test("Studio resizes a schedule with locked and freeform dimensions", async ({
     width: Number(await widthInput.inputValue()),
     height: Number(await heightInput.inputValue()),
   };
-  await expect(page.getByLabel("Lock schedule proportions")).toBeChecked();
+  await expect(page.getByLabel("Lock schedule proportions")).not.toBeChecked();
+  await page.getByLabel("Lock schedule proportions").check();
 
   await widthInput.fill(String(Math.round(original.width * 0.8)));
   await widthInput.blur();
@@ -1016,6 +1021,21 @@ test("top navigation lists every preset and opens custom or matched device manag
   await createStudioSchedule(page, "NAV DEVICE 1");
   const preview = page.getByTestId("artboard-preview");
   const deviceSelector = page.getByLabel(/^Current device:/);
+  const centerCalendar = page.getByRole("button", {
+    name: "Center calendar",
+  });
+
+  await expect(centerCalendar).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Show wallpaper only" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Show wallpaper only" }).click();
+  await expect(
+    page.getByRole("button", { name: "Preview Android lock screen" }),
+  ).toBeVisible();
+  await centerCalendar.click();
+  await page.getByRole("button", { name: "Device", exact: true }).click();
+  await expect(page.getByLabel("Vertical schedule position")).toHaveValue("50");
 
   await deviceSelector.click();
   const choices = page.getByRole("radiogroup", {
@@ -1027,14 +1047,15 @@ test("top navigation lists every preset and opens custom or matched device manag
   await expect(
     page.getByLabel("Current device: Desktop Full HD"),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Show wallpaper only" }),
+  ).toBeVisible();
 
   await page.getByLabel("Current device: Desktop Full HD").click();
   await expect(
     choices.getByRole("radio", { name: /Desktop Full HD/ }),
   ).toHaveAttribute("aria-checked", "true");
-  await expect(
-    choices.getByRole("radio", { name: /iPhone/ }),
-  ).toBeVisible();
+  await expect(choices.getByRole("radio", { name: /iPhone/ })).toBeVisible();
   await expect(
     choices.getByRole("radio", { name: /Square 1080/ }),
   ).toBeVisible();
@@ -1091,7 +1112,9 @@ test("device preview environments remain visually restrained", async ({
   ]);
   const preview = page.getByTestId("artboard-preview");
   await page.getByRole("button", { name: "Device", exact: true }).click();
-  await page.getByRole("button", { name: "Lock screen" }).click();
+  await expect(
+    page.getByRole("button", { name: /lock screen/i }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(preview).toHaveScreenshot("phone-lock-screen-preview.png", {
     animations: "disabled",
   });
@@ -1101,14 +1124,19 @@ test("device preview environments remain visually restrained", async ({
   });
 
   await page.getByRole("button", { name: "Change device" }).click();
-  await page.getByRole("button", { name: /iPad Portrait/ }).click();
+  await choosePresetFromOpenPicker(page, "Tablet", /iPad Portrait/);
+  await expect(
+    page.getByRole("button", { name: /lock screen/i }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(preview).toHaveScreenshot("tablet-cards-preview.png", {
     animations: "disabled",
   });
 
   await page.getByRole("button", { name: "Change device" }).click();
   await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
-  await page.getByRole("button", { name: "Windows desktop" }).click();
+  await expect(
+    page.getByRole("button", { name: "Windows desktop" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(preview).toHaveScreenshot("desktop-windows-preview.png", {
     animations: "disabled",
   });
@@ -1119,6 +1147,9 @@ test("device preview environments remain visually restrained", async ({
   );
 
   await page.getByRole("button", { name: "Change device" }).click();
+  await page
+    .getByRole("button", { name: "Custom size or Match My Screen" })
+    .click();
   await page.getByRole("button", { name: "Match My Screen" }).click();
   await page
     .getByLabel("Screen screenshot", { exact: true })
@@ -1482,10 +1513,7 @@ test("dragging a sticker to the trash target removes it and Undo restores it", a
   await expect(trash).toContainText("Drag here to remove");
   const trashBox = await trash.boundingBox();
   expect(trashBox).not.toBeNull();
-  await page.mouse.move(
-    trashBox!.x - 32,
-    trashBox!.y + trashBox!.height / 2,
-  );
+  await page.mouse.move(trashBox!.x - 32, trashBox!.y + trashBox!.height / 2);
   await expect(trash).toHaveAttribute("data-nearby", "true");
   await expect(trash).toHaveAttribute("data-active", "false");
   await expect(trash).toContainText("Drop inside the target");

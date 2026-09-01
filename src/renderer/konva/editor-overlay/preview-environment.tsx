@@ -20,6 +20,7 @@ const COLORS = {
 
 const EMPTY_ASSETS: RenderAssetImages = new Map();
 export const DEVICE_CHROME_OPACITY = 0.28;
+export const IPHONE_TIME_DATE_OPACITY = 0.18;
 
 function neutralChromeColor(tone: DeviceArtworkTone, opacity: number) {
   return tone === "light"
@@ -74,7 +75,7 @@ function IPhoneLockScreenOverlay({
   const actions = images.get("iphone-actions");
   const homeIndicator = images.get("iphone-home-indicator");
   return (
-    <Group opacity={DEVICE_CHROME_OPACITY}>
+    <Group>
       {statusBar ? (
         <KonvaImage
           image={statusBar}
@@ -82,6 +83,7 @@ function IPhoneLockScreenOverlay({
           y={0}
           width={393 * xScale}
           height={59 * yScale}
+          opacity={DEVICE_CHROME_OPACITY}
         />
       ) : null}
       {date ? (
@@ -91,6 +93,7 @@ function IPhoneLockScreenOverlay({
           y={98 * yScale}
           width={171 * xScale}
           height={28 * yScale}
+          opacity={IPHONE_TIME_DATE_OPACITY}
         />
       ) : null}
       {clock ? (
@@ -100,6 +103,7 @@ function IPhoneLockScreenOverlay({
           y={132 * yScale}
           width={295 * xScale}
           height={119 * yScale}
+          opacity={IPHONE_TIME_DATE_OPACITY}
         />
       ) : null}
       {actions ? (
@@ -109,6 +113,7 @@ function IPhoneLockScreenOverlay({
           y={744 * yScale}
           width={301 * xScale}
           height={50 * yScale}
+          opacity={DEVICE_CHROME_OPACITY}
         />
       ) : null}
       {homeIndicator ? (
@@ -118,6 +123,7 @@ function IPhoneLockScreenOverlay({
           y={818 * yScale}
           width={390 * xScale}
           height={34 * yScale}
+          opacity={DEVICE_CHROME_OPACITY}
         />
       ) : null}
     </Group>

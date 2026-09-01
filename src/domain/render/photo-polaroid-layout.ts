@@ -208,6 +208,58 @@ function rotatePoint(origin: Point, point: Point, degrees: number): Point {
   };
 }
 
+function resolvePolaroidSlots(
+  family: TargetCompositionFamily,
+  area: Rect,
+  count: PolaroidPhotoCount,
+): ResolvedPolaroidSlot[] {
+  return POLAROID_TEMPLATES[family][count].map((item) => {
+    const desiredPaperHeight = area.height * item.height;
+    const paperWidth = Math.min(
+      desiredPaperHeight * POLAROID_PAPER_ASPECT,
+      area.width * item.maxWidth,
+    );
+    const paperHeight = paperWidth / POLAROID_PAPER_ASPECT;
+    const paper: Rect = {
+      x: area.x + Math.min(area.width - paperWidth, area.width * item.x),
+      y: area.y + area.height * item.y,
+      width: paperWidth,
+      height: paperHeight,
+    };
+    const side = paperWidth * 0.065;
+    const top = side;
+    const bottom = paperHeight * 0.16;
+    const rawImage: Rect = {
+      x: paper.x + side,
+      y: paper.y + top,
+      width: paperWidth - side * 2,
+      height: paperHeight - top - bottom,
+    };
+    const imagePoint = rotatePoint(
+      paper,
+      { x: rawImage.x, y: rawImage.y },
+      item.rotation,
+    );
+    return {
+      paper,
+      image: { ...rawImage, ...imagePoint },
+      rawImage,
+      side,
+      bottom,
+      rotation: item.rotation,
+    };
+  });
+}
+
+function placeholdersForSlots(slots: readonly ResolvedPolaroidSlot[]) {
+  return slots.map((slot, index) => ({
+    slot: index + 1,
+    paper: slot.paper,
+    frame: slot.image,
+    rotation: slot.rotation,
+  }));
+}
+
 function splitColumns(family: TargetCompositionFamily, dayCount: number) {
   if (dayCount <= 1) return Math.max(1, dayCount);
   if (
@@ -331,43 +383,7 @@ function buildPolaroidNodes(
   const layoutCount = (
     assetIds.length === 0 ? 4 : assetIds.length
   ) as PolaroidPhotoCount;
-  const templates = POLAROID_TEMPLATES[family][layoutCount];
-  const slots: ResolvedPolaroidSlot[] = templates.map((item) => {
-    const desiredPaperHeight = area.height * item.height;
-    const paperWidth = Math.min(
-      desiredPaperHeight * POLAROID_PAPER_ASPECT,
-      area.width * item.maxWidth,
-    );
-    const paperHeight = paperWidth / POLAROID_PAPER_ASPECT;
-    const paper: Rect = {
-      x: area.x + Math.min(area.width - paperWidth, area.width * item.x),
-      y: area.y + area.height * item.y,
-      width: paperWidth,
-      height: paperHeight,
-    };
-    const side = paperWidth * 0.065;
-    const top = side;
-    const bottom = paperHeight * 0.16;
-    const rawImage: Rect = {
-      x: paper.x + side,
-      y: paper.y + top,
-      width: paperWidth - side * 2,
-      height: paperHeight - top - bottom,
-    };
-    const imagePoint = rotatePoint(
-      paper,
-      { x: rawImage.x, y: rawImage.y },
-      item.rotation,
-    );
-    return {
-      paper,
-      image: { ...rawImage, ...imagePoint },
-      rawImage,
-      side,
-      bottom,
-      rotation: item.rotation,
-    };
-  });
+  const slots = resolvePolaroidSlots(family, area, layoutCount);
   const nodes: RenderNode[] = [];
   const layouts: PolaroidFrameLayout[] = [];
   const photoFrames: Array<{
@@ -449,16 +465,14 @@ function buildPolaroidNodes(
     });
     photoFrames.push({ assetId, frame: image, rotation });
   });
-  const placeholders =
+  const placeholderSets =
     assetIds.length === 0
-      ? slots.map((slot, index) => ({
-          slot: index + 1,
-          paper: slot.paper,
-          frame: slot.image,
-          rotation: slot.rotation,
-        }))
+      ? ([1, 2, 3, 4] as const).map((count) =>
+          placeholdersForSlots(resolvePolaroidSlots(family, area, count)),
+        )
       : [];
-  return { nodes, layouts, photoFrames, placeholders };
+  const placeholders = placeholderSets[3] ?? [];
+  return { nodes, layouts, photoFrames, placeholders, placeholderSets };
 }
 
 export function buildPhotoPolaroidRenderModel(
@@ -716,6 +730,21 @@ export function buildPhotoPolaroidRenderModel(
       y: item.frame.y + originY,
     },
   }));
+  const translatedPhotoPlaceholderSets = polaroid.placeholderSets.map((set) =>
+    set.map((item) => ({
+      ...item,
+      paper: {
+        ...item.paper,
+        x: item.paper.x + originX,
+        y: item.paper.y + originY,
+      },
+      frame: {
+        ...item.frame,
+        x: item.frame.x + originX,
+        y: item.frame.y + originY,
+      },
+    })),
+  );
   const translatedPolaroids = polaroid.layouts.map((item) => ({
     ...item,
     paper: {
@@ -788,6 +817,7 @@ export function buildPhotoPolaroidRenderModel(
     photoAssetId: project.assetReferences.photoAssetIds[0] ?? null,
     photoFrames: translatedPhotoFrames,
     photoPlaceholders: translatedPhotoPlaceholders,
+    photoPlaceholderSets: translatedPhotoPlaceholderSets,
     polaroids: translatedPolaroids,
     dayLayout,
     scheduleRegion,

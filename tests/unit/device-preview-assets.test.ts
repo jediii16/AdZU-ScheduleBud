@@ -7,6 +7,11 @@ import {
   deviceArtworkToneForModel,
   devicePreviewAssetSourceEntries,
 } from "@/renderer/konva/editor-overlay/device-preview-assets";
+import {
+  DEVICE_CHROME_OPACITY,
+  IPHONE_TIME_DATE_OPACITY,
+} from "@/renderer/konva/editor-overlay/preview-environment";
+import { nextSplitPreviewCount } from "@/renderer/konva/editor-overlay/photo-overlay";
 
 function previewVariant(
   presetId: string,
@@ -25,6 +30,17 @@ function previewVariant(
 }
 
 describe("device preview assets", () => {
+  it("cycles the Split placeholder preview from one through four photos", () => {
+    expect(nextSplitPreviewCount(1)).toBe(2);
+    expect(nextSplitPreviewCount(2)).toBe(3);
+    expect(nextSplitPreviewCount(3)).toBe(4);
+    expect(nextSplitPreviewCount(4)).toBe(1);
+  });
+
+  it("keeps the iPhone time and date subtler than the other device chrome", () => {
+    expect(IPHONE_TIME_DATE_OPACITY).toBeLessThan(DEVICE_CHROME_OPACITY);
+  });
+
   it("loads only the active device artwork", () => {
     expect(
       devicePreviewAssetSourceEntries(

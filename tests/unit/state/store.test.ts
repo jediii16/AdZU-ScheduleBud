@@ -624,6 +624,42 @@ describe("design and device slices", () => {
     });
   });
 
+  it("starts device previews with useful system chrome by category", () => {
+    const { store } = createTestStore();
+    store.getState().createProject();
+
+    const categories = [
+      ["phone", { width: 1080, height: 2400 }, "lock-screen"],
+      ["tablet", { width: 1536, height: 2048 }, "lock-screen"],
+      ["laptop", { width: 1366, height: 768 }, "windows-desktop"],
+      ["desktop", { width: 1920, height: 1080 }, "windows-desktop"],
+      ["square", { width: 1080, height: 1080 }, "clean"],
+    ] as const;
+
+    for (const [category, dimensions, expectedMode] of categories) {
+      const id = store.getState().createDeviceVariant({
+        category,
+        dimensions,
+      })!;
+      const variant = selectActiveProject(
+        store.getState(),
+      )!.deviceVariants.find((item) => item.id === id);
+      expect(variant?.preview.mode).toBe(expectedMode);
+    }
+
+    const macbookId = store.getState().createDeviceVariant({
+      category: "laptop",
+      dimensions: { width: 2560, height: 1600 },
+      dimensionSource: "preset",
+      presetId: "laptop-2560x1600",
+    })!;
+    expect(
+      selectActiveProject(store.getState())?.deviceVariants.find(
+        (item) => item.id === macbookId,
+      )?.preview.mode,
+    ).toBe("clean");
+  });
+
   it("keeps and persists schedule size per device while coalescing resize history", async () => {
     const { store, projects } = createTestStore();
     store.getState().createProject();
@@ -664,7 +700,7 @@ describe("design and device slices", () => {
     ).toEqual({
       widthRatio: null,
       heightRatio: null,
-      lockAspectRatio: true,
+      lockAspectRatio: false,
     });
 
     await store.getState().flushAutosave();
@@ -688,7 +724,7 @@ describe("design and device slices", () => {
     ).toEqual({
       widthRatio: null,
       heightRatio: null,
-      lockAspectRatio: true,
+      lockAspectRatio: false,
     });
   });
 

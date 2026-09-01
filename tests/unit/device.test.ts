@@ -50,7 +50,7 @@ describe("device category and screen matching", () => {
       scheduleSize: {
         widthRatio: null,
         heightRatio: null,
-        lockAspectRatio: true,
+        lockAspectRatio: false,
       },
     });
     expect(

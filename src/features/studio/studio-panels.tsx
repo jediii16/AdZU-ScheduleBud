@@ -661,9 +661,9 @@ function PhotoInspectorSection({
               }
               hint={
                 composition === "polaroid"
-                  ? "Previewing 4 empty frames · Add 1–4 photos"
+                  ? "Preview cycles through 1–4-photo Polaroid layouts"
                   : composition === "split"
-                    ? "Add 1–4 photos to build the Split mosaic"
+                    ? "Preview cycles through 1–4-photo Split mosaics"
                     : "Previewing an empty photo frame"
               }
               buttonLabel="Add photo"
@@ -2913,6 +2913,10 @@ const PHONE_PREVIEW_OPTIONS = [
   ["lock-screen", "Lock screen"],
   ["home-screen", "Home screen"],
 ] as const satisfies readonly PreviewOption[];
+const TABLET_PREVIEW_OPTIONS = [
+  ["clean", "Wallpaper"],
+  ["lock-screen", "Lock screen"],
+] as const satisfies readonly PreviewOption[];
 const WALLPAPER_ONLY_PREVIEW_OPTIONS = [
   ["clean", "Wallpaper"],
 ] as const satisfies readonly PreviewOption[];
@@ -2921,13 +2925,15 @@ const WINDOWS_PREVIEW_OPTIONS = [
   ["windows-desktop", "Windows desktop"],
 ] as const satisfies readonly PreviewOption[];
 
-function previewOptionsFor(variant: DeviceVariant): readonly PreviewOption[] {
+export function previewOptionsFor(
+  variant: DeviceVariant,
+): readonly PreviewOption[] {
   if (variant.presetId === DEVICE_PRESET_IDS.iphone)
     return IPHONE_PREVIEW_OPTIONS;
   if (variant.presetId === DEVICE_PRESET_IDS.android)
     return ANDROID_PREVIEW_OPTIONS;
   if (variant.category === "phone") return PHONE_PREVIEW_OPTIONS;
-  if (variant.category === "tablet") return WALLPAPER_ONLY_PREVIEW_OPTIONS;
+  if (variant.category === "tablet") return TABLET_PREVIEW_OPTIONS;
   if (variant.category === "square") return WALLPAPER_ONLY_PREVIEW_OPTIONS;
   if (variant.presetId === DEVICE_PRESET_IDS.macbook)
     return WALLPAPER_ONLY_PREVIEW_OPTIONS;

@@ -1049,7 +1049,7 @@ describe("layout design inspector", () => {
     expect(zone).toHaveAttribute("data-dragging", "false");
   });
 
-  it("explains the default four-frame Polaroid placeholder", () => {
+  it("explains the animated empty Polaroid preview", () => {
     const project = visualScheduleProject();
     const variant = project.deviceVariants[0]!;
     render(
@@ -1068,7 +1068,7 @@ describe("layout design inspector", () => {
     );
 
     expect(
-      screen.getByText("Previewing 4 empty frames · Add 1–4 photos"),
+      screen.getByText("Preview cycles through 1–4-photo Polaroid layouts"),
     ).toBeVisible();
     expect(screen.getByRole("radio", { name: "polaroid" })).toHaveAttribute(
       "aria-checked",
@@ -1213,6 +1213,29 @@ describe("layout design inspector", () => {
     expect(screen.queryByLabelText("Caption (optional)")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Move photo 2 up" }));
     expect(onMove).toHaveBeenCalledWith("two", "up");
+  });
+
+  it("explains the animated empty Split mosaic preview", () => {
+    const project = visualScheduleProject();
+    const variant = project.deviceVariants[0]!;
+    render(
+      <DesignStudioPanel
+        design={{ ...project.design, layoutId: "photo" }}
+        visibleFields={project.design.visibleFields}
+        activeLayout="photo"
+        detailCapabilities={resolveLayoutDetailCapabilities("photo", variant)}
+        photoComposition="split"
+        onLayout={vi.fn()}
+        onTitleVisible={vi.fn()}
+        onTitleText={vi.fn()}
+        onField={vi.fn()}
+        onDayVisibility={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Preview cycles through 1–4-photo Split mosaics"),
+    ).toBeVisible();
   });
 
   it("offers compact accessible Background modes and contextual controls", () => {

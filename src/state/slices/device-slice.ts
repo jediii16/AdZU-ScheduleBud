@@ -7,12 +7,24 @@ import {
   type DeviceVariant,
 } from "@/domain/device/types";
 import { clampPhotoTransform } from "@/domain/render/photo-crop";
+import { DEVICE_PRESET_IDS } from "@/data/devices/registry";
 import { stickerById } from "@/data/stickers/catalog";
 import {
   MAX_STICKERS_PER_VARIANT,
   clampStickerInstance,
 } from "@/domain/stickers/geometry";
 import type { DeviceSlice, StoreContext } from "../types";
+
+function defaultPreviewModeFor(
+  category: DeviceVariant["category"],
+  presetId: DeviceVariant["presetId"],
+): DeviceVariant["preview"]["mode"] {
+  if (category === "phone" || category === "tablet") return "lock-screen";
+  if (presetId === DEVICE_PRESET_IDS.macbook) return "clean";
+  if (category === "laptop" || category === "desktop")
+    return "windows-desktop";
+  return "clean";
+}
 
 function updateVariant(
   project: Parameters<StoreContext["commit"]>[1] extends (
@@ -69,7 +81,10 @@ export function createDeviceSlice(context: StoreContext): DeviceSlice {
         },
         stickers: [],
         preview: {
-          mode: "clean",
+          mode: defaultPreviewModeFor(
+            input.category,
+            input.presetId ?? null,
+          ),
           showSafeAreas: false,
           showWarnings: true,
           enableSnapping: true,

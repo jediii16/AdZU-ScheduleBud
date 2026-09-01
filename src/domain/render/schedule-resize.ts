@@ -502,5 +502,16 @@ export function applyScheduleSize<T extends ScheduleRenderResult>(
           })),
         }
       : {}),
+    ...(result.photoPlaceholderSets
+      ? {
+          photoPlaceholderSets: result.photoPlaceholderSets.map((set) =>
+            set.map((placeholder) => ({
+              ...placeholder,
+              paper: transformRect(placeholder.paper, transform),
+              frame: transformRect(placeholder.frame, transform),
+            })),
+          ),
+        }
+      : {}),
   } as T;
 }
