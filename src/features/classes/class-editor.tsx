@@ -102,7 +102,7 @@ export function MeetingFields({
             className="sb-control font-mono"
             type="time"
             min="07:05"
-            max="21:00"
+            max="23:00"
             step="300"
             value={meeting.endTime}
             onChange={(event) => onChange({ endTime: event.target.value })}
@@ -132,7 +132,7 @@ export function MeetingFields({
       </div>
       {showValidation && !validation.complete ? (
         <p role="status" className="text-xs font-medium text-warning">
-          This meeting needs valid days and a time between 07:00 and 21:00.
+          This meeting needs valid days and a time between 07:00 and 23:00.
         </p>
       ) : null}
     </div>

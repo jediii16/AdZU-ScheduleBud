@@ -66,10 +66,16 @@ describe("landing and creation entry", () => {
     expect(
       screen.getByRole("heading", { name: "Three steps. Nothing to rebuild." }),
     ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Templates" })).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: "Your schedule stays with you." }),
-    ).toBeVisible();
-    expect(screen.queryByRole("link", { name: /template/i })).toBeNull();
+      screen.queryByRole("heading", { name: "Your schedule stays with you." }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Your timetable, ready for the screens you already use.",
+      }),
+    ).toBeNull();
+    expect(screen.queryByRole("link", { name: "My schedules" })).toBeNull();
     expect(
       screen.queryByRole("heading", { name: "Your schedules" }),
     ).toBeNull();
@@ -128,6 +134,56 @@ describe("landing and creation entry", () => {
     expect(push).toHaveBeenCalledWith("/studio");
   });
 
+  it("renames, duplicates, and deletes through the project action menu", async () => {
+    const user = userEvent.setup();
+    const { store } = createTestStore({ autosaveDebounceMs: 1 });
+    const projectId = store.getState().createProject("Original schedule");
+    render(
+      <ScheduleBudProvider store={store} hydrate={false}>
+        <HomeExperience />
+      </ScheduleBudProvider>,
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "More actions for Original schedule",
+      }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    const title = screen.getByRole("textbox", { name: "Schedule name" });
+    await user.clear(title);
+    await user.type(title, "Fall schedule");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(store.getState().projectsById[projectId]?.metadata.title).toBe(
+      "Fall schedule",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "More actions for Fall schedule" }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Duplicate" }),
+    );
+    expect(await screen.findByText("Fall schedule copy")).toBeVisible();
+    expect(Object.keys(store.getState().projectsById)).toHaveLength(2);
+
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    await user.click(
+      screen.getByRole("button", {
+        name: "More actions for Fall schedule copy",
+      }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await waitFor(() =>
+      expect(screen.queryByText("Fall schedule copy")).toBeNull(),
+    );
+    expect(Object.keys(store.getState().projectsById)).toHaveLength(1);
+    expect(confirm).toHaveBeenCalledWith(
+      "Delete “Fall schedule copy”? This schedule will be removed from this device.",
+    );
+    confirm.mockRestore();
+  });
+
   it("hydrates the project dashboard from the canonical local repository", async () => {
     const seeded = createTestStore({ autosaveDebounceMs: 1 });
     seeded.store.getState().createProject("Stored schedule");
@@ -162,7 +218,7 @@ describe("manual creation", () => {
     expect(startTime).toHaveAttribute("max", "20:55");
     expect(startTime).toHaveAttribute("step", "300");
     expect(endTime).toHaveAttribute("min", "07:05");
-    expect(endTime).toHaveAttribute("max", "21:00");
+    expect(endTime).toHaveAttribute("max", "23:00");
     expect(endTime).toHaveAttribute("step", "300");
     fireEvent.change(startTime, {
       target: { value: "08:00" },
@@ -320,7 +376,7 @@ describe("Portal creation", () => {
   it("rejects invalid extensions and oversize files with student-facing feedback", async () => {
     const user = userEvent.setup();
     renderWithStore(<PortalCreation />);
-    const dropZone = screen.getByLabelText("XLSX upload drop zone");
+    const dropZone = screen.getByLabelText("Schedule file upload drop zone");
     fireEvent.dragEnter(dropZone, { dataTransfer: { files: [] } });
     expect(dropZone).toHaveAttribute("data-dragging", "true");
     expect(screen.getByText("Release to import")).toBeVisible();
@@ -329,13 +385,11 @@ describe("Portal creation", () => {
     const input = document.querySelector(
       'input[type="file"]',
     ) as HTMLInputElement;
-    const invalid = new File(["not xlsx"], "schedule.pdf", {
-      type: "application/pdf",
-    });
+    const invalid = new File(["not a schedule"], "schedule.txt");
     fireEvent.change(input, { target: { files: [invalid] } });
-    expect(await screen.findByText(/must be .xlsx/i)).toBeVisible();
-    expect(screen.getByText("schedule.pdf")).toBeVisible();
-    expect(screen.getByText(/PDF file/i)).toBeVisible();
+    expect(await screen.findByText(/must be PDF or XLSX/i)).toBeVisible();
+    expect(screen.getByText("schedule.txt")).toBeVisible();
+    expect(screen.getByText(/TXT file/i)).toBeVisible();
     const oversize = new File(["x"], "schedule.xlsx");
     Object.defineProperty(oversize, "size", { value: 5 * 1024 * 1024 + 1 });
     fireEvent.change(input, { target: { files: [oversize] } });
@@ -393,6 +447,23 @@ describe("Portal creation", () => {
     ).toBe(true);
   });
 
+  it("imports copied schedule text without a file", async () => {
+    renderWithStore(<PortalCreation />);
+    fireEvent.change(screen.getByLabelText("Schedule text"), {
+      target: {
+        value:
+          "Subject Sec Units Schedule Room Faculty JDN503 Property Law 2A-JDN-ONSITE 4.00 Mon 05:30 PM - 09:30 PM No Room No Instructor",
+      },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Import pasted schedule" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "JDN503" }),
+    ).toBeVisible();
+    expect(screen.getByText("Mon · 17:30–21:30")).toBeVisible();
+  });
+
   it("requires every pending imported subject to retain a code", async () => {
     renderWithStore(<PortalCreation />);
     fireEvent.change(document.querySelector('input[type="file"]')!, {
@@ -430,7 +501,7 @@ describe("Portal creation", () => {
     });
     expect(
       await screen.findByText(
-        /missing required Portal columns|couldn't read this workbook/i,
+        /missing required schedule columns|couldn't read that schedule/i,
       ),
     ).toBeVisible();
   });

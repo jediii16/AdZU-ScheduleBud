@@ -63,7 +63,7 @@ describe("meeting and schedule validation", () => {
       validateMeeting({
         days: ["Sat"],
         startTime: "07:00",
-        endTime: "21:00",
+        endTime: "23:00",
       }),
     ).toEqual({ complete: true, issues: [] });
     expect(
@@ -76,8 +76,8 @@ describe("meeting and schedule validation", () => {
     expect(
       validateMeeting({
         days: ["Sat"],
-        startTime: "20:00",
-        endTime: "21:01",
+        startTime: "22:00",
+        endTime: "23:01",
       }).issues,
     ).toContain("outside-supported-hours");
   });

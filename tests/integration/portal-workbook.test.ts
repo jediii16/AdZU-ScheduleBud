@@ -115,10 +115,16 @@ describe("sanitized Portal XLSX fixtures", () => {
   });
 
   describe("Portal file validation", () => {
-    it("accepts an .xlsx file exactly at the 5 MB limit", () => {
+    it("accepts PDF and XLSX files at the 5 MB limit", () => {
       expect(
         validatePortalFile({
           name: "schedule.XLSX",
+          size: MAX_PORTAL_WORKBOOK_BYTES,
+        }),
+      ).toEqual([]);
+      expect(
+        validatePortalFile({
+          name: "schedule.pdf",
           size: MAX_PORTAL_WORKBOOK_BYTES,
         }),
       ).toEqual([]);
@@ -126,7 +132,7 @@ describe("sanitized Portal XLSX fixtures", () => {
 
     it("rejects invalid extensions", () => {
       expect(validatePortalFile({ name: "schedule.xls", size: 1024 })).toEqual([
-        "Portal schedules must be .xlsx files.",
+        "Schedule files must be PDF or XLSX files.",
       ]);
     });
 
@@ -136,7 +142,7 @@ describe("sanitized Portal XLSX fixtures", () => {
           name: "schedule.xlsx",
           size: MAX_PORTAL_WORKBOOK_BYTES + 1,
         }),
-      ).toEqual(["Portal schedules must be 5 MB or smaller."]);
+      ).toEqual(["Schedule files must be 5 MB or smaller."]);
     });
   });
 });

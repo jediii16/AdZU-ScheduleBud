@@ -38,8 +38,8 @@ The domain preserves these invariants:
 - back-to-back intervals do not conflict;
 - compact week collapses only exact Monday/Thursday and Tuesday/Friday pairs;
 - warning acknowledgement is a soft gate;
-- meeting completeness, automatic ranges, manual ranges, overlap layout, and Portal parsing share exported 07:00–21:00 bounds;
-- exact-minute times at 07:00 and 21:00 are valid, while canonical meetings outside those bounds remain editable but are excluded from occurrences;
+- meeting completeness, automatic ranges, manual ranges, overlap layout, and import parsing share exported 07:00–23:00 bounds;
+- exact-minute times at 07:00 and 23:00 are valid, while canonical meetings outside those bounds remain editable but are excluded from occurrences;
 - automatic time ranges round outward within the supported bounds and fall back to 07:00–18:00 when no complete in-domain meeting exists;
 - overlap columns are calculated before rendering.
 
@@ -79,7 +79,7 @@ The source-only `countForGPA` field is not copied because ScheduleBud scheduling
 
 The browser receives workbook bytes and parses the first worksheet locally with SheetJS CE. The worker boundary is prepared at `src/workers/portal-xlsx.worker.ts`. The parser normalizes punctuation/case in headers, supports documented aliases, validates required columns, removes blank rows, groups by subject code and section, and creates one meeting per repeated row.
 
-Day parsing uses longest-token-first decoding. Time parsing preserves minutes and validates positive 12-hour ranges within 7:00 AM–9:00 PM. Invalid rows become incomplete meetings with their room, professor, raw time, session, school year, and source row metadata intact. Rows with no subject code cannot be grouped; they are skipped only with a row-specific warning.
+Day parsing uses longest-token-first decoding. Time parsing preserves minutes and validates positive 12-hour ranges within 7:00 AM–11:00 PM. Invalid rows become incomplete meetings with their room, professor, raw time, session, school year, and source row metadata intact. Rows with no subject code cannot be grouped; they are skipped only with a row-specific warning.
 
 Parsing returns a discriminated `pending-portal-import` result and has no store or curriculum dependency. Portal rows are authoritative for the student's enrolled schedule: the parser never looks up subject codes in the static curriculum, never infers units, and never emits curriculum-match warnings. Imported subjects store the Portal code and neutral `0` units; there is no subject-name field or missing-name warning. Every pending subject starts included and can be excluded before confirmation without losing its rows, meetings, or import metadata. A later confirmation action replaces schedule state atomically, preserving excluded subjects with `enabled: false`.
 

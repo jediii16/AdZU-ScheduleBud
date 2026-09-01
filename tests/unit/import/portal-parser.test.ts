@@ -122,7 +122,7 @@ describe("Portal row parsing", () => {
         idFactory: sequentialIds(),
       });
     } catch (error) {
-      expect((error as PortalImportError).details).toContain("School Year");
+      expect((error as PortalImportError).details).toEqual(["Time"]);
     }
   });
 

@@ -35,7 +35,7 @@ Confirming a populated term creates canonical subjects with authoritative code a
 
 ## Manual flow
 
-The form uses subject code as the sole class identifier and groups it separately from meetings. Day checkboxes are keyboard-accessible, time inputs use five-minute steps and the supported 07:00–21:00 boundary, and optional room/professor fields are clearly marked. Multiple draft meetings can be added before a class is committed. Incomplete meetings are allowed and remain repairable.
+The form uses subject code as the sole class identifier and groups it separately from meetings. Day checkboxes are keyboard-accessible, time inputs use five-minute steps and the supported 07:00–23:00 boundary, and optional room/professor fields are clearly marked. Multiple draft meetings can be added before a class is committed. Incomplete meetings are allowed and remain repairable.
 
 The class list separates **Included** and **Not included** rows with expandable editing. It supports inclusion changes, subject edits, meeting edits, additional meetings, duplication, and the distinct **Remove from project** action while preserving the last-meeting invariant. Inclusion changes and permanent removal enter undo history and autosave; exclusion retains the subject and allows later re-enabling.
 

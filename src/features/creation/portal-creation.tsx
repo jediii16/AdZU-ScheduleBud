@@ -5,6 +5,8 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  ClipboardPaste,
+  FileText,
   FileSpreadsheet,
   LoaderCircle,
   RotateCcw,
@@ -21,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { MeetingFields, meetingSummary } from "@/features/classes/class-editor";
 import {
   parsePortalWorkbook,
+  parsePortalPdf,
+  parsePastedSchedule,
   PortalImportError,
   validatePortalFile,
   type PendingPortalImport,
@@ -53,10 +57,10 @@ function displayReviewTime(time: string): string {
 function studentFileError(error: unknown): string {
   if (error instanceof PortalImportError) {
     return error.code === "missing-headers"
-      ? `This workbook is missing required Portal columns: ${error.details.join(", ")}.`
-      : "This workbook does not contain schedule rows.";
+      ? `This file is missing required schedule columns: ${error.details.join(", ")}.`
+      : error.message;
   }
-  return "We couldn't read this workbook. Download a fresh XLSX schedule from the AdZU Portal and try again.";
+  return "We couldn't read that schedule. Try a fresh PDF or XLSX file, or paste the schedule text instead.";
 }
 
 function formatFileSize(bytes: number): string {
@@ -80,6 +84,8 @@ function WorkbookFileCard({
           <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
         ) : status === "ready" ? (
           <CheckCircle2 aria-hidden="true" className="size-5 text-success" />
+        ) : extension === "PDF" ? (
+          <FileText aria-hidden="true" className="size-5" />
         ) : (
           <FileSpreadsheet aria-hidden="true" className="size-5" />
         )}
@@ -476,6 +482,7 @@ export function PortalCreation() {
   const [pending, setPending] = useState<PendingPortalImport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pastedText, setPastedText] = useState("");
   const [parsing, setParsing] = useState(false);
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
@@ -491,9 +498,13 @@ export function PortalCreation() {
     setParsing(true);
     try {
       const bytes = await file.arrayBuffer();
-      const parsed = parsePortalWorkbook(bytes, {
-        idFactory: (kind) => `${kind}-${crypto.randomUUID()}`,
-      });
+      const options = {
+        idFactory: (kind: "subject" | "meeting") =>
+          `${kind}-${crypto.randomUUID()}`,
+      };
+      const parsed = file.name.toLowerCase().endsWith(".pdf")
+        ? await parsePortalPdf(bytes, options)
+        : parsePortalWorkbook(bytes, options);
       setPending(parsed);
     } catch (caught) {
       if (process.env.NODE_ENV === "development") console.error(caught);
@@ -502,9 +513,27 @@ export function PortalCreation() {
       setParsing(false);
     }
   };
+  const parseText = () => {
+    setError(null);
+    setSelectedFile(null);
+    try {
+      setPending(
+        parsePastedSchedule(pastedText, {
+          idFactory: (kind) => `${kind}-${crypto.randomUUID()}`,
+        }),
+      );
+    } catch (caught) {
+      if (process.env.NODE_ENV === "development") console.error(caught);
+      setError(
+        caught instanceof PortalImportError
+          ? caught.message
+          : "We couldn't recognize classes in that text. Include each subject, day, and time range, then try again.",
+      );
+    }
+  };
   const confirm = () => {
     if (!pending) return;
-    ensureCreationProject(store, "Portal schedule");
+    ensureCreationProject(store, "Imported schedule");
     const schoolYear = pending.metadata.schoolYears[0] ?? null;
     store.getState().replaceSchedule(pending.subjects, {
       source: "portal",
@@ -539,12 +568,12 @@ export function PortalCreation() {
           <>
             <header className="mb-8">
               <p className="mb-2 font-mono text-xs font-bold tracking-[0.14em] text-brand uppercase">
-                Portal import
+                Schedule import
               </p>
-              <h1 className="sb-page-title">Import your Portal schedule.</h1>
+              <h1 className="sb-page-title">Import your class schedule.</h1>
               <p className="mt-3 text-text-secondary">
-                Choose the XLSX schedule downloaded from your AdZU Portal
-                account.
+                Upload a PDF or XLSX, or paste schedule text from any student
+                portal.
               </p>
             </header>
             <div
@@ -570,25 +599,25 @@ export function PortalCreation() {
                 if (file) void parseFile(file);
               }}
               data-dragging={dragging}
-              aria-label="XLSX upload drop zone"
+              aria-label="Schedule file upload drop zone"
               className="sb-dropzone flex min-h-64 flex-col items-center justify-center rounded-lg px-6 py-10 text-center"
             >
               <span className="sb-dropzone-icon mb-4 flex size-12 items-center justify-center rounded-md bg-accent text-brand">
                 <FileSpreadsheet aria-hidden="true" className="size-6" />
               </span>
               <h2 className="font-heading text-lg font-bold">
-                {dragging ? "Release to import" : "Drop your XLSX here"}
+                {dragging ? "Release to import" : "Drop your PDF or XLSX here"}
               </h2>
               <p className="mt-2 text-sm text-text-secondary">
                 {dragging
-                  ? "We’ll check the workbook before adding any classes"
+                  ? "We’ll check the file before adding any classes"
                   : "or choose it from your device"}
               </p>
               <input
                 ref={inputRef}
                 className="sr-only"
                 type="file"
-                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                accept=".pdf,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void parseFile(file);
@@ -605,10 +634,10 @@ export function PortalCreation() {
                 ) : (
                   <Upload aria-hidden="true" />
                 )}
-                {parsing ? "Reading workbook…" : "Choose XLSX file"}
+                {parsing ? "Reading schedule…" : "Choose PDF or XLSX"}
               </Button>
               <p className="mt-4 text-xs text-text-muted">
-                XLSX only · Maximum 5 MB
+                PDF or XLSX · Maximum 5 MB
               </p>
             </div>
             {selectedFile ? (
@@ -635,6 +664,49 @@ export function PortalCreation() {
                 </IssueNotice>
               </div>
             ) : null}
+            <div className="my-7 flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-xs font-bold tracking-[0.12em] text-text-muted uppercase">
+                or paste text
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <section aria-labelledby="paste-schedule-title">
+              <div className="flex items-start gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent text-brand">
+                  <ClipboardPaste aria-hidden="true" className="size-5" />
+                </span>
+                <div>
+                  <h2
+                    id="paste-schedule-title"
+                    className="font-heading text-lg font-bold"
+                  >
+                    Paste your schedule
+                  </h2>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    Copy the schedule table from your portal. Extra columns and
+                    duplicate rows are ignored.
+                  </p>
+                </div>
+              </div>
+              <label className="mt-4 block">
+                <span className="sb-label">Schedule text</span>
+                <textarea
+                  className="sb-control min-h-44 resize-y font-mono text-xs leading-5"
+                  value={pastedText}
+                  onChange={(event) => setPastedText(event.target.value)}
+                  placeholder="Subject  Section  Day  Time  Room  Instructor…"
+                />
+              </label>
+              <Button
+                type="button"
+                className="mt-4 w-full sm:w-auto"
+                disabled={!pastedText.trim()}
+                onClick={parseText}
+              >
+                <ClipboardPaste aria-hidden="true" /> Import pasted schedule
+              </Button>
+            </section>
             <div className="mt-6">
               <LocalPrivacyNote />
             </div>

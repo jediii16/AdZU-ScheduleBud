@@ -40,14 +40,14 @@ describe("time range calculation", () => {
 
   it("accepts exact supported manual boundaries", () => {
     expect(
-      resolveTimeRange([], { startTime: "07:00", endTime: "21:00" }),
-    ).toEqual({ startTime: "07:00", endTime: "21:00", source: "manual" });
+      resolveTimeRange([], { startTime: "07:00", endTime: "23:00" }),
+    ).toEqual({ startTime: "07:00", endTime: "23:00", source: "manual" });
   });
 
   it.each([
     { startTime: "06:59", endTime: "17:00" },
-    { startTime: "08:00", endTime: "21:01" },
-    { startTime: "21:00", endTime: "21:00" },
+    { startTime: "08:00", endTime: "23:01" },
+    { startTime: "23:00", endTime: "23:00" },
   ])("rejects an out-of-domain or non-positive manual range", (manual) => {
     expect(resolveTimeRange([], manual).source).toBe("default");
   });
@@ -55,7 +55,7 @@ describe("time range calculation", () => {
   it("ignores externally malformed out-of-domain meetings safely", () => {
     const value = subject({
       meetings: [
-        { ...subject().meetings[0]!, startTime: "20:30", endTime: "22:00" },
+        { ...subject().meetings[0]!, startTime: "23:30", endTime: "23:59" },
       ],
     });
     expect(calculateAutomaticTimeRange([value])).toEqual({

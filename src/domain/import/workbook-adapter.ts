@@ -4,16 +4,17 @@ import type { IdFactory } from "@/domain/schedule";
 
 import { parsePortalRows, type PendingPortalImport } from "./portal-parser";
 
-export const MAX_PORTAL_WORKBOOK_BYTES = 5 * 1024 * 1024;
+export const MAX_PORTAL_FILE_BYTES = 5 * 1024 * 1024;
+export const MAX_PORTAL_WORKBOOK_BYTES = MAX_PORTAL_FILE_BYTES;
 
 export function validatePortalFile(
   file: Pick<File, "name" | "size">,
 ): string[] {
   const errors: string[] = [];
-  if (!file.name.toLowerCase().endsWith(".xlsx"))
-    errors.push("Portal schedules must be .xlsx files.");
-  if (file.size > MAX_PORTAL_WORKBOOK_BYTES)
-    errors.push("Portal schedules must be 5 MB or smaller.");
+  if (!/\.(?:xlsx|pdf)$/i.test(file.name))
+    errors.push("Schedule files must be PDF or XLSX files.");
+  if (file.size > MAX_PORTAL_FILE_BYTES)
+    errors.push("Schedule files must be 5 MB or smaller.");
   return errors;
 }
 

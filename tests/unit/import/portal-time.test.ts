@@ -26,7 +26,7 @@ describe("Portal time parsing", () => {
     ["8 to 9", "malformed"],
     ["03:45 AM - 03:45 AM", "non-positive"],
     ["06:55 AM - 08:00 AM", "outside-supported-hours"],
-    ["08:00 PM - 09:05 PM", "outside-supported-hours"],
+    ["10:00 PM - 11:05 PM", "outside-supported-hours"],
   ])("retains %s as an invalid repairable range", (input, code) => {
     expect(parsePortalTimeRange(input)).toMatchObject({
       valid: false,

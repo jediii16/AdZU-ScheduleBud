@@ -11,7 +11,7 @@ export function LocalPrivacyNote() {
         <strong className="font-semibold text-foreground">
           Processed locally.
         </strong>{" "}
-        Your workbook is read in this browser and is not uploaded to
+        Your file or pasted text is read in this browser and is not uploaded to
         ScheduleBud.
       </p>
     </div>

@@ -9,12 +9,8 @@ import { parsePortalTimeRange } from "./portal-time";
 
 export const PORTAL_REQUIRED_COLUMNS = [
   "Current Subject",
-  "Section",
   "Day",
   "Time",
-  "Room",
-  "Instructor",
-  "School Year",
 ] as const;
 
 const HEADER_ALIASES: Record<string, string> = {
@@ -30,6 +26,8 @@ const HEADER_ALIASES: Record<string, string> = {
   professor: "Instructor",
   schoolyear: "School Year",
   session: "Session",
+  units: "Units",
+  unit: "Units",
 };
 
 export type PortalImportWarning = {
@@ -106,7 +104,10 @@ export function parsePortalRows(
   const warnings: PortalImportWarning[] = [];
   for (const item of dataRows) {
     const code = cellText(item.row[column("Current Subject")]);
-    const section = cellText(item.row[column("Section")]);
+    const sectionIndex = column("Section");
+    const section = cellText(
+      sectionIndex >= 0 ? item.row[sectionIndex] : undefined,
+    );
     if (!code) {
       warnings.push({
         code: "missing-subject",
@@ -124,6 +125,12 @@ export function parsePortalRows(
   const schoolYears = new Set<string>();
   const subjects: Subject[] = [];
   for (const group of groups.values()) {
+    const unitsIndex = column("Units");
+    const units = group.rows.reduce((value, { row }) => {
+      if (value > 0 || unitsIndex < 0) return value;
+      const parsed = Number(row[unitsIndex]);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : value;
+    }, 0);
     const meetings = group.rows.map(({ row, rowNumber }) => {
       const day = parsePortalDays(row[column("Day")]);
       const time = parsePortalTimeRange(row[column("Time")]);
@@ -137,7 +144,10 @@ export function parsePortalRows(
           message: time.warning,
           rowNumber,
         });
-      const schoolYear = cellText(row[column("School Year")]);
+      const schoolYearIndex = column("School Year");
+      const schoolYear = cellText(
+        schoolYearIndex >= 0 ? row[schoolYearIndex] : undefined,
+      );
       if (schoolYear) schoolYears.add(schoolYear);
       const sessionIndex = column("Session");
       const sessionValue = sessionIndex >= 0 ? row[sessionIndex] : undefined;
@@ -145,8 +155,10 @@ export function parsePortalRows(
         days: day.valid ? day.days : [],
         startTime: time.startTime,
         endTime: time.endTime,
-        room: cellText(row[column("Room")]),
-        professor: cellText(row[column("Instructor")]),
+        room: cellText(column("Room") >= 0 ? row[column("Room")] : undefined),
+        professor: cellText(
+          column("Instructor") >= 0 ? row[column("Instructor")] : undefined,
+        ),
         importMetadata: {
           source: "portal" as const,
           sourceRows: [rowNumber],
@@ -170,7 +182,7 @@ export function parsePortalRows(
       normalizeSubject(
         {
           code: group.code,
-          units: 0,
+          units,
           section: group.section,
           enabled: true,
           isCustom: true,

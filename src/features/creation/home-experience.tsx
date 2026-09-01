@@ -1,16 +1,12 @@
 "use client";
 
+import { Menu } from "@base-ui/react/menu";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  Brush,
-  Check,
-  FileUp,
-  HardDrive,
-  MonitorSmartphone,
-} from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { ArrowRight, Copy, Ellipsis, Pencil, Trash2 } from "lucide-react";
 
 import heroVisual from "../../../hero.svg";
 import { BrandLockup } from "@/components/shared/brand-lockup";
@@ -20,23 +16,10 @@ import type { ScheduleProject } from "@/domain/project";
 import { cn } from "@/lib/utils";
 import { useScheduleBudStore } from "@/state/react";
 
-const productCapabilities = [
-  {
-    icon: FileUp,
-    title: "Built for AdZU schedules",
-    copy: "Bring in your Portal schedule file, start from your curriculum, or add classes manually.",
-  },
-  {
-    icon: MonitorSmartphone,
-    title: "Designed for any screen",
-    copy: "Make wallpapers for your phone, tablet, laptop, desktop, or a custom screen size.",
-  },
-  {
-    icon: Brush,
-    title: "Customize without Canva",
-    copy: "Choose a layout, colors, type, backgrounds, photos, and stickers without rebuilding your schedule.",
-  },
-] as const;
+const ProjectCanvasPreview = dynamic(() => import("./project-canvas-preview"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse bg-muted" />,
+});
 
 function formatUpdatedDate(value: string): string {
   return new Intl.DateTimeFormat("en-PH", {
@@ -61,7 +44,7 @@ function projectTarget(project: ScheduleProject): string | null {
   );
 }
 
-function PublicHeader({ hasProjects }: { hasProjects: boolean }) {
+function PublicHeader() {
   return (
     <header className="border-b border-border-muted bg-background/90 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -72,19 +55,9 @@ function PublicHeader({ hasProjects }: { hasProjects: boolean }) {
         >
           <BrandLockup descriptor />
         </Link>
-        <nav aria-label="Homepage" className="flex items-center gap-2 sm:gap-5">
-          {hasProjects ? (
-            <a
-              href="#your-schedules"
-              className="hidden text-sm font-semibold text-text-secondary transition-colors hover:text-brand motion-reduce:transition-none sm:inline"
-            >
-              My schedules
-            </a>
-          ) : null}
-          <Link href="/create" className={buttonVariants({ size: "sm" })}>
-            Create schedule
-          </Link>
-        </nav>
+        <Link href="/create" className={buttonVariants({ size: "sm" })}>
+          Create schedule
+        </Link>
       </div>
     </header>
   );
@@ -92,12 +65,12 @@ function PublicHeader({ hasProjects }: { hasProjects: boolean }) {
 
 function Hero() {
   return (
-    <section className="mx-auto grid max-w-7xl items-center gap-8 px-4 pt-14 pb-16 sm:px-6 sm:pt-18 sm:pb-20 lg:grid-cols-[minmax(0,42fr)_minmax(0,58fr)] lg:gap-5 lg:px-8 lg:pt-22 lg:pb-24">
-      <div className="relative z-10 max-w-xl lg:pb-4">
+    <section className="mx-auto grid max-w-[96rem] items-center gap-8 px-4 pt-14 pb-16 sm:px-6 sm:pt-18 sm:pb-20 lg:px-8 lg:pt-22 lg:pb-24 xl:grid-cols-[minmax(0,36fr)_minmax(0,64fr)] xl:gap-0">
+      <div className="relative z-10 max-w-xl xl:pb-4">
         <p className="mb-5 font-mono text-xs font-bold tracking-[0.16em] text-brand uppercase">
           Built for AdZU students
         </p>
-        <h1 className="font-heading text-[2.75rem] leading-[0.98] font-extrabold tracking-[-0.045em] text-balance text-foreground sm:text-6xl lg:text-[4.3rem]">
+        <h1 className="font-heading text-[2.75rem] leading-[0.98] font-extrabold tracking-[-0.045em] text-balance text-foreground sm:text-6xl xl:text-[4.3rem]">
           Your schedule.
           <br />
           Your wallpaper.
@@ -106,21 +79,21 @@ function Hero() {
           Turn your AdZU class schedule into a wallpaper made for your phone,
           tablet, laptop, or desktop—without rebuilding it from scratch.
         </p>
-        <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+        <div className="mt-8 flex items-center">
           <Link href="/create" className={buttonVariants({ size: "lg" })}>
             Create my schedule <ArrowRight aria-hidden="true" />
           </Link>
-          <span className="inline-flex items-center gap-2 text-sm font-medium text-text-muted">
-            <Check aria-hidden="true" className="size-4 text-brand" /> No
-            account required
-          </span>
         </div>
       </div>
 
-      <figure className="relative -mx-4 min-h-[17rem] sm:mx-0 sm:min-h-[24rem] lg:-mr-9 lg:min-h-[32rem]">
+      <figure className="relative -mx-10 min-h-[20rem] sm:-mx-10 sm:min-h-[30rem] xl:-mr-32 xl:-ml-12 xl:min-h-[39rem]">
         <div
           aria-hidden="true"
-          className="absolute inset-[12%_5%_4%_8%] rounded-[50%] bg-brand/7 blur-3xl"
+          className="absolute inset-[3%_-2%_-3%_1%] rounded-[48%] bg-brand/18 blur-[68px]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-[18%_10%_10%_22%] rounded-[50%] bg-[#64bfff]/24 blur-3xl"
         />
         <Image
           src={heroVisual}
@@ -128,11 +101,165 @@ function Hero() {
           width={1440}
           height={810}
           preload
-          sizes="(max-width: 1023px) 100vw, 60vw"
-          className="relative h-auto w-full scale-[1.08] object-contain sm:scale-100 lg:translate-x-2 lg:scale-[1.08]"
+          sizes="(max-width: 1279px) 110vw, 68vw"
+          className="relative h-auto w-full scale-[1.19] object-contain sm:scale-[1.14] xl:translate-x-5 xl:scale-[1.3]"
         />
       </figure>
     </section>
+  );
+}
+
+const menuItemClass =
+  "flex min-w-36 items-center gap-2 px-3 py-2 text-sm font-medium text-text-secondary outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground";
+
+function ProjectActionsMenu({
+  project,
+  onRename,
+  onDuplicate,
+  onDelete,
+}: {
+  project: ScheduleProject;
+  onRename(): void;
+  onDuplicate(): void;
+  onDelete(): void;
+}) {
+  return (
+    <Menu.Root>
+      <Menu.Trigger
+        aria-label={`More actions for ${project.metadata.title}`}
+        className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-md text-text-muted opacity-100 transition-[opacity,background-color,color] hover:bg-muted hover:text-foreground data-pressed:bg-muted data-pressed:text-foreground motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:data-pressed:opacity-100"
+      >
+        <Ellipsis aria-hidden="true" className="size-4" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner
+          className="z-50 outline-hidden"
+          sideOffset={6}
+          align="end"
+        >
+          <Menu.Popup className="origin-[var(--transform-origin)] rounded-lg border border-border bg-surface-elevated py-1 shadow-[0_16px_40px_-16px_rgba(20,45,75,.35)] outline-hidden transition-[transform,opacity] duration-100 data-ending-style:scale-[.97] data-ending-style:opacity-0 data-starting-style:scale-[.97] data-starting-style:opacity-0 motion-reduce:transition-none">
+            <Menu.Item className={menuItemClass} onClick={onRename}>
+              <Pencil aria-hidden="true" className="size-3.5" /> Rename
+            </Menu.Item>
+            <Menu.Item className={menuItemClass} onClick={onDuplicate}>
+              <Copy aria-hidden="true" className="size-3.5" /> Duplicate
+            </Menu.Item>
+            <Menu.Item
+              className={cn(
+                menuItemClass,
+                "text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive",
+              )}
+              onClick={onDelete}
+            >
+              <Trash2 aria-hidden="true" className="size-3.5" /> Delete
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
+
+function ProjectCard({
+  project,
+  onOpen,
+  onRename,
+  onDuplicate,
+  onDelete,
+}: {
+  project: ScheduleProject;
+  onOpen(): void;
+  onRename(title: string): void;
+  onDuplicate(): void;
+  onDelete(): void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(project.metadata.title);
+  const target = projectTarget(project);
+
+  const submitRename = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = draftTitle.trim();
+    if (!normalized) return;
+    onRename(normalized);
+    setEditing(false);
+  };
+
+  const cancelRename = () => {
+    setDraftTitle(project.metadata.title);
+    setEditing(false);
+  };
+
+  return (
+    <li className="group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border-muted bg-background transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-[0_18px_44px_-28px_rgba(20,65,110,.65)] motion-reduce:transform-none motion-reduce:transition-none">
+      <div className="aspect-[16/9] w-full overflow-hidden border-b border-border-muted">
+        <ProjectCanvasPreview project={project} />
+      </div>
+      <div className="flex min-h-32 min-w-0 flex-1 flex-col items-start p-4 pr-12">
+        {editing ? (
+          <form className="w-full" onSubmit={submitRename}>
+            <label htmlFor={`project-title-${project.id}`} className="sr-only">
+              Schedule name
+            </label>
+            <input
+              id={`project-title-${project.id}`}
+              autoFocus
+              value={draftTitle}
+              onChange={(event) => setDraftTitle(event.target.value)}
+              maxLength={160}
+              className="sb-control h-9 min-h-9"
+            />
+            <div className="mt-2 flex gap-2">
+              <Button type="submit" size="xs">
+                Save
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                onClick={cancelRename}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <h3 className="w-full truncate font-heading text-base font-bold text-foreground">
+              {project.metadata.title}
+            </h3>
+            <p className="mt-1 flex flex-wrap gap-x-2 text-xs leading-5 text-text-muted">
+              <span>Updated {formatUpdatedDate(project.updatedAt)}</span>
+              {target ? <span aria-hidden="true">·</span> : null}
+              {target ? <span>{target}</span> : null}
+              <span aria-hidden="true">·</span>
+              <span>
+                {project.schedule.length}{" "}
+                {project.schedule.length === 1 ? "class" : "classes"}
+              </span>
+            </p>
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              aria-label={`Open ${project.metadata.title}`}
+              onClick={onOpen}
+              className="mt-auto -ml-2 text-brand hover:bg-accent"
+            >
+              Open <ArrowRight aria-hidden="true" />
+            </Button>
+          </>
+        )}
+      </div>
+      {!editing ? (
+        <ProjectActionsMenu
+          project={project}
+          onRename={() => setEditing(true)}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
+        />
+      ) : null}
+    </li>
   );
 }
 
@@ -141,12 +268,29 @@ function ProjectDashboard({ projects }: { projects: ScheduleProject[] }) {
   const setActiveProject = useScheduleBudStore(
     (state) => state.setActiveProject,
   );
+  const renameProject = useScheduleBudStore((state) => state.renameProject);
+  const duplicateProject = useScheduleBudStore(
+    (state) => state.duplicateProject,
+  );
+  const deleteProject = useScheduleBudStore((state) => state.deleteProject);
 
   const openProject = (project: ScheduleProject) => {
     setActiveProject(project.id);
     router.push(
       project.schedule.length > 0 ? "/studio" : "/create/manual?edit=1",
     );
+  };
+
+  const rename = (project: ScheduleProject, title: string) => {
+    setActiveProject(project.id);
+    renameProject(title);
+  };
+
+  const remove = (project: ScheduleProject) => {
+    const confirmed = window.confirm(
+      `Delete “${project.metadata.title}”? This schedule will be removed from this device.`,
+    );
+    if (confirmed) void deleteProject(project.id);
   };
 
   return (
@@ -157,17 +301,12 @@ function ProjectDashboard({ projects }: { projects: ScheduleProject[] }) {
     >
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="font-mono text-xs font-bold tracking-[0.14em] text-brand uppercase">
-              Saved on this device
-            </p>
-            <h2
-              id="your-schedules-heading"
-              className="mt-2 font-heading text-3xl font-extrabold tracking-[-0.03em] text-foreground"
-            >
-              Your schedules
-            </h2>
-          </div>
+          <h2
+            id="your-schedules-heading"
+            className="font-heading text-3xl font-extrabold tracking-[-0.03em] text-foreground"
+          >
+            Your schedules
+          </h2>
           <Link
             href="/create"
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -176,43 +315,37 @@ function ProjectDashboard({ projects }: { projects: ScheduleProject[] }) {
           </Link>
         </div>
 
-        <ul className="mt-7 grid gap-3 md:grid-cols-2">
-          {projects.map((project) => {
-            const target = projectTarget(project);
-            return (
-              <li
-                key={project.id}
-                className="group flex min-w-0 items-center justify-between gap-4 rounded-lg border border-border-muted bg-background px-4 py-4 transition-[border-color,box-shadow] hover:border-brand/30 hover:shadow-[0_12px_32px_-24px_rgba(20,65,110,.5)] motion-reduce:transition-none sm:px-5"
-              >
-                <div className="min-w-0">
-                  <h3 className="truncate font-heading text-base font-bold text-foreground">
-                    {project.metadata.title}
-                  </h3>
-                  <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-text-muted">
-                    <span>Updated {formatUpdatedDate(project.updatedAt)}</span>
-                    {target ? <span aria-hidden="true">·</span> : null}
-                    {target ? <span>{target}</span> : null}
-                    <span aria-hidden="true">·</span>
-                    <span>
-                      {project.schedule.length}{" "}
-                      {project.schedule.length === 1 ? "class" : "classes"}
-                    </span>
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  aria-label={`Open ${project.metadata.title}`}
-                  onClick={() => openProject(project)}
-                  className="shrink-0 text-brand hover:bg-accent"
-                >
-                  Open <ArrowRight aria-hidden="true" />
-                </Button>
-              </li>
-            );
-          })}
+        <ul className="mt-7 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onOpen={() => openProject(project)}
+              onRename={(title) => rename(project, title)}
+              onDuplicate={() => void duplicateProject(project.id)}
+              onDelete={() => remove(project)}
+            />
+          ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+function TemplatesPlaceholder() {
+  return (
+    <section
+      aria-labelledby="templates-heading"
+      className="border-b border-border-muted"
+    >
+      <div className="mx-auto max-w-7xl px-4 pt-12 pb-10 sm:px-6 sm:pt-14 sm:pb-12 lg:px-8">
+        <h2
+          id="templates-heading"
+          className="font-heading text-3xl font-extrabold tracking-[-0.03em] text-foreground"
+        >
+          Templates
+        </h2>
+        <div aria-hidden="true" className="h-12 sm:h-16" />
       </div>
     </section>
   );
@@ -275,109 +408,29 @@ function HowItWorks() {
   );
 }
 
-function Capabilities() {
-  return (
-    <section
-      aria-labelledby="capabilities-heading"
-      className="border-y border-border-muted bg-card/45"
-    >
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:gap-20">
-          <div>
-            <p className="font-mono text-xs font-bold tracking-[0.14em] text-brand uppercase">
-              Made for the way you study
-            </p>
-            <h2
-              id="capabilities-heading"
-              className="mt-3 max-w-md font-heading text-3xl font-extrabold tracking-[-0.035em] text-foreground sm:text-4xl"
-            >
-              Your timetable, ready for the screens you already use.
-            </h2>
-          </div>
-          <div className="divide-y divide-border-muted border-y border-border-muted">
-            {productCapabilities.map(({ icon: Icon, title, copy }) => (
-              <article
-                key={title}
-                className="grid gap-4 py-6 sm:grid-cols-[2.5rem_12rem_1fr] sm:items-start sm:gap-5"
-              >
-                <Icon aria-hidden="true" className="size-5 text-brand" />
-                <h3 className="font-heading text-base font-bold text-foreground">
-                  {title}
-                </h3>
-                <p className="text-sm leading-6 text-text-secondary">{copy}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Privacy() {
-  return (
-    <section
-      aria-labelledby="privacy-heading"
-      className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8"
-    >
-      <div className="grid items-center gap-8 lg:grid-cols-[.72fr_1.28fr] lg:gap-20">
-        <div className="flex size-16 items-center justify-center rounded-full bg-accent text-brand">
-          <HardDrive aria-hidden="true" className="size-7" />
-        </div>
-        <div>
-          <p className="font-mono text-xs font-bold tracking-[0.14em] text-brand uppercase">
-            Local-first by design
-          </p>
-          <h2
-            id="privacy-heading"
-            className="mt-3 font-heading text-3xl font-extrabold tracking-[-0.035em] text-foreground sm:text-4xl"
-          >
-            Your schedule stays with you.
-          </h2>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg">
-            ScheduleBud runs locally in your browser. Your schedule and design
-            projects are stored on your device—no account, backend, or cloud
-            sync required.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FinalCallToAction() {
-  return (
-    <section className="bg-brand text-primary-foreground">
-      <div className="mx-auto flex max-w-7xl flex-col gap-7 px-4 py-14 sm:px-6 sm:py-16 md:flex-row md:items-center md:justify-between lg:px-8">
-        <div>
-          <h2 className="font-heading text-3xl font-extrabold tracking-[-0.035em] sm:text-4xl">
-            Ready to make your schedule?
-          </h2>
-          <p className="mt-2 text-sm text-white/75">No account required.</p>
-        </div>
-        <Link
-          href="/create"
-          className={cn(
-            buttonVariants({ variant: "secondary", size: "lg" }),
-            "w-fit bg-white text-brand hover:bg-white/90",
-          )}
-        >
-          Create my schedule <ArrowRight aria-hidden="true" />
-        </Link>
-      </div>
-    </section>
-  );
-}
-
 function Footer() {
   return (
-    <footer className="border-t border-border-muted bg-background">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-xs text-text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-        <BrandLockup />
-        <p>
-          Built for AdZU students · Independent student project · ©{" "}
-          {new Date().getFullYear()}
-        </p>
+    <footer className="bg-[#10253b] text-white">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1fr_auto] md:items-end lg:px-8">
+        <div>
+          <BrandLockup descriptor surface="dark" />
+          <p className="mt-5 max-w-md text-sm leading-6 text-white/65">
+            Make an AdZU class schedule wallpaper for every screen you use.
+            Everything stays in your browser.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-4 md:items-end">
+          <Link
+            href="/create"
+            className="text-sm font-bold text-white underline-offset-4 hover:underline"
+          >
+            Create a schedule{" "}
+            <ArrowRight aria-hidden="true" className="ml-1 inline size-4" />
+          </Link>
+          <p className="text-xs text-white/45">
+            Independent student project · © {new Date().getFullYear()}
+          </p>
+        </div>
       </div>
     </footer>
   );
@@ -391,14 +444,12 @@ export function HomeExperience() {
 
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
-      <PublicHeader hasProjects={projects.length > 0} />
+      <PublicHeader />
       <main>
         <Hero />
         {projects.length > 0 ? <ProjectDashboard projects={projects} /> : null}
+        <TemplatesPlaceholder />
         <HowItWorks />
-        <Capabilities />
-        <Privacy />
-        <FinalCallToAction />
       </main>
       <Footer />
     </div>

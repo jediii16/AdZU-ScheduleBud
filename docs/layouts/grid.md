@@ -10,7 +10,7 @@ Grid is a layout, not a theme or template. It uses the same canonical schedule, 
 
 The pure builder in `src/domain/render/grid-layout.ts` expands enabled, complete full-week occurrences. Canonical start minutes determine block Y and duration determines block height. No minimum visual block height changes those ratios. A 09:30 meeting starts halfway between the 09:00 and 10:00 guides, and a two-hour meeting is exactly twice the height of a one-hour meeting at the same scale.
 
-The automatic range rounds the earliest start down and latest end up to whole hours, clamped to the shared 07:00–21:00 domain. Ranges shorter than six hours expand deterministically around the actual meetings, shifting at a supported boundary when needed. The existing 07:00–18:00 fallback remains in effect when no renderable meeting exists.
+The automatic range rounds the earliest start down and latest end up to whole hours, clamped to the shared 07:00–23:00 domain. Ranges shorter than six hours expand deterministically around the actual meetings, shifting at a supported boundary when needed. The existing 07:00–18:00 fallback remains in effect when no renderable meeting exists.
 
 ## Axis and structural lines
 
