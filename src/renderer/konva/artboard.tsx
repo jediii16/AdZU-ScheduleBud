@@ -7,6 +7,7 @@ import { Stage } from "react-konva";
 import type {
   AlignmentGuides,
   Rect as ModelRect,
+  RenderModel,
   ScheduleRenderResult,
 } from "@/domain/render";
 import type { DeviceVariant } from "@/domain/device/types";
@@ -51,7 +52,9 @@ type BackgroundEditorInteraction = {
 export function ScheduleArtboard({
   result,
   zoom,
+  contentMode,
   exportStageRef,
+  exportSnapshot,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -71,7 +74,12 @@ export function ScheduleArtboard({
 }: {
   result: ScheduleRenderResult;
   zoom: number;
+  contentMode: "wallpaper" | "schedule" | "background";
   exportStageRef: RefObject<Konva.Stage | null>;
+  exportSnapshot?:
+    | { key: number; model: RenderModel; assets: RenderAssetImages }
+    | null
+    | undefined;
   onDragStart(): void;
   onDragMove(x: number, y: number, previewScale: number): void;
   onDragEnd(x: number, y: number, previewScale: number): void;
@@ -153,7 +161,9 @@ export function ScheduleArtboard({
       }}
     >
       <div
+        key={contentMode}
         data-testid="artboard-preview"
+        data-content-mode={contentMode}
         data-target-width={result.model.width}
         data-target-height={result.model.height}
         data-preview-scale={scale}
@@ -172,10 +182,19 @@ export function ScheduleArtboard({
         data-background-position-x={variant.backgroundImageTransform.position.x}
         data-background-position-y={variant.backgroundImageTransform.position.y}
         data-background-zoom={variant.backgroundImageTransform.scale}
-        className="relative m-auto shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
+        className="sb-content-switch relative m-auto shrink-0 overflow-hidden bg-white shadow-[0_10px_35px_rgba(23,32,51,0.15)]"
         style={{
           width: result.model.width * scale,
           height: result.model.height * scale,
+          ...(contentMode === "schedule"
+            ? {
+                backgroundColor: "#f8fafc",
+                backgroundImage:
+                  "linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+                backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0",
+                backgroundSize: "16px 16px",
+              }
+            : {}),
           cursor: backgroundEditor?.adjusting
             ? backgroundDragging
               ? "grabbing"
@@ -315,13 +334,15 @@ export function ScheduleArtboard({
             previewScale={scale}
             artworkTone={artworkTone}
           />
-          {result.photoPlaceholders?.length ? (
+          {contentMode === "wallpaper" && result.photoPlaceholders?.length ? (
             <PolaroidPlaceholderOverlay
               placeholders={result.photoPlaceholders}
               previewScale={scale}
             />
           ) : null}
-          {photoEditor && !backgroundEditor?.adjusting ? (
+          {contentMode !== "schedule" &&
+          photoEditor &&
+          !backgroundEditor?.adjusting ? (
             <PhotoEditorOverlay
               frame={photoEditor.frame}
               rotation={photoEditor.rotation ?? 0}
@@ -330,7 +351,9 @@ export function ScheduleArtboard({
               previewScale={scale}
             />
           ) : null}
-          {!photoEditor?.adjusting && !backgroundEditor?.adjusting ? (
+          {contentMode !== "background" &&
+          !photoEditor?.adjusting &&
+          !backgroundEditor?.adjusting ? (
             <ScheduleEditorOverlay
               bounds={result.scheduleBounds}
               canvasSize={{
@@ -364,7 +387,8 @@ export function ScheduleArtboard({
               }}
             />
           ) : null}
-          {!photoEditor?.adjusting &&
+          {contentMode !== "schedule" &&
+          !photoEditor?.adjusting &&
           !backgroundEditor?.adjusting &&
           stickerEditor ? (
             <StickerEditorOverlay
@@ -399,20 +423,24 @@ export function ScheduleArtboard({
           </div>
         ) : null}
       </div>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed top-0 -left-[20000px]"
-      >
-        {fontState === "ready" ? (
+      {exportSnapshot ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed top-0 -left-[20000px]"
+        >
           <Stage
+            key={exportSnapshot.key}
             ref={exportStageRef}
-            width={result.model.width}
-            height={result.model.height}
+            width={exportSnapshot.model.width}
+            height={exportSnapshot.model.height}
           >
-            <ScheduleScene model={result.model} assets={assetImages} />
+            <ScheduleScene
+              model={exportSnapshot.model}
+              assets={exportSnapshot.assets}
+            />
           </Stage>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

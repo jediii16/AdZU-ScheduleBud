@@ -31,7 +31,10 @@ import {
   balancedPositionFor,
   studioTargetForVariant,
 } from "@/data/devices/studio-targets";
-import type { DevicePreset } from "@/data/devices/registry";
+import {
+  devicePresetRegistry,
+  type DevicePreset,
+} from "@/data/devices/registry";
 import {
   detectSafeAreaCollision,
   resolveSafeAreaModel,
@@ -59,18 +62,22 @@ import {
   scheduleSizeFromPixels,
   scheduleSizeLimits,
   type Rect,
+  type RenderModel,
 } from "@/domain/render";
 import type { CustomPaletteColorRole } from "@/domain/project";
-import { detectConflicts } from "@/domain/schedule/conflicts";
-import { validateMeeting } from "@/domain/schedule/validation";
 import {
-  attemptWarningGate,
-  type WarningGateState,
-} from "@/domain/schedule/warnings";
-import {
+  ExportPreparationError,
   PngExportCoordinator,
-  exportStagePng,
+  createPngZip,
+  downloadBlob,
   photoExportBlockReason,
+  preparePngExport,
+  renderModelForExportContent,
+  schedulebudPngFilename,
+  schedulebudZipFilename,
+  stagePngBlob,
+  uniqueArchiveFilename,
+  type ExportContent,
   type ExportStatus,
 } from "@/features/export/png-export";
 import {
@@ -87,9 +94,11 @@ import { ScheduleArtboard } from "@/renderer/konva/artboard";
 import type { ScheduleResizeHandle } from "@/renderer/konva/editor-overlay/schedule-overlay";
 import {
   loadRenderAssetSources,
+  renderAssetSourceEntries,
   renderAssetLoadSignature,
   type RenderAssetSourceEntry,
 } from "@/renderer/konva/theme-asset-loading";
+import type { RenderAssetImages } from "@/renderer/konva/schedule-scene";
 import { createPersistence } from "@/storage/persistence";
 import {
   inspectTemporaryImage,
@@ -105,14 +114,35 @@ const EMPTY_PHOTO_ASSET_IDS: readonly string[] = [];
 
 async function waitForExportStage(
   stageRef: { current: Konva.Stage | null },
+  dimensions: { width: number; height: number },
   timeoutMs = 5_000,
 ): Promise<Konva.Stage> {
   const deadline = performance.now() + timeoutMs;
   while (performance.now() < deadline) {
-    if (stageRef.current) return stageRef.current;
+    if (
+      stageRef.current?.width() === dimensions.width &&
+      stageRef.current.height() === dimensions.height
+    )
+      return stageRef.current;
     await new Promise<void>((resolve) => window.setTimeout(resolve, 16));
   }
   throw new Error("The wallpaper is still preparing.");
+}
+
+async function decodeExportImage(
+  blob: Blob,
+  temporaryUrls: string[],
+): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(blob);
+  temporaryUrls.push(url);
+  const image = new Image();
+  image.decoding = "async";
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("Image decoding failed."));
+    image.src = url;
+  });
+  return image;
 }
 
 import { useScheduleBudStore, useScheduleBudStoreApi } from "@/state/react";
@@ -133,6 +163,28 @@ const TOOL_ITEMS = [
   { id: "device", label: "Device", icon: Smartphone },
 ] as const;
 
+const EXPORT_CONTENT_OPTIONS: readonly {
+  id: ExportContent;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "wallpaper",
+    label: "Full wallpaper",
+    description: "Complete design and schedule",
+  },
+  {
+    id: "schedule",
+    label: "Schedule only",
+    description: "Transparent full-size PNG",
+  },
+  {
+    id: "background",
+    label: "Background only",
+    description: "Design without the schedule",
+  },
+];
+
 function autosaveCopy(status: string): string {
   if (status === "saving" || status === "idle") return "Saving…";
   if (status === "error") return "Couldn't save locally";
@@ -142,7 +194,6 @@ function autosaveCopy(status: string): string {
 function exportCopy(status: ExportStatus): string {
   if (status === "preparing") return "Preparing…";
   if (status === "exporting") return "Exporting…";
-  if (status === "downloaded") return "Download again";
   return "Export PNG";
 }
 
@@ -189,12 +240,24 @@ export function StudioExperience() {
   const targetPickerReturnFocusRef = useRef<HTMLElement | null>(null);
   const deviceMenuRef = useRef<HTMLDetailsElement | null>(null);
   const deviceMenuTriggerRef = useRef<HTMLElement | null>(null);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
+  const exportSnapshotKey = useRef(0);
   const stickerTrashRef = useRef<HTMLDivElement | null>(null);
   const stickerMenuReturnFocusRef = useRef<HTMLElement | null>(null);
   const exportCoordinator = useRef(new PngExportCoordinator());
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [exportError, setExportError] = useState<string | null>(null);
-  const [exportGate, setExportGate] = useState<WarningGateState>("idle");
+  const [exportSnapshot, setExportSnapshot] = useState<{
+    key: number;
+    model: RenderModel;
+    assets: RenderAssetImages;
+  } | null>(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exportContent, setExportContent] =
+    useState<ExportContent>("wallpaper");
+  const [exportSuccessMessage, setExportSuccessMessage] = useState<
+    string | null
+  >(null);
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [guideOpacity, setGuideOpacity] = useState(0.35);
   const [photoAdjusting, setPhotoAdjusting] = useState(false);
@@ -233,6 +296,32 @@ export function StudioExperience() {
   }>(() => ({ signature: "[]", images: new Map() }));
   const photoPanStart = useRef<PhotoTransform | null>(null);
   const backgroundPanStart = useRef<BackgroundImageTransform | null>(null);
+
+  useEffect(() => {
+    if (exportStatus !== "success") return;
+    const timer = window.setTimeout(() => {
+      setExportStatus("idle");
+      setExportSuccessMessage(null);
+    }, 3_000);
+    return () => window.clearTimeout(timer);
+  }, [exportStatus]);
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!exportMenuRef.current?.contains(event.target as Node))
+        setExportMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExportMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [exportMenuOpen]);
 
   const pointIsOverStickerTrash = (point: ClientPoint | null) => {
     const rect = stickerTrashRef.current?.getBoundingClientRect();
@@ -584,12 +673,25 @@ export function StudioExperience() {
     }
     return next;
   }, [palettePreview, project, subjectColorPreview]);
-  const renderResult = useMemo(
+  const fullRenderResult = useMemo(
     () =>
       previewProject && activeVariant && target
         ? buildScheduleRenderModel(previewProject, activeVariant)
         : null,
     [activeVariant, previewProject, target],
+  );
+  const renderResult = useMemo(
+    () =>
+      fullRenderResult
+        ? {
+            ...fullRenderResult,
+            model: renderModelForExportContent(
+              fullRenderResult.model,
+              exportContent,
+            ),
+          }
+        : null,
+    [exportContent, fullRenderResult],
   );
   const staticAssetSignature = renderResult
     ? renderAssetLoadSignature(renderResult.model)
@@ -628,24 +730,6 @@ export function StudioExperience() {
       staticAssetSignature,
     ],
   );
-  const staticAssetsReady =
-    staticAssetSources.length === 0 ||
-    loadedStaticAssets.signature === staticAssetSignature;
-  const issueCount = useMemo(() => {
-    if (!project) return 0;
-    const incomplete = project.schedule.reduce(
-      (count, subject) =>
-        count +
-        (subject.enabled
-          ? subject.meetings.filter(
-              (meeting) =>
-                meeting.enabled && !validateMeeting(meeting).complete,
-            ).length
-          : 0),
-      0,
-    );
-    return incomplete + detectConflicts(project.schedule).length;
-  }, [project]);
   const safeAreas = useMemo(
     () => (activeVariant ? resolveSafeAreaModel(activeVariant) : { zones: [] }),
     [activeVariant],
@@ -1139,60 +1223,137 @@ export function StudioExperience() {
     backgroundPanStart.current = null;
     store.getState().commitHistoryTransaction();
   };
-  const runExport = async () => {
-    if (photoExportBlocked) {
+  const runExport = async (
+    content: ExportContent = "wallpaper",
+    allConfiguredSizes = false,
+  ) => {
+    if (photoExportBlocked && content !== "schedule") {
       setExportError(photoExportIssue);
       return;
     }
-    if (!staticAssetsReady) {
-      setExportError(
-        "Your sticker artwork is still preparing. Try exporting again in a moment.",
-      );
-      return;
-    }
-    if (
-      project.design.background.mode === "image" &&
-      backgroundAssetId &&
-      loadedBackground?.id !== backgroundAssetId
-    ) {
-      setExportError(
-        "Your background image is still preparing. Try exporting again in a moment.",
-      );
-      return;
-    }
-    if (
-      activeLayout === "photo" &&
-      photoAssetIds.some((assetId) => !loadedPhotos.has(assetId))
-    ) {
-      setExportError(
-        "Your photo is still preparing. Try exporting again in a moment.",
-      );
-      return;
-    }
-    const gate = attemptWarningGate(issueCount > 0, exportGate);
-    setExportGate(gate.state);
-    if (!gate.allowed) return;
     setExportError(null);
+    setExportSuccessMessage(null);
+    setExportMenuOpen(false);
     const result = await exportCoordinator.current.run(async () => {
       setExportStatus("preparing");
-      await document.fonts.ready;
-      const stage = await waitForExportStage(exportStageRef);
-      setExportStatus("exporting");
-      await exportStagePng(stage, renderResult.model, target.filename);
-      setExportStatus("downloaded");
+      const state = store.getState();
+      const currentProject = state.activeProjectId
+        ? state.projectsById[state.activeProjectId]
+        : undefined;
+      if (!currentProject) throw new Error("The active wallpaper is unavailable.");
+      const snapshotProject = structuredClone(currentProject);
+      const activeSnapshotVariant = snapshotProject.deviceVariants.find(
+        (variant) => variant.id === snapshotProject.activeDeviceVariantId,
+      );
+      if (!activeSnapshotVariant)
+        throw new Error("The active wallpaper is unavailable.");
+      const variants = allConfiguredSizes
+        ? snapshotProject.deviceVariants
+        : [activeSnapshotVariant];
+      if (content !== "schedule") {
+        const batchPhotoIssue = variants
+          .map((variant) =>
+            photoExportBlockReason(
+              resolveProjectLayout(snapshotProject, variant),
+              snapshotProject.assetReferences.photoAssetIds.length,
+              resolveAvailablePhotoComposition(
+                snapshotProject.design.photoComposition,
+              ),
+            ),
+          )
+          .find((issue) => issue !== null);
+        if (batchPhotoIssue)
+          throw new ExportPreparationError("asset", batchPhotoIssue);
+      }
+      const temporaryUrls: string[] = [];
+      try {
+        const archiveFiles = new Map<string, Blob>();
+        for (const variant of variants) {
+          const fullResult = buildScheduleRenderModel(snapshotProject, variant);
+          const model = renderModelForExportContent(fullResult.model, content);
+          const sourceById = new Map(renderAssetSourceEntries(model));
+          const assets = await preparePngExport({
+            model,
+            availableAssets: renderAssetImages,
+            resolveAssets: async (missingIds) => {
+              const resolved = new Map<string, HTMLImageElement>();
+              const staticSources = missingIds.flatMap((assetId) => {
+                const source = sourceById.get(assetId);
+                return source ? ([[assetId, source]] as const) : [];
+              });
+              for (const entry of await loadRenderAssetSources(staticSources))
+                resolved.set(...entry);
+              await Promise.all(
+                missingIds.map(async (assetId) => {
+                  if (resolved.has(assetId) || sourceById.has(assetId)) return;
+                  const asset = await studioPersistence.assets.read(assetId);
+                  if (!asset) return;
+                  resolved.set(
+                    assetId,
+                    await decodeExportImage(asset.blob, temporaryUrls),
+                  );
+                }),
+              );
+              return resolved;
+            },
+          });
+          exportStageRef.current = null;
+          const key = (exportSnapshotKey.current += 1);
+          setExportSnapshot({ key, model, assets });
+          const stage = await waitForExportStage(exportStageRef, model);
+          setExportStatus("exporting");
+          const blob = await stagePngBlob(stage, model);
+          const target = studioTargetForVariant(variant);
+          const filename = schedulebudPngFilename(
+            snapshotProject.metadata.title,
+            target.label,
+            content,
+          );
+          if (allConfiguredSizes) {
+            const uniqueFilename = uniqueArchiveFilename(
+              filename,
+              new Set(archiveFiles.keys()),
+            );
+            archiveFiles.set(uniqueFilename, blob);
+          } else {
+            downloadBlob(blob, filename);
+          }
+        }
+        if (allConfiguredSizes) {
+          const archive = await createPngZip(archiveFiles);
+          downloadBlob(
+            archive,
+            schedulebudZipFilename(snapshotProject.metadata.title, content),
+          );
+        }
+        setExportSuccessMessage(
+          allConfiguredSizes ? "ZIP exported" : "PNG exported",
+        );
+        setExportStatus("success");
+      } finally {
+        exportStageRef.current = null;
+        setExportSnapshot(null);
+        temporaryUrls.forEach((url) => URL.revokeObjectURL(url));
+      }
     });
     if (result === null && exportCoordinator.current.busy) return;
   };
-  const guardedExport = () => {
-    void runExport().catch((error: unknown) => {
+  const guardedExport = (
+    content: ExportContent = "wallpaper",
+    allConfiguredSizes = false,
+  ) => {
+    void runExport(content, allConfiguredSizes).catch((error: unknown) => {
       console.error("ScheduleBud PNG export failed", error);
       setExportStatus("error");
       setExportError(
-        "We couldn't create this PNG on this device. Your project is safe; try again or choose a smaller device size if memory is limited.",
+        error instanceof ExportPreparationError
+          ? error.message
+          : "Couldn’t export the wallpaper. Try again.",
       );
     });
   };
-  const previewWarningMessage = !activeVariant.preview.showWarnings
+  const previewWarningMessage =
+    exportContent === "background" || !activeVariant.preview.showWarnings
     ? null
     : safeCollision.status === "blocked"
       ? "Part of your schedule is in a blocked system area."
@@ -1212,8 +1373,8 @@ export function StudioExperience() {
         scheduleSizeLimits={scheduleLimits}
         targetTriggerRef={targetPickerTriggerRef}
         onChangeTarget={() => {
-          targetPickerReturnFocusRef.current = targetPickerTriggerRef.current;
-          setTargetPickerOpen(true);
+          deviceMenuRef.current?.setAttribute("open", "");
+          window.requestAnimationFrame(() => deviceMenuTriggerRef.current?.focus());
         }}
         onPosition={(position) =>
           store.getState().setSchedulePosition(activeVariant.id, position)
@@ -1517,34 +1678,31 @@ export function StudioExperience() {
               className="size-3.5 shrink-0 transition-transform group-open:rotate-180"
             />
           </summary>
-          <div className="absolute top-[calc(100%+0.5rem)] right-0 z-40 w-[min(20rem,calc(100vw-1rem))] rounded-md border border-border bg-surface-elevated p-2 shadow-xl">
+          <div className="absolute top-[calc(100%+0.5rem)] right-0 z-40 max-h-[min(75dvh,32rem)] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto rounded-md border border-border bg-surface-elevated p-2 shadow-xl">
             <p className="px-2 pt-1 pb-2 text-[11px] font-bold tracking-[0.08em] text-text-muted uppercase">
               Preview device
             </p>
             <div role="radiogroup" aria-label="Active preview device">
-              {project.deviceVariants.map((variant) => {
-                const item = studioTargetForVariant(variant);
-                const checked = variant.id === activeVariant.id;
+              {devicePresetRegistry.map((preset) => {
+                const checked = activeVariant.presetId === preset.id;
                 return (
                   <button
-                    key={variant.id}
+                    key={preset.id}
                     type="button"
                     role="radio"
                     aria-checked={checked}
                     className={`flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${checked ? "bg-brand/8 text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground"}`}
                     onClick={() => {
-                      setStickerMenu(null);
-                      stickerMenuReturnFocusRef.current = null;
-                      store.getState().setActiveDeviceVariant(variant.id);
+                      createPresetTarget(preset);
                       deviceMenuRef.current?.removeAttribute("open");
                     }}
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">
-                        {item.label}
+                        {preset.displayName}
                       </span>
                       <span className="block font-mono text-[11px] text-text-muted">
-                        {variant.dimensions.width} × {variant.dimensions.height}
+                        {preset.width} × {preset.height}
                       </span>
                     </span>
                     <Check
@@ -1554,6 +1712,45 @@ export function StudioExperience() {
                   </button>
                 );
               })}
+              {project.deviceVariants.some(
+                (variant) => variant.presetId === null,
+              ) ? (
+                <p className="mt-1 border-t border-border px-2 pt-2 pb-1 text-[10px] font-bold tracking-[0.08em] text-text-muted uppercase">
+                  Custom & matched
+                </p>
+              ) : null}
+              {project.deviceVariants
+                .filter((variant) => variant.presetId === null)
+                .map((variant) => {
+                  const item = studioTargetForVariant(variant);
+                  const checked = variant.id === activeVariant.id;
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={checked}
+                      className={`flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${checked ? "bg-brand/8 text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground"}`}
+                      onClick={() => {
+                        switchTarget(variant.id);
+                        deviceMenuRef.current?.removeAttribute("open");
+                      }}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">
+                          {item.label}
+                        </span>
+                        <span className="block font-mono text-[11px] text-text-muted">
+                          {variant.dimensions.width} × {variant.dimensions.height}
+                        </span>
+                      </span>
+                      <Check
+                        aria-hidden="true"
+                        className={`size-4 shrink-0 ${checked ? "opacity-100" : "opacity-0"}`}
+                      />
+                    </button>
+                  );
+                })}
             </div>
             <Button
               type="button"
@@ -1567,7 +1764,7 @@ export function StudioExperience() {
                 setTargetPickerOpen(true);
               }}
             >
-              Add or match a device
+              Custom size or Match My Screen
             </Button>
           </div>
         </details>
@@ -1601,22 +1798,127 @@ export function StudioExperience() {
         >
           {autosaveCopy(autosave.status)}
         </p>
-        <Button
-          onClick={guardedExport}
-          disabled={
-            photoExportBlocked ||
-            exportStatus === "preparing" ||
-            exportStatus === "exporting"
-          }
-        >
-          {exportStatus === "downloaded" ? (
-            <Check aria-hidden="true" />
-          ) : (
-            <Download aria-hidden="true" />
-          )}
-          <span className="hidden sm:inline">{exportCopy(exportStatus)}</span>
-          <span className="sm:hidden">Export</span>
-        </Button>
+        <div ref={exportMenuRef} className="relative flex shrink-0">
+          <Button
+            onClick={() => guardedExport(exportContent)}
+            aria-busy={
+              exportStatus === "preparing" || exportStatus === "exporting"
+            }
+            title={`Export ${EXPORT_CONTENT_OPTIONS.find((option) => option.id === exportContent)?.label.toLowerCase()} — ${renderResult.model.width} × ${renderResult.model.height}`}
+            className="rounded-r-none"
+            disabled={
+              photoExportBlocked ||
+              exportStatus === "preparing" ||
+              exportStatus === "exporting"
+            }
+          >
+            {exportStatus === "success" ? (
+              <Check aria-hidden="true" />
+            ) : (
+              <Download aria-hidden="true" />
+            )}
+            <span className="hidden sm:inline">{exportCopy(exportStatus)}</span>
+            <span className="sm:hidden">
+              {exportStatus === "preparing" || exportStatus === "exporting"
+                ? "Preparing…"
+                : "Export"}
+            </span>
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            aria-label="More download options"
+            aria-haspopup="dialog"
+            aria-expanded={exportMenuOpen}
+            title="More download options"
+            className="rounded-l-none border-l border-white/25"
+            disabled={
+              exportStatus === "preparing" || exportStatus === "exporting"
+            }
+            onClick={() => setExportMenuOpen((open) => !open)}
+          >
+            <ChevronDown
+              aria-hidden="true"
+              className={`transition-transform ${exportMenuOpen ? "rotate-180" : ""}`}
+            />
+          </Button>
+          {exportMenuOpen ? (
+            <div
+              role="dialog"
+              aria-label="Export options"
+              className="absolute top-[calc(100%+0.5rem)] right-0 z-50 w-[min(22rem,calc(100vw-1rem))] rounded-md border border-border bg-surface-elevated p-3 text-foreground shadow-xl"
+            >
+              <p className="px-1 text-[11px] font-bold tracking-[0.08em] text-text-muted uppercase">
+                Export content
+              </p>
+              <div
+                role="radiogroup"
+                aria-label="Content to export"
+                className="mt-2 grid gap-1"
+              >
+                {EXPORT_CONTENT_OPTIONS.map((option) => {
+                  const checked = exportContent === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={checked}
+                      className={`flex min-h-12 items-center gap-3 rounded-sm px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${checked ? "bg-brand/8 text-brand" : "text-text-secondary hover:bg-muted hover:text-foreground"}`}
+                      onClick={() => setExportContent(option.id)}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold">
+                          {option.label}
+                        </span>
+                        <span className="block text-[11px] text-text-muted">
+                          {option.description}
+                        </span>
+                      </span>
+                      <Check
+                        aria-hidden="true"
+                        className={`size-4 shrink-0 ${checked ? "opacity-100" : "opacity-0"}`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="px-1 pb-2 font-mono text-[11px] text-text-muted">
+                  Current: {target.label} · {renderResult.model.width} ×{" "}
+                  {renderResult.model.height}
+                </p>
+                <div className="grid gap-2">
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={photoExportBlocked && exportContent !== "schedule"}
+                    onClick={() => guardedExport(exportContent)}
+                  >
+                    <Download aria-hidden="true" />
+                    Download current content
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={photoExportBlocked && exportContent !== "schedule"}
+                    onClick={() => guardedExport(exportContent, true)}
+                  >
+                    <Download aria-hidden="true" />
+                    Download all{" "}
+                    {exportContent === "wallpaper"
+                      ? "wallpapers"
+                      : exportContent === "schedule"
+                        ? "schedules"
+                        : "backgrounds"}{" "}
+                    ({project.deviceVariants.length} devices, .zip)
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </header>
       {photoExportBlocked ? (
         <div
@@ -1627,19 +1929,12 @@ export function StudioExperience() {
           photo.
         </div>
       ) : null}
-      {exportGate === "revealed" ? (
+      {exportStatus === "success" ? (
         <div
           role="status"
-          className="z-20 flex shrink-0 items-center justify-between gap-3 border-b border-warning/35 bg-[color-mix(in_oklch,var(--warning)_10%,white)] px-4 py-2 text-xs text-foreground"
+          className="fixed top-16 right-4 z-50 rounded-md border border-border bg-surface-elevated px-3 py-2 text-xs font-medium text-text-secondary shadow-lg"
         >
-          <span>
-            {issueCount} schedule{" "}
-            {issueCount === 1 ? "issue was" : "issues were"} detected. Export
-            again to continue intentionally.
-          </span>
-          <Link href="/review" className="shrink-0 font-semibold text-brand">
-            Review issues
-          </Link>
+          {exportSuccessMessage ?? "Export complete"}
         </div>
       ) : null}
       {exportError ? (
@@ -1675,7 +1970,9 @@ export function StudioExperience() {
           <ScheduleArtboard
             result={renderResult}
             zoom={editor.previewZoom}
+            contentMode={exportContent}
             exportStageRef={exportStageRef}
+            exportSnapshot={exportSnapshot}
             dragging={editor.dragging}
             guides={editor.alignmentGuides}
             variant={activeVariant}
@@ -1684,7 +1981,9 @@ export function StudioExperience() {
             guideOpacity={guideOpacity}
             assetImages={renderAssetImages}
             photoEditor={
-              activeLayout === "photo" && activePhotoFrame
+              exportContent !== "schedule" &&
+              activeLayout === "photo" &&
+              activePhotoFrame
                 ? {
                     frame: activePhotoFrame.frame,
                     rotation: activePhotoFrame.rotation,
@@ -1698,6 +1997,7 @@ export function StudioExperience() {
                 : undefined
             }
             backgroundEditor={
+              exportContent !== "schedule" &&
               project.design.background.mode === "image" &&
               backgroundAssetId &&
               loadedBackground?.id === backgroundAssetId
@@ -1709,7 +2009,7 @@ export function StudioExperience() {
                   }
                 : undefined
             }
-            stickerEditor={{
+            stickerEditor={exportContent === "schedule" ? undefined : {
               selectedId: editor.selectedStickerId,
               onSelect: (instanceId) =>
                 store.getState().setSelectedSticker(instanceId),
@@ -1913,11 +2213,8 @@ export function StudioExperience() {
       </div>
       <DeviceTargetPicker
         open={targetPickerOpen}
-        variants={project.deviceVariants}
-        activeVariantId={activeVariant.id}
         returnFocusRef={targetPickerReturnFocusRef}
         onClose={() => setTargetPickerOpen(false)}
-        onPreset={createPresetTarget}
         onCustom={(category, width, height) =>
           createTarget(category, { width, height }, "custom")
         }

@@ -9,14 +9,11 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   deviceCategoryRegistry,
-  devicePresetRegistry,
-  type DevicePreset,
 } from "@/data/devices/registry";
 import {
   deviceDimensionsSchema,
   inferScreenMatch,
   type DeviceCategory,
-  type DeviceVariant,
 } from "@/domain/device/types";
 import { inspectTemporaryImage, type InspectedImage } from "@/storage/assets";
 
@@ -28,20 +25,14 @@ function formatImageSize(bytes: number): string {
 
 export function DeviceTargetPicker({
   open,
-  variants,
-  activeVariantId,
   returnFocusRef,
   onClose,
-  onPreset,
   onCustom,
   onMatched,
 }: {
   open: boolean;
-  variants: readonly DeviceVariant[];
-  activeVariantId: string;
   returnFocusRef?: RefObject<HTMLElement | null>;
   onClose(): void;
-  onPreset(preset: DevicePreset): void;
   onCustom(category: DeviceCategory, width: number, height: number): void;
   onMatched(
     image: InspectedImage,
@@ -133,10 +124,10 @@ export function DeviceTargetPicker({
             <div>
               <p className="sb-label">Device</p>
               <Dialog.Title className="sb-section-title">
-                Choose a device
+                Custom or matched device
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-sm text-text-secondary">
-                ScheduleBud remembers your composition for each device size.
+                Enter exact dimensions or read them from a local screenshot.
               </Dialog.Description>
             </div>
             <Dialog.Close
@@ -149,45 +140,8 @@ export function DeviceTargetPicker({
 
           {!matchMode ? (
             <>
-              <div className="grid gap-6 py-5 md:grid-cols-[1fr_0.8fr]">
-                <section>
-                  <h3 className="sb-inspector-heading">Devices</h3>
-                  <div className="mt-2 divide-y divide-border border-y border-border">
-                    {devicePresetRegistry.map((preset) => {
-                      const current = variants.some(
-                        (variant) =>
-                          variant.id === activeVariantId &&
-                          variant.presetId === preset.id,
-                      );
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          aria-current={current ? "true" : undefined}
-                          className="flex min-h-14 w-full cursor-pointer items-center justify-between gap-3 px-2 py-2 text-left transition-colors duration-150 hover:bg-muted/70 active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
-                          onClick={() => {
-                            onPreset(preset);
-                            onClose();
-                          }}
-                        >
-                          <span className="font-semibold">
-                            {preset.displayName}
-                          </span>
-                          <span className="flex items-center gap-2 font-mono text-xs text-text-muted">
-                            {preset.width} × {preset.height}
-                            {current ? (
-                              <Check
-                                aria-hidden="true"
-                                className="size-4 text-brand"
-                              />
-                            ) : null}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-                <section>
+              <div className="py-5">
+                <section className="mx-auto max-w-md">
                   <h3 className="sb-inspector-heading">Custom size</h3>
                   <label className="mt-2 block">
                     <span className="text-xs font-semibold text-text-secondary">
@@ -277,7 +231,7 @@ export function DeviceTargetPicker({
                   variant="ghost"
                   onClick={() => setMatchMode(false)}
                 >
-                  Back to device types
+                  Back to custom size
                 </Button>
                 <h3 className="mt-3 font-semibold">
                   Use a screenshot from your device

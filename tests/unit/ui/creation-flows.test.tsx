@@ -57,12 +57,22 @@ describe("landing and creation entry", () => {
     renderWithStore(<HomeExperience />);
     expect(
       screen.getByRole("heading", {
-        name: /Your class schedule, made for your screen/i,
+        name: /Your schedule\.Your wallpaper\./i,
       }),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Create my schedule/i }),
+      screen.getAllByRole("link", { name: /Create my schedule/i })[0],
     ).toHaveAttribute("href", "/create");
+    expect(
+      screen.getByRole("heading", { name: "Three steps. Nothing to rebuild." }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Your schedule stays with you." }),
+    ).toBeVisible();
+    expect(screen.queryByRole("link", { name: /template/i })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Your schedules" }),
+    ).toBeNull();
     const { container } = render(<CreatePage />);
     expect(
       within(container).getByRole("link", {
@@ -83,23 +93,59 @@ describe("landing and creation entry", () => {
     ).toHaveAttribute("href", "/create/manual");
   });
 
-  it("shows a returning project and keeps start-new separate", () => {
+  it("keeps the product hero visible and opens timestamp-sorted local projects", async () => {
+    const user = userEvent.setup();
     const { store } = createTestStore();
-    store.getState().createProject("My semester");
+    const olderId = store.getState().createProject("First semester");
     store.getState().addSubject({ code: "FIC 101" });
+    store.getState().createProject("Second semester");
     render(
       <ScheduleBudProvider store={store} hydrate={false}>
         <HomeExperience />
       </ScheduleBudProvider>,
     );
-    expect(screen.getByText("Welcome back.")).toBeVisible();
-    expect(screen.getByRole("heading", { name: "My semester" })).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Continue editing/i }),
-    ).toHaveAttribute("href", "/review");
+      screen.getByRole("heading", { name: /Your schedule\.Your wallpaper\./i }),
+    ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Start a new schedule/i }),
-    ).toHaveAttribute("href", "/create");
+      screen.getByRole("heading", { name: "Your schedules" }),
+    ).toBeVisible();
+    const projectItems = screen
+      .getByRole("heading", { name: "Your schedules" })
+      .closest("section")!
+      .querySelectorAll("li");
+    expect(projectItems).toHaveLength(2);
+    expect(within(projectItems[0]!).getByText("Second semester")).toBeVisible();
+    expect(within(projectItems[1]!).getByText("First semester")).toBeVisible();
+    expect(screen.getByRole("link", { name: /New schedule/i })).toHaveAttribute(
+      "href",
+      "/create",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Open First semester" }),
+    );
+    expect(store.getState().activeProjectId).toBe(olderId);
+    expect(push).toHaveBeenCalledWith("/studio");
+  });
+
+  it("hydrates the project dashboard from the canonical local repository", async () => {
+    const seeded = createTestStore({ autosaveDebounceMs: 1 });
+    seeded.store.getState().createProject("Stored schedule");
+    await seeded.store.getState().flushAutosave();
+    const restored = createTestStore({
+      projects: seeded.projects,
+      assets: seeded.assets,
+      applicationMetadata: seeded.applicationMetadata,
+    });
+    render(
+      <ScheduleBudProvider store={restored.store}>
+        <HomeExperience />
+      </ScheduleBudProvider>,
+    );
+    expect(await screen.findByText("Stored schedule")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Open Stored schedule" }),
+    ).toBeEnabled();
   });
 });
 

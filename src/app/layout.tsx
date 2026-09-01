@@ -7,8 +7,9 @@ import { fontClassNames } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AdZU ScheduleBud 2.0",
-  description: "A local-first schedule wallpaper generator for AdZU students.",
+  title: "ScheduleBud — AdZU Schedule Wallpaper Generator",
+  description:
+    "Create a personalized class schedule wallpaper for your phone, tablet, laptop, or desktop. Built for Ateneo de Zamboanga University students.",
   icons: {
     icon: [
       {

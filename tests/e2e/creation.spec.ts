@@ -1,4 +1,5 @@
 import { expect, test, type Download, type Page } from "@playwright/test";
+import { unzipSync } from "fflate";
 import { resolve } from "node:path";
 
 async function createStudioSchedule(
@@ -20,10 +21,14 @@ async function createStudioSchedule(
 }
 
 async function pngDimensions(download: Download) {
+  return pngBufferDimensions(await downloadBuffer(download));
+}
+
+async function downloadBuffer(download: Download): Promise<Buffer> {
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-  return pngBufferDimensions(Buffer.concat(chunks));
+  return Buffer.concat(chunks);
 }
 
 function pngBufferDimensions(png: Buffer) {
@@ -44,8 +49,11 @@ async function exportedPng(page: Page): Promise<Buffer> {
 async function openTargetPicker(page: Page) {
   await page.getByRole("button", { name: "Device", exact: true }).click();
   await page.getByRole("button", { name: "Change device" }).click();
+  await page
+    .getByRole("button", { name: "Custom size or Match My Screen" })
+    .click();
   await expect(
-    page.getByRole("dialog", { name: "Choose a device" }),
+    page.getByRole("dialog", { name: "Custom or matched device" }),
   ).toBeVisible();
   await expect(page.getByText("This project", { exact: true })).toHaveCount(0);
 }
@@ -55,7 +63,8 @@ async function choosePreset(
   category: "Phone" | "Tablet" | "Laptop" | "Desktop" | "Square",
   name: RegExp,
 ) {
-  await openTargetPicker(page);
+  const selector = page.getByLabel(/^Current device:/);
+  await selector.click();
   await choosePresetFromOpenPicker(page, category, name);
 }
 
@@ -64,7 +73,10 @@ async function choosePresetFromOpenPicker(
   _category: "Phone" | "Tablet" | "Laptop" | "Desktop" | "Square",
   name: RegExp,
 ) {
-  await page.getByRole("button", { name }).click();
+  await page
+    .getByRole("radiogroup", { name: "Active preview device" })
+    .getByRole("radio", { name })
+    .click();
 }
 
 async function switchToMinimal(page: Page) {
@@ -264,7 +276,9 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   const phoneDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   const phone = await phoneDownload;
-  expect(phone.suggestedFilename()).toBe("adzu-schedule-phone.png");
+  expect(phone.suggestedFilename()).toBe(
+    "schedulebud-my-schedule-android-phone.png",
+  );
   expect(await pngDimensions(phone)).toEqual({ width: 1080, height: 2400 });
 
   await page.getByRole("button", { name: "Device", exact: true }).click();
@@ -300,8 +314,88 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   const desktopDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   const desktop = await desktopDownload;
-  expect(desktop.suggestedFilename()).toBe("adzu-schedule-desktop.png");
+  expect(desktop.suggestedFilename()).toBe(
+    "schedulebud-my-schedule-desktop-full-hd.png",
+  );
   expect(await pngDimensions(desktop)).toEqual({ width: 1920, height: 1080 });
+});
+
+test("advanced export downloads full-size schedule/background PNGs and configured sizes as ZIP", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await createStudioSchedule(page);
+
+  await page.getByRole("button", { name: "More download options" }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export options" });
+  await expect(exportDialog).toBeVisible();
+  await exportDialog.getByRole("radio", { name: /Schedule only/ }).click();
+  await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
+    "data-content-mode",
+    "schedule",
+  );
+  await page.getByRole("button", { name: "More download options" }).click();
+  const scheduleDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export PNG" }).click();
+  const schedule = await scheduleDownload;
+  expect(schedule.suggestedFilename()).toBe(
+    "schedulebud-my-schedule-android-phone-schedule.png",
+  );
+  expect(await pngDimensions(schedule)).toEqual({ width: 1080, height: 2400 });
+
+  await page.getByRole("button", { name: "More download options" }).click();
+  await exportDialog.getByRole("radio", { name: /Background only/ }).click();
+  await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
+    "data-content-mode",
+    "background",
+  );
+  const backgroundDownload = page.waitForEvent("download");
+  await exportDialog
+    .getByRole("button", { name: "Download current content" })
+    .click();
+  const background = await backgroundDownload;
+  expect(background.suggestedFilename()).toBe(
+    "schedulebud-my-schedule-android-phone-background.png",
+  );
+  expect(await pngDimensions(background)).toEqual({
+    width: 1080,
+    height: 2400,
+  });
+
+  await page.getByRole("button", { name: "More download options" }).click();
+  await exportDialog.getByRole("radio", { name: /Schedule only/ }).click();
+  await expect(
+    exportDialog.getByRole("button", {
+      name: "Download all schedules (2 devices, .zip)",
+    }),
+  ).toBeVisible();
+  const zipDownload = page.waitForEvent("download");
+  await exportDialog
+    .getByRole("button", {
+      name: "Download all schedules (2 devices, .zip)",
+    })
+    .click();
+  const archiveDownload = await zipDownload;
+  expect(archiveDownload.suggestedFilename()).toBe(
+    "schedulebud-my-schedule-schedule-all-sizes.zip",
+  );
+  const archive = unzipSync(
+    new Uint8Array(await downloadBuffer(archiveDownload)),
+  );
+  expect(Object.keys(archive).sort()).toEqual([
+    "schedulebud-my-schedule-android-phone-schedule.png",
+    "schedulebud-my-schedule-desktop-full-hd-schedule.png",
+  ]);
+  expect(
+    pngBufferDimensions(Buffer.from(archive[
+      "schedulebud-my-schedule-android-phone-schedule.png"
+    ]!)),
+  ).toEqual({ width: 1080, height: 2400 });
+  expect(
+    pngBufferDimensions(Buffer.from(archive[
+      "schedulebud-my-schedule-desktop-full-hd-schedule.png"
+    ]!)),
+  ).toEqual({ width: 1920, height: 1080 });
 });
 
 test("Studio zoom keeps the entire canvas reachable in both scroll directions", async ({
@@ -835,15 +929,18 @@ test("multi-device picker creates Tablet and custom Phone variants and preserves
   page,
 }) => {
   await createStudioSchedule(page, "TARGET 1", ["Mon", "Tue", "Wed"]);
-  await openTargetPicker(page);
-  await page.getByRole("button", { name: /iPad Portrait/ }).click();
+  await choosePreset(page, "Tablet", /iPad Portrait/);
   await expect(page.getByTestId("artboard-preview")).toHaveAttribute(
     "data-target-width",
     "1536",
   );
+  await page.getByRole("button", { name: "Device", exact: true }).click();
   await page.getByLabel("Horizontal schedule position").fill("25");
 
   await page.getByRole("button", { name: "Change device" }).click();
+  await page
+    .getByRole("button", { name: "Custom size or Match My Screen" })
+    .click();
   await page.getByLabel("Custom screen type").selectOption("phone");
   await page.getByLabel("Custom width").fill("1170");
   await page.getByLabel("Custom height").fill("2532");
@@ -913,7 +1010,7 @@ test("generic lock-screen safe areas report overlap and Tablet exports exact dim
   });
 });
 
-test("top navigation switches existing devices and opens device management", async ({
+test("top navigation lists every preset and opens custom or matched device management", async ({
   page,
 }) => {
   await createStudioSchedule(page, "NAV DEVICE 1");
@@ -935,20 +1032,38 @@ test("top navigation switches existing devices and opens device management", asy
   await expect(
     choices.getByRole("radio", { name: /Desktop Full HD/ }),
   ).toHaveAttribute("aria-checked", "true");
-  await page.getByRole("button", { name: "Add or match a device" }).click();
   await expect(
-    page.getByRole("dialog", { name: "Choose a device" }),
+    choices.getByRole("radio", { name: /iPhone/ }),
+  ).toBeVisible();
+  await expect(
+    choices.getByRole("radio", { name: /Square 1080/ }),
+  ).toBeVisible();
+  await choices.getByRole("radio", { name: /iPhone/ }).click();
+  await expect(preview).toHaveAttribute("data-target-width", "1206");
+  await expect(page.getByLabel("Current device: iPhone")).toBeVisible();
+  await page.getByLabel("Current device: iPhone").click();
+  await page
+    .getByRole("button", { name: "Custom size or Match My Screen" })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Custom or matched device" }),
   ).toBeVisible();
 });
 
 test("mobile target picker remains a usable sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await createStudioSchedule(page, "PICKER 1");
-  await openTargetPicker(page);
+  await page.getByLabel(/^Current device:/).click();
+  await page
+    .getByRole("button", { name: "Custom size or Match My Screen" })
+    .click();
   await expect(
-    page.getByRole("dialog", { name: "Choose a device" }),
+    page.getByRole("dialog", { name: "Custom or matched device" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Square 1080/ })).toBeVisible();
+  await expect(page.getByLabel("Custom width")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Match My Screen" }),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () =>
@@ -958,11 +1073,9 @@ test("mobile target picker remains a usable sheet", async ({ page }) => {
   ).toBe(true);
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("dialog", { name: "Choose a device" }),
+    page.getByRole("dialog", { name: "Custom or matched device" }),
   ).toBeHidden();
-  await expect(
-    page.getByRole("button", { name: "Change device" }),
-  ).toBeFocused();
+  await expect(page.getByLabel(/^Current device:/)).toBeFocused();
 });
 
 test("device preview environments remain visually restrained", async ({
