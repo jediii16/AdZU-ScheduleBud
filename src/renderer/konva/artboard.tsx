@@ -41,6 +41,10 @@ type PhotoEditorInteraction = {
   onPanStart(): void;
   onPanMove(delta: { x: number; y: number }): void;
   onPanEnd(): void;
+  resizeHandles: readonly ScheduleResizeHandle[];
+  onResizeStart(handle: ScheduleResizeHandle): void;
+  onResizeMove(handle: ScheduleResizeHandle, bounds: ModelRect): void;
+  onResizeEnd(handle: ScheduleResizeHandle, bounds: ModelRect): void;
 };
 
 type BackgroundEditorInteraction = {
@@ -115,14 +119,12 @@ export function ScheduleArtboard({
   const [scheduleSelected, setScheduleSelected] = useState(false);
   const [scheduleHovered, setScheduleHovered] = useState(false);
   const [scheduleResizing, setScheduleResizing] = useState(false);
-  const [photoDragging, setPhotoDragging] = useState(false);
   const [backgroundDragging, setBackgroundDragging] = useState(false);
   const fontSignature = renderModelFontSignature(result.model);
   const [fontReadiness, setFontReadiness] = useState<{
     signature: string;
     state: "loading" | "ready" | "error";
   }>(() => ({ signature: fontSignature, state: "loading" }));
-  const photoDragStart = useRef<{ x: number; y: number } | null>(null);
   const backgroundDragStart = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     const element = containerRef.current;
@@ -204,11 +206,7 @@ export function ScheduleArtboard({
             ? backgroundDragging
               ? "grabbing"
               : "grab"
-            : photoEditor?.adjusting && photoEditor.hasPhoto
-              ? photoDragging
-                ? "grabbing"
-                : "grab"
-              : undefined,
+            : undefined,
         }}
         onPointerDown={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
@@ -226,35 +224,7 @@ export function ScheduleArtboard({
             backgroundEditor.onPanStart();
             return;
           }
-          if (photoEditor?.adjusting && photoEditor.hasPhoto) {
-            const frame = photoEditor.frame;
-            const radians = (-(photoEditor.rotation ?? 0) * Math.PI) / 180;
-            const local = {
-              x:
-                frame.x +
-                (point.x - frame.x) * Math.cos(radians) -
-                (point.y - frame.y) * Math.sin(radians),
-              y:
-                frame.y +
-                (point.x - frame.x) * Math.sin(radians) +
-                (point.y - frame.y) * Math.cos(radians),
-            };
-            if (
-              local.x >= frame.x &&
-              local.x <= frame.x + frame.width &&
-              local.y >= frame.y &&
-              local.y <= frame.y + frame.height
-            ) {
-              event.currentTarget.setPointerCapture(event.pointerId);
-              photoDragStart.current = {
-                x: event.clientX,
-                y: event.clientY,
-              };
-              setPhotoDragging(true);
-              photoEditor.onPanStart();
-              return;
-            }
-          }
+          if (photoEditor?.adjusting) return;
           const bounds = result.scheduleBounds;
           const scheduleHitSlop = 12 / scale;
           setScheduleSelected(
@@ -273,12 +243,6 @@ export function ScheduleArtboard({
             });
             return;
           }
-          const start = photoDragStart.current;
-          if (!start || !photoEditor?.adjusting) return;
-          photoEditor.onPanMove({
-            x: (event.clientX - start.x) / scale,
-            y: (event.clientY - start.y) / scale,
-          });
         }}
         onPointerUp={(event) => {
           if (backgroundDragStart.current) {
@@ -289,12 +253,6 @@ export function ScheduleArtboard({
             backgroundEditor?.onPanEnd();
             return;
           }
-          if (!photoDragStart.current) return;
-          photoDragStart.current = null;
-          setPhotoDragging(false);
-          if (event.currentTarget.hasPointerCapture(event.pointerId))
-            event.currentTarget.releasePointerCapture(event.pointerId);
-          photoEditor?.onPanEnd();
         }}
         onPointerCancel={() => {
           if (backgroundDragStart.current) {
@@ -303,10 +261,6 @@ export function ScheduleArtboard({
             backgroundEditor?.onPanEnd();
             return;
           }
-          if (!photoDragStart.current) return;
-          photoDragStart.current = null;
-          setPhotoDragging(false);
-          photoEditor?.onPanEnd();
         }}
       >
         <Stage
@@ -354,6 +308,13 @@ export function ScheduleArtboard({
               hasPhoto={photoEditor.hasPhoto}
               adjusting={photoEditor.adjusting}
               previewScale={scale}
+              resizeHandles={photoEditor.resizeHandles}
+              onPanStart={photoEditor.onPanStart}
+              onPanMove={photoEditor.onPanMove}
+              onPanEnd={photoEditor.onPanEnd}
+              onResizeStart={photoEditor.onResizeStart}
+              onResizeMove={photoEditor.onResizeMove}
+              onResizeEnd={photoEditor.onResizeEnd}
             />
           ) : null}
           <PreviewEnvironmentOverlay

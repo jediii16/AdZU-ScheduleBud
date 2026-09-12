@@ -2,10 +2,14 @@
 
 import Konva from "konva";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Group, Layer, Line, Rect, Text } from "react-konva";
+import { Circle, Group, Layer, Line, Rect, Text } from "react-konva";
 import type { Rect as ModelRect } from "@/domain/render";
 import { resolvePhotoSplitMosaicFrames } from "@/domain/render/photo-split-layout";
 import { fontFamilyForId } from "../font-loading";
+import {
+  resizeScheduleRect,
+  type ScheduleResizeHandle,
+} from "./schedule-overlay";
 
 type SplitPhotoCount = 1 | 2 | 3 | 4;
 
@@ -329,18 +333,70 @@ export function PhotoEditorOverlay({
   adjusting,
   previewScale,
   rotation,
+  resizeHandles = [],
+  onPanStart,
+  onPanMove,
+  onPanEnd,
+  onResizeStart,
+  onResizeMove,
+  onResizeEnd,
 }: {
   frame: ModelRect;
   hasPhoto: boolean;
   adjusting: boolean;
   previewScale: number;
   rotation?: number;
+  resizeHandles?: readonly ScheduleResizeHandle[];
+  onPanStart?(): void;
+  onPanMove?(delta: { x: number; y: number }): void;
+  onPanEnd?(): void;
+  onResizeStart?(handle: ScheduleResizeHandle): void;
+  onResizeMove?(handle: ScheduleResizeHandle, bounds: ModelRect): void;
+  onResizeEnd?(handle: ScheduleResizeHandle, bounds: ModelRect): void;
 }) {
+  const panStart = useRef<{ x: number; y: number } | null>(null);
+  const resizeStart = useRef<{
+    handle: ScheduleResizeHandle;
+    bounds: ModelRect;
+    pointerOffset: { x: number; y: number };
+  } | null>(null);
   const strokeWidth = (adjusting ? 2 : 1) / previewScale;
   const radius = Math.min(24, frame.width * 0.025);
   const crosshair = 14 / previewScale;
+  const handleRadius = Math.max(5 / previewScale, 4);
+  const localBounds = { x: 0, y: 0, width: frame.width, height: frame.height };
+  const localPointer = (event: Konva.KonvaEventObject<Event>) =>
+    event.target.getParent()?.getRelativePointerPosition() ?? null;
+  const stagePointer = (event: Konva.KonvaEventObject<Event>) =>
+    event.target.getLayer()?.getRelativePointerPosition() ?? null;
+  const handlePoint = (handle: ScheduleResizeHandle) => ({
+    x: handle.includes("west")
+      ? 0
+      : handle.includes("east")
+        ? frame.width
+        : frame.width / 2,
+    y: handle.includes("north")
+      ? 0
+      : handle.includes("south")
+        ? frame.height
+        : frame.height / 2,
+  });
+  const cursorFor = (handle: ScheduleResizeHandle) => {
+    if (handle === "north" || handle === "south") return "ns-resize";
+    if (handle === "east" || handle === "west") return "ew-resize";
+    if (handle === "north-west" || handle === "south-east")
+      return "nwse-resize";
+    return "nesw-resize";
+  };
+  const pinRenderedPosition = function (this: Konva.Node) {
+    return this.getAbsolutePosition();
+  };
+  const stop = (event: Konva.KonvaEventObject<Event>) => {
+    event.cancelBubble = true;
+    event.evt.stopPropagation();
+  };
   return (
-    <Layer name="photo-editor-overlay" listening={false}>
+    <Layer name="photo-editor-overlay" listening={adjusting}>
       {!hasPhoto ? (
         <>
           <Rect
@@ -369,36 +425,148 @@ export function PhotoEditorOverlay({
         </>
       ) : null}
       {adjusting ? (
-        <>
+        <Group x={frame.x} y={frame.y} rotation={rotation ?? 0}>
           <Rect
             name="photo-adjust-frame"
-            {...frame}
-            rotation={rotation ?? 0}
+            {...localBounds}
+            fill="rgba(20,95,155,0.001)"
             stroke="#145F9B"
             strokeWidth={strokeWidth}
             cornerRadius={radius}
+            draggable
+            dragBoundFunc={pinRenderedPosition}
+            onMouseDown={stop}
+            onTouchStart={stop}
+            onDragStart={(event) => {
+              stop(event);
+              panStart.current = stagePointer(event);
+              onPanStart?.();
+            }}
+            onDragMove={(event) => {
+              stop(event);
+              const start = panStart.current;
+              const point = stagePointer(event);
+              if (start && point)
+                onPanMove?.({ x: point.x - start.x, y: point.y - start.y });
+            }}
+            onDragEnd={(event) => {
+              stop(event);
+              panStart.current = null;
+              onPanEnd?.();
+            }}
+            onMouseEnter={(event) => {
+              const stage = event.target.getStage();
+              if (stage) stage.container().style.cursor = "grab";
+            }}
+            onMouseLeave={(event) => {
+              const stage = event.target.getStage();
+              if (stage && !panStart.current)
+                stage.container().style.cursor = "default";
+            }}
           />
           <Line
             points={[
-              frame.x + frame.width / 2 - crosshair,
-              frame.y + frame.height / 2,
-              frame.x + frame.width / 2 + crosshair,
-              frame.y + frame.height / 2,
+              frame.width / 2 - crosshair,
+              frame.height / 2,
+              frame.width / 2 + crosshair,
+              frame.height / 2,
             ]}
             stroke="#FFFFFF"
             strokeWidth={1.5 / previewScale}
+            listening={false}
           />
           <Line
             points={[
-              frame.x + frame.width / 2,
-              frame.y + frame.height / 2 - crosshair,
-              frame.x + frame.width / 2,
-              frame.y + frame.height / 2 + crosshair,
+              frame.width / 2,
+              frame.height / 2 - crosshair,
+              frame.width / 2,
+              frame.height / 2 + crosshair,
             ]}
             stroke="#FFFFFF"
             strokeWidth={1.5 / previewScale}
+            listening={false}
           />
-        </>
+          {resizeHandles.map((handle) => {
+            const point = handlePoint(handle);
+            return (
+              <Circle
+                key={handle}
+                name={`photo-resize-${handle}`}
+                aria-label={`Resize photo ${handle}`}
+                {...point}
+                radius={handleRadius}
+                fill="#FFFFFF"
+                stroke="#145F9B"
+                strokeWidth={1.5 / previewScale}
+                hitStrokeWidth={Math.max(12 / previewScale, handleRadius * 2)}
+                draggable
+                dragBoundFunc={pinRenderedPosition}
+                onMouseDown={stop}
+                onTouchStart={stop}
+                onMouseEnter={(event) => {
+                  const stage = event.target.getStage();
+                  if (stage) stage.container().style.cursor = cursorFor(handle);
+                }}
+                onMouseLeave={(event) => {
+                  const stage = event.target.getStage();
+                  if (stage && !resizeStart.current)
+                    stage.container().style.cursor = "default";
+                }}
+                onDragStart={(event) => {
+                  stop(event);
+                  const pointer = localPointer(event);
+                  resizeStart.current = {
+                    handle,
+                    bounds: localBounds,
+                    pointerOffset: pointer
+                      ? { x: pointer.x - point.x, y: pointer.y - point.y }
+                      : { x: 0, y: 0 },
+                  };
+                  onResizeStart?.(handle);
+                }}
+                onDragMove={(event) => {
+                  stop(event);
+                  const start = resizeStart.current;
+                  const pointer = localPointer(event);
+                  if (!start || !pointer) return;
+                  onResizeMove?.(
+                    handle,
+                    resizeScheduleRect(
+                      start.bounds,
+                      handle,
+                      {
+                        x: pointer.x - start.pointerOffset.x,
+                        y: pointer.y - start.pointerOffset.y,
+                      },
+                      false,
+                      36 / previewScale,
+                    ),
+                  );
+                }}
+                onDragEnd={(event) => {
+                  stop(event);
+                  const start = resizeStart.current;
+                  const pointer = localPointer(event);
+                  if (start && pointer)
+                    onResizeEnd?.(
+                      handle,
+                      resizeScheduleRect(
+                        start.bounds,
+                        handle,
+                        {
+                          x: pointer.x - start.pointerOffset.x,
+                          y: pointer.y - start.pointerOffset.y,
+                        },
+                        false,
+                        36 / previewScale,
+                      ),
+                    );
+                  resizeStart.current = null;
+                }}
+              />
+            );
+          })}
+        </Group>
       ) : null}
     </Layer>
   );

@@ -22,7 +22,12 @@ import {
   type PhotoMetrics,
   type PhotoTypography,
 } from "./photo-layout";
-import { clampPhotoTransform, photoTransformFor } from "./photo-crop";
+import {
+  clampPhotoTransform,
+  photoFrameScaleFor,
+  photoTransformFor,
+  resizePhotoFrameAroundCenter,
+} from "./photo-crop";
 import { fitText } from "./text-fit";
 import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
 import type { WallpaperThemeTokens } from "./themes/types";
@@ -251,6 +256,35 @@ function resolvePolaroidSlots(
   });
 }
 
+function resizePolaroidSlot(
+  slot: ResolvedPolaroidSlot,
+  scale: { x: number; y: number },
+): ResolvedPolaroidSlot {
+  const paper = resizePhotoFrameAroundCenter(slot.paper, scale);
+  const side = paper.width * 0.065;
+  const top = side;
+  const bottom = paper.height * 0.16;
+  const rawImage: Rect = {
+    x: paper.x + side,
+    y: paper.y + top,
+    width: Math.max(1, paper.width - side * 2),
+    height: Math.max(1, paper.height - top - bottom),
+  };
+  const imagePoint = rotatePoint(
+    paper,
+    { x: rawImage.x, y: rawImage.y },
+    slot.rotation,
+  );
+  return {
+    paper,
+    image: { ...rawImage, ...imagePoint },
+    rawImage,
+    side,
+    bottom,
+    rotation: slot.rotation,
+  };
+}
+
 function placeholdersForSlots(slots: readonly ResolvedPolaroidSlot[]) {
   return slots.map((slot, index) => ({
     slot: index + 1,
@@ -392,7 +426,14 @@ function buildPolaroidNodes(
     rotation: number;
   }> = [];
   assetIds.forEach((assetId, index) => {
-    const { paper, image, rawImage, side, bottom, rotation } = slots[index]!;
+    const transform = clampPhotoTransform(
+      photoTransformFor(variant, "polaroid", assetId),
+    );
+    const { paper, image, rawImage, side, bottom, rotation } =
+      resizePolaroidSlot(
+        slots[index]!,
+        photoFrameScaleFor(variant, "polaroid", assetId),
+      );
     const paperWidth = paper.width;
     const paperHeight = paper.height;
     const caption = project.design.photoCaptions[assetId] ?? "";
@@ -408,9 +449,6 @@ function buildPolaroidNodes(
       shadowOffset: { x: 0, y: Math.max(2, paperHeight * 0.012) },
       shadowOpacity: 0.12,
     });
-    const transform = clampPhotoTransform(
-      photoTransformFor(variant, "polaroid", assetId),
-    );
     nodes.push({
       id: `polaroid-image-${assetId}`,
       kind: "image",

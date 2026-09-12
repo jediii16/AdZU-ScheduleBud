@@ -974,7 +974,11 @@ describe("layout design inspector", () => {
       />,
     );
     expect(screen.getByText(filename)).toHaveAttribute("title", filename);
-    expect(screen.getByText("Drag the photo to reposition")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Drag the photo to reposition · Drag frame handles to resize",
+      ),
+    ).toBeVisible();
     expect(screen.getByLabelText("Photo composition")).toBeVisible();
     expect(screen.queryByText("internal-asset-id")).toBeNull();
   });

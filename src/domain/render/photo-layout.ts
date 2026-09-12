@@ -10,7 +10,12 @@ import {
 } from "@/domain/schedule/occurrences";
 import type { ScheduleDay, Subject } from "@/domain/schedule/types";
 import { resolveLayoutVisibleFields } from "./layout-capabilities";
-import { clampPhotoTransform, photoTransformFor } from "./photo-crop";
+import {
+  clampPhotoTransform,
+  photoFrameScaleFor,
+  photoTransformFor,
+  resizePhotoFrameAroundCenter,
+} from "./photo-crop";
 import { fitText, type FittedText } from "./text-fit";
 import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
 import type { WallpaperThemeTokens } from "./themes/types";
@@ -706,12 +711,18 @@ export function buildPhotoHeroRenderModel(
   ) {
     throw new RangeError("Resolved Photo Hero composition exceeds its target.");
   }
-  const localPhotoFrame: Rect = {
+  const naturalPhotoFrame: Rect = {
     x: 0,
     y: 0,
     width: groupWidth,
     height: photoHeight,
   };
+  const localPhotoFrame = photoAssetId
+    ? resizePhotoFrameAroundCenter(
+        naturalPhotoFrame,
+        photoFrameScaleFor(variant, "hero", photoAssetId),
+      )
+    : naturalPhotoFrame;
   const photoNodes: RenderNode[] = [];
   if (photoAssetId) {
     const transform = clampPhotoTransform(
@@ -848,10 +859,9 @@ export function buildPhotoHeroRenderModel(
     height: groupHeight,
   };
   const photoFrame: Rect = {
-    x: originX,
-    y: originY,
-    width: groupWidth,
-    height: photoHeight,
+    ...localPhotoFrame,
+    x: localPhotoFrame.x + originX,
+    y: localPhotoFrame.y + originY,
   };
   const layers: RenderModel["layers"] = [
     {

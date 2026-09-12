@@ -9,6 +9,9 @@ export const DEFAULT_PHOTO_TRANSFORM: PhotoTransform = {
   scale: PHOTO_ZOOM_MIN,
   rotation: 0,
 };
+export const DEFAULT_PHOTO_FRAME_SCALE = { x: 1, y: 1 } as const;
+export const PHOTO_FRAME_SCALE_MIN = 0.4;
+export const PHOTO_FRAME_SCALE_MAX = 1.6;
 
 export type AvailablePhotoComposition = Extract<
   PhotoComposition,
@@ -39,6 +42,28 @@ function clamp01(value: number): number {
 }
 
 export function clampPhotoTransform(transform: PhotoTransform): PhotoTransform {
+  const frameScale = transform.frameScale
+    ? {
+        x: Math.min(
+          PHOTO_FRAME_SCALE_MAX,
+          Math.max(
+            PHOTO_FRAME_SCALE_MIN,
+            Number.isFinite(transform.frameScale.x)
+              ? transform.frameScale.x
+              : 1,
+          ),
+        ),
+        y: Math.min(
+          PHOTO_FRAME_SCALE_MAX,
+          Math.max(
+            PHOTO_FRAME_SCALE_MIN,
+            Number.isFinite(transform.frameScale.y)
+              ? transform.frameScale.y
+              : 1,
+          ),
+        ),
+      }
+    : undefined;
   return {
     position: {
       x: clamp01(transform.position.x),
@@ -52,6 +77,32 @@ export function clampPhotoTransform(transform: PhotoTransform): PhotoTransform {
       ),
     ),
     rotation: 0,
+    ...(frameScale ? { frameScale } : {}),
+  };
+}
+
+export function photoFrameScaleFor(
+  variant: DeviceVariant,
+  composition: AvailablePhotoComposition,
+  assetId: string,
+): { x: number; y: number } {
+  return (
+    photoTransformFor(variant, composition, assetId).frameScale ??
+    DEFAULT_PHOTO_FRAME_SCALE
+  );
+}
+
+export function resizePhotoFrameAroundCenter(
+  frame: Rect,
+  scale: { x: number; y: number },
+): Rect {
+  const width = frame.width * scale.x;
+  const height = frame.height * scale.y;
+  return {
+    x: frame.x + (frame.width - width) / 2,
+    y: frame.y + (frame.height - height) / 2,
+    width,
+    height,
   };
 }
 

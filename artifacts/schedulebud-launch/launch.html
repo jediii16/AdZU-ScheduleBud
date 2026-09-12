@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ScheduleBud Launch</title>
+  <style>
+    :root {
+      --ink: #071426;
+      --navy: #092541;
+      --blue: #0877bd;
+      --sky: #d9efff;
+      --paper: #f5f8fc;
+      --line: rgba(10, 45, 75, .14);
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--paper); }
+    #stage::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 20;
+      background: radial-gradient(circle at 50% 30%, transparent 0 55%, rgba(6, 22, 40, .08) 100%);
+    }
+    .scene { position: absolute; inset: 0; opacity: 0; overflow: hidden; }
+    .run .scene { animation: sceneInOut var(--duration) cubic-bezier(.22,.72,.18,1) both; animation-delay: var(--start); }
+    .run .scene.last { animation-name: sceneIn; }
+    @keyframes sceneInOut {
+      0% { opacity: 0; transform: scale(1.035); }
+      10% { opacity: 1; transform: scale(1); }
+      84% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(.985); }
+    }
+    @keyframes sceneIn {
+      0% { opacity: 0; transform: scale(1.035); }
+      14%, 100% { opacity: 1; transform: scale(1); }
+    }
+    .dark { color: white; background: linear-gradient(150deg, #061728 0%, #0b355b 100%); }
+    .light { background: linear-gradient(160deg, #f9fbfe 0%, #e7f4fe 100%); }
+    .blue { color: white; background: linear-gradient(145deg, #0879bd 0%, #073e72 100%); }
+    .grain {
+      position: absolute; inset: 0; opacity: .22;
+      background-image: radial-gradient(rgba(255,255,255,.22) .7px, transparent .7px);
+      background-size: 7px 7px;
+    }
+    .orb { position: absolute; border-radius: 999px; filter: blur(10px); opacity: .55; }
+    .orb.a { width: 760px; height: 760px; left: -330px; top: -240px; background: #0f91dd; }
+    .orb.b { width: 650px; height: 650px; right: -310px; bottom: -220px; background: #43b6e9; opacity: .2; }
+    .wrap { position: absolute; inset: 0; padding: 118px 86px 96px; z-index: 2; }
+    .eyebrow { font-size: 27px; line-height: 1; letter-spacing: .2em; font-weight: 850; text-transform: uppercase; color: #49b6f3; }
+    .light .eyebrow { color: var(--blue); }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: 112px; line-height: .93; letter-spacing: -.075em; font-weight: 900; }
+    h2 { font-size: 88px; line-height: .96; letter-spacing: -.065em; font-weight: 900; }
+    .sub { margin-top: 36px; max-width: 810px; font-size: 35px; line-height: 1.35; letter-spacing: -.025em; color: rgba(255,255,255,.78); }
+    .light .sub { color: #3f5268; }
+    .accent { color: #55c1ff; }
+    .light .accent { color: var(--blue); }
+    .brand { display: flex; align-items: center; gap: 20px; }
+    .brand img { width: 88px; height: 88px; object-fit: contain; }
+    .brand-name { font-size: 46px; line-height: .9; font-weight: 900; letter-spacing: -.045em; }
+    .brand-name b { color: #33a7ea; }
+    .brand small { display: block; margin-top: 14px; font-size: 17px; line-height: 1; letter-spacing: .2em; font-weight: 800; color: rgba(255,255,255,.58); }
+    .hero-copy { position: absolute; left: 86px; right: 86px; top: 470px; }
+    .hero-rule { width: 150px; height: 13px; border-radius: 10px; margin: 45px 0 48px; background: #39b4f7; }
+    .counter { position: absolute; right: 86px; top: 112px; font-size: 25px; letter-spacing: .18em; font-weight: 800; color: rgba(255,255,255,.48); }
+    .phone {
+      position: absolute; width: 490px; height: 1060px; overflow: hidden; border-radius: 58px;
+      background: #fff; border: 14px solid #061423; box-shadow: 0 42px 90px rgba(5, 33, 58, .26);
+    }
+    .phone::before { content: ""; position: absolute; z-index: 4; width: 150px; height: 37px; border-radius: 0 0 24px 24px; left: 50%; top: 0; transform: translateX(-50%); background: #061423; }
+    .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+    .scene-import .copy { position: absolute; left: 74px; right: 74px; top: 108px; }
+    .scene-import .phone { left: 295px; top: 655px; transform: rotate(-2deg); }
+    .pills { display: flex; gap: 16px; margin-top: 32px; flex-wrap: wrap; }
+    .pill { padding: 15px 22px; border: 1px solid rgba(8,119,189,.2); background: rgba(255,255,255,.74); border-radius: 999px; font-size: 24px; font-weight: 800; color: #0a5f99; }
+    .scene-style .copy { position: absolute; left: 74px; right: 74px; top: 112px; text-align: center; }
+    .fan { position: absolute; left: 0; right: 0; top: 660px; height: 1050px; }
+    .wallpaper { position: absolute; width: 408px; height: 906px; overflow: hidden; border-radius: 44px; border: 9px solid rgba(255,255,255,.92); box-shadow: 0 38px 80px rgba(0,14,32,.34); background: white; }
+    .wallpaper img { width: 100%; height: 100%; object-fit: cover; }
+    .wallpaper.one { left: 42px; top: 105px; transform: rotate(-11deg); }
+    .wallpaper.two { left: 336px; top: 10px; z-index: 2; transform: rotate(0deg); }
+    .wallpaper.three { right: 42px; top: 105px; transform: rotate(11deg); }
+    .tagline { margin-top: 32px; font-size: 31px; color: rgba(255,255,255,.78); }
+    .scene-export .copy { position: absolute; left: 74px; right: 74px; top: 104px; z-index: 2; }
+    .devices { position: absolute; left: 60px; right: 60px; top: 650px; bottom: 90px; }
+    .device-card { position: absolute; overflow: hidden; background: white; border: 8px solid #071524; box-shadow: 0 40px 80px rgba(6,35,62,.22); }
+    .device-card img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+    .device-card.desktop { left: 60px; top: 140px; width: 740px; height: 440px; border-radius: 28px; transform: rotate(-3deg); }
+    .device-card.tablet { right: 20px; top: 520px; width: 520px; height: 650px; border-radius: 38px; transform: rotate(4deg); }
+    .device-card.mobile { left: 30px; top: 510px; width: 330px; height: 735px; border-radius: 48px; transform: rotate(-7deg); }
+    .device-card.mobile img, .device-card.tablet img { object-position: center 28%; }
+    .screen-list { margin-top: 32px; font-size: 29px; color: #416078; font-weight: 750; letter-spacing: .02em; }
+    .cta .wrap { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding-bottom: 140px; }
+    .cta .brand { margin-bottom: 70px; transform: scale(1.12); }
+    .cta h2 { font-size: 94px; max-width: 880px; }
+    .cta p { margin-top: 38px; font-size: 32px; color: rgba(255,255,255,.72); }
+    .button { margin-top: 62px; padding: 25px 40px; border-radius: 24px; background: #22a6ea; color: white; font-size: 30px; font-weight: 850; box-shadow: 0 24px 55px rgba(0,119,191,.35); }
+    .url { position: absolute; bottom: 68px; left: 0; right: 0; font-size: 23px; letter-spacing: .08em; color: rgba(255,255,255,.48); text-align: center; }
+    .progress { position: absolute; z-index: 30; bottom: 0; left: 0; height: 10px; width: 0; background: #43b7f2; }
+    .run .progress { animation: progress 15s linear both; }
+    @keyframes progress { to { width: 100%; } }
+    .run .phone { animation: phoneFloat 3s ease-in-out infinite alternate; }
+    @keyframes phoneFloat { to { translate: 0 -20px; } }
+    .run .fan { animation: fanLift 3.4s ease-in-out infinite alternate; }
+    @keyframes fanLift { to { translate: 0 -18px; } }
+  </style>
+</head>
+<body>
+  <main id="stage">
+    <section class="scene dark" style="--start:0s;--duration:2.7s">
+      <div class="orb a"></div><div class="orb b"></div><div class="grain"></div>
+      <div class="wrap">
+        <div class="brand">
+          <img src="assets/logo.svg" alt="" />
+          <div><div class="brand-name">Schedule<b>Bud</b></div><small>FOR ADZU STUDENTS</small></div>
+        </div>
+        <div class="counter">01 / 05</div>
+        <div class="hero-copy">
+          <div class="eyebrow">Your semester, simplified</div>
+          <div class="hero-rule"></div>
+          <h1>Stop rebuilding<br><span class="accent">your schedule.</span></h1>
+          <p class="sub">Turn it into something you’ll actually see.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene light scene-import" style="--start:2.55s;--duration:3.25s">
+      <div class="wrap copy">
+        <div class="eyebrow">Step 01</div>
+        <h2 style="margin-top:28px">Import it.<br><span class="accent">Don’t rebuild it.</span></h2>
+        <div class="pills"><span class="pill">Portal</span><span class="pill">XLSX</span><span class="pill">PDF</span><span class="pill">Curriculum</span></div>
+      </div>
+      <div class="phone"><img src="assets/import.png" alt="ScheduleBud import choices" /></div>
+    </section>
+
+    <section class="scene blue scene-style" style="--start:5.65s;--duration:3.55s">
+      <div class="grain"></div>
+      <div class="wrap copy">
+        <div class="eyebrow" style="color:#bfeaff">Step 02</div>
+        <h2 style="margin-top:28px">Make it<br><span style="color:#bfeaff">yours.</span></h2>
+        <p class="tagline">Layouts, colors, type, photos, and stickers.</p>
+      </div>
+      <div class="fan">
+        <div class="wallpaper one"><img src="assets/minimal.png" alt="Minimal ScheduleBud wallpaper" /></div>
+        <div class="wallpaper two"><img src="assets/grid.png" alt="Grid ScheduleBud wallpaper" /></div>
+        <div class="wallpaper three"><img src="assets/cards.png" alt="Cards ScheduleBud wallpaper" /></div>
+      </div>
+    </section>
+
+    <section class="scene light scene-export" style="--start:9.05s;--duration:3.55s">
+      <div class="wrap copy">
+        <div class="eyebrow">Step 03</div>
+        <h2 style="margin-top:28px">Export for<br><span class="accent">every screen.</span></h2>
+        <p class="screen-list">Phone · Tablet · Laptop · Desktop</p>
+      </div>
+      <div class="devices">
+        <div class="device-card desktop"><img src="assets/home.png" alt="ScheduleBud homepage" /></div>
+        <div class="device-card mobile"><img src="assets/minimal.png" alt="ScheduleBud phone wallpaper" /></div>
+        <div class="device-card tablet"><img src="assets/grid.png" alt="ScheduleBud tablet wallpaper" /></div>
+      </div>
+    </section>
+
+    <section class="scene dark cta last" style="--start:12.45s;--duration:2.55s">
+      <div class="orb a"></div><div class="orb b"></div><div class="grain"></div>
+      <div class="wrap">
+        <div class="brand">
+          <img src="assets/logo.svg" alt="" />
+          <div><div class="brand-name">Schedule<b>Bud</b></div><small>FOR ADZU STUDENTS</small></div>
+        </div>
+        <h2>Your schedule.<br><span class="accent">Your wallpaper.</span></h2>
+        <p>Always one glance away.</p>
+        <div class="button">Create your schedule →</div>
+      </div>
+      <div class="url">ADZU-SCHEDULEBUD.VERCEL.APP</div>
+    </section>
+    <div class="progress"></div>
+  </main>
+  <script>
+    window.startLaunch = () => document.getElementById('stage').classList.add('run');
+  </script>
+</body>
+</html>

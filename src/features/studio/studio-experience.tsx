@@ -52,9 +52,12 @@ import {
 } from "@/domain/device/types";
 import {
   DEFAULT_PHOTO_TRANSFORM,
+  PHOTO_FRAME_SCALE_MAX,
+  PHOTO_FRAME_SCALE_MIN,
   buildScheduleRenderModel,
   createCustomPalette,
   panPhotoTransform,
+  photoFrameScaleFor,
   photoTransformFor,
   resolveAvailablePhotoComposition,
   resolveLayoutDetailCapabilities,
@@ -113,6 +116,52 @@ import {
 import type { StoredAsset } from "@/storage/types";
 
 const EMPTY_PHOTO_ASSET_IDS: readonly string[] = [];
+const FREEFORM_PHOTO_RESIZE_HANDLES: readonly ScheduleResizeHandle[] = [
+  "north-west",
+  "north",
+  "north-east",
+  "east",
+  "south-east",
+  "south",
+  "south-west",
+  "west",
+];
+
+function splitPhotoResizeHandles(
+  count: number,
+  index: number,
+  portrait: boolean,
+): readonly ScheduleResizeHandle[] {
+  if (count <= 1) return FREEFORM_PHOTO_RESIZE_HANDLES;
+  if (count === 2)
+    return portrait
+      ? [index === 0 ? "east" : "west"]
+      : [index === 0 ? "south" : "north"];
+  if (count === 3) {
+    if (index === 0) return ["south"];
+    return ["north", index === 1 ? "east" : "west"];
+  }
+  const onLeft = index % 2 === 0;
+  const onTop = index < 2;
+  return [onLeft ? "east" : "west", onTop ? "south" : "north"];
+}
+
+function clampPhotoFrameScale(value: number): number {
+  return Math.min(PHOTO_FRAME_SCALE_MAX, Math.max(PHOTO_FRAME_SCALE_MIN, value));
+}
+
+type PhotoFrameResizeGesture = {
+  frame: Rect;
+  scale: { x: number; y: number };
+  transform: PhotoTransform;
+  targetAssetId: string;
+  composition: "hero" | "split" | "polaroid";
+  index: number;
+  count: number;
+  mosaicFrame: Rect | null;
+  gap: number;
+  portrait: boolean;
+};
 
 async function waitForExportStage(
   stageRef: { current: Konva.Stage | null },
@@ -298,6 +347,7 @@ export function StudioExperience() {
     images: ReadonlyMap<string, HTMLImageElement>;
   }>(() => ({ signature: "[]", images: new Map() }));
   const photoPanStart = useRef<PhotoTransform | null>(null);
+  const photoFrameResizeStart = useRef<PhotoFrameResizeGesture | null>(null);
   const backgroundPanStart = useRef<BackgroundImageTransform | null>(null);
 
   useEffect(() => {
@@ -839,6 +889,17 @@ export function StudioExperience() {
   const activePhotoTransform = activePhotoId
     ? photoTransformFor(activeVariant, activePhotoComposition, activePhotoId)
     : DEFAULT_PHOTO_TRANSFORM;
+  const activePhotoIndex = activePhotoId
+    ? photoAssetIds.indexOf(activePhotoId)
+    : -1;
+  const activePhotoResizeHandles =
+    activePhotoComposition === "split"
+      ? splitPhotoResizeHandles(
+          photoAssetIds.length,
+          Math.max(0, activePhotoIndex),
+          activeVariant.orientation === "portrait",
+        )
+      : FREEFORM_PHOTO_RESIZE_HANDLES;
   const photoExportIssue = photoExportBlockReason(
     activeLayout,
     photoAssetIds.length,
@@ -1178,6 +1239,99 @@ export function StudioExperience() {
   };
   const finishPhotoCrop = () => {
     photoPanStart.current = null;
+    store.getState().commitHistoryTransaction();
+  };
+  const beginPhotoFrameResize = () => {
+    if (!activePhotoId || !activePhotoFrame) return;
+    const targetAssetId =
+      activePhotoComposition === "split"
+        ? (photoAssetIds[0] ?? activePhotoId)
+        : activePhotoId;
+    photoFrameResizeStart.current = {
+      frame: activePhotoFrame.frame,
+      scale: photoFrameScaleFor(
+        activeVariant,
+        activePhotoComposition,
+        targetAssetId,
+      ),
+      transform: photoTransformFor(
+        activeVariant,
+        activePhotoComposition,
+        targetAssetId,
+      ),
+      targetAssetId,
+      composition: activePhotoComposition,
+      index: Math.max(0, activePhotoIndex),
+      count: photoAssetIds.length,
+      mosaicFrame:
+        activePhotoComposition === "split"
+          ? (renderResult.photoFrame ?? null)
+          : null,
+      gap:
+        "photoMosaicGap" in renderResult &&
+        typeof renderResult.photoMosaicGap === "number"
+          ? renderResult.photoMosaicGap
+          : 0,
+      portrait: activeVariant.orientation === "portrait",
+    };
+    if (!store.getState().history.transaction)
+      store.getState().beginHistoryTransaction("Resize photo frame");
+  };
+  const movePhotoFrameResize = (
+    handle: ScheduleResizeHandle,
+    bounds: Rect,
+  ) => {
+    const start = photoFrameResizeStart.current;
+    if (!start) return;
+    let x = start.scale.x;
+    let y = start.scale.y;
+    if (start.composition !== "split" || start.count <= 1) {
+      x = clampPhotoFrameScale(
+        start.scale.x * (bounds.width / Math.max(1, start.frame.width)),
+      );
+      y = clampPhotoFrameScale(
+        start.scale.y * (bounds.height / Math.max(1, start.frame.height)),
+      );
+    } else if (start.mosaicFrame) {
+      const contentWidth = Math.max(1, start.mosaicFrame.width - start.gap);
+      const contentHeight = Math.max(1, start.mosaicFrame.height - start.gap);
+      if (handle === "east" || handle === "west") {
+        const selectedOnLeft =
+          start.count === 3 ? start.index === 1 : start.index % 2 === 0;
+        const columnRatio = selectedOnLeft
+          ? bounds.width / contentWidth
+          : 1 - bounds.width / contentWidth;
+        x = clampPhotoFrameScale(columnRatio * 2);
+      }
+      if (handle === "north" || handle === "south") {
+        const selectedOnTop =
+          start.count === 2 ? start.index === 0 : start.index < 2;
+        const featuredRatio = selectedOnTop
+          ? bounds.height / contentHeight
+          : 1 - bounds.height / contentHeight;
+        const storedRatio =
+          start.count === 3
+            ? featuredRatio - (start.portrait ? 0.55 : 0.6) + 0.5
+            : featuredRatio;
+        y = clampPhotoFrameScale(storedRatio * 2);
+      }
+    }
+    store.getState().setPhotoTransform(
+      activeVariant.id,
+      start.composition,
+      start.targetAssetId,
+      {
+        ...start.transform,
+        frameScale: { x, y },
+      },
+    );
+  };
+  const finishPhotoFrameResize = (
+    handle: ScheduleResizeHandle,
+    bounds: Rect,
+  ) => {
+    movePhotoFrameResize(handle, bounds);
+    photoFrameResizeStart.current = null;
     store.getState().commitHistoryTransaction();
   };
   const beginPhotoZoom = () => {
@@ -1627,7 +1781,7 @@ export function StudioExperience() {
         }}
         onPhotoZoomEnd={finishPhotoZoom}
         onPhotoReset={() => {
-          if (activePhotoId)
+          if (activePhotoId) {
             store
               .getState()
               .clearPhotoTransform(
@@ -1635,6 +1789,20 @@ export function StudioExperience() {
                 activePhotoComposition,
                 activePhotoId,
               );
+            const splitLayoutAssetId = photoAssetIds[0];
+            if (
+              activePhotoComposition === "split" &&
+              splitLayoutAssetId &&
+              splitLayoutAssetId !== activePhotoId
+            )
+              store
+                .getState()
+                .clearPhotoTransform(
+                  activeVariant.id,
+                  "split",
+                  splitLayoutAssetId,
+                );
+          }
         }}
         onPhotoDone={() => setPhotoAdjusting(false)}
         onPhotoMove={(assetId, direction) =>
@@ -2072,6 +2240,10 @@ export function StudioExperience() {
                     onPanStart: beginPhotoCrop,
                     onPanMove: movePhotoCrop,
                     onPanEnd: finishPhotoCrop,
+                    resizeHandles: activePhotoResizeHandles,
+                    onResizeStart: beginPhotoFrameResize,
+                    onResizeMove: movePhotoFrameResize,
+                    onResizeEnd: finishPhotoFrameResize,
                   }
                 : undefined
             }

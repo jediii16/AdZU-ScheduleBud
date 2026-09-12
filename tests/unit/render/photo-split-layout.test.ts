@@ -500,4 +500,26 @@ describe("Clean Slate Photo Split", () => {
       ),
     ).toBe(false);
   });
+
+  it("resizes shared Split dividers without introducing gaps", () => {
+    const project = splitProject(["Mon", "Tue"]);
+    project.assetReferences.photoAssetIds = ["a", "b", "c", "d"];
+    const variant = project.deviceVariants[0]!;
+    variant.photoTransforms.split.a = {
+      position: { x: 0.5, y: 0.5 },
+      scale: 1,
+      rotation: 0,
+      frameScale: { x: 1.4, y: 1.2 },
+    };
+    const result = buildPhotoSplitRenderModel(project, variant);
+    const [topLeft, topRight, bottomLeft, bottomRight] = result.photoCells;
+    expect(topLeft!.bounds.width).toBeGreaterThan(topRight!.bounds.width);
+    expect(topLeft!.bounds.height).toBeGreaterThan(bottomLeft!.bounds.height);
+    expect(topLeft!.bounds.x + topLeft!.bounds.width + result.photoMosaicGap)
+      .toBeCloseTo(topRight!.bounds.x);
+    expect(topLeft!.bounds.y + topLeft!.bounds.height + result.photoMosaicGap)
+      .toBeCloseTo(bottomLeft!.bounds.y);
+    expect(bottomLeft!.bounds.width).toBeCloseTo(topLeft!.bounds.width);
+    expect(bottomRight!.bounds.height).toBeCloseTo(bottomLeft!.bounds.height);
+  });
 });

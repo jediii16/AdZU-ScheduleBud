@@ -313,6 +313,28 @@ describe("Clean Slate Photo Hero RenderModel", () => {
 });
 
 describe("Photo Hero crop geometry", () => {
+  it("resizes the Hero frame independently on each axis", () => {
+    const project = photoProject(["Mon", "Tue"]);
+    const target = project.deviceVariants[0]!;
+    const natural = buildPhotoHeroRenderModel(project, target);
+    target.photoTransforms.hero["photo-hero"] = {
+      position: { x: 0.5, y: 0.5 },
+      scale: 1,
+      rotation: 0,
+      frameScale: { x: 0.7, y: 1.4 },
+    };
+    const resized = buildPhotoHeroRenderModel(project, target);
+    expect(resized.photoFrame.width).toBeCloseTo(
+      natural.photoFrame.width * 0.7,
+    );
+    expect(resized.photoFrame.height).toBeCloseTo(
+      natural.photoFrame.height * 1.4,
+    );
+    expect(resized.photoFrame.x + resized.photoFrame.width / 2).toBeCloseTo(
+      natural.photoFrame.x + natural.photoFrame.width / 2,
+    );
+  });
+
   it.each([
     { width: 800, height: 1200 },
     { width: 1600, height: 900 },
@@ -348,5 +370,11 @@ describe("Photo Hero crop geometry", () => {
     expect(panned.position.x).toBeLessThanOrEqual(1);
     expect(panned.position.y).toBeGreaterThanOrEqual(0);
     expect(panned.position.y).toBeLessThanOrEqual(1);
+    expect(
+      clampPhotoTransform({
+        ...DEFAULT_PHOTO_TRANSFORM,
+        frameScale: { x: 0.01, y: 20 },
+      }).frameScale,
+    ).toEqual({ x: 0.4, y: 1.6 });
   });
 });

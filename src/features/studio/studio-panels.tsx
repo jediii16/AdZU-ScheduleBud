@@ -682,7 +682,9 @@ function PhotoInspectorSection({
                 {selectedPhoto.filename}
               </p>
               <p className="text-xs text-text-muted">
-                Drag the photo to reposition
+                {composition === "split"
+                  ? "Drag the photo to reposition · Drag divider handles to resize"
+                  : "Drag the photo to reposition · Drag frame handles to resize"}
               </p>
               <label className="block">
                 <span className="mb-1 flex justify-between text-xs font-semibold text-text-secondary">
@@ -711,7 +713,7 @@ function PhotoInspectorSection({
                   variant="ghost"
                   onClick={onReset}
                 >
-                  Reset crop
+                  Reset photo
                 </Button>
                 <Button type="button" size="sm" onClick={onDone}>
                   Done

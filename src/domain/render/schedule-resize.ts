@@ -13,6 +13,13 @@ import type {
 
 export const SCHEDULE_READABILITY_SCALE_THRESHOLD = 0.62;
 
+export const PHONE_SCHEDULE_FRAME = {
+  left: 0.1,
+  top: 0.3,
+  right: 0.1,
+  bottom: 0.09,
+} as const;
+
 type ResizeTransform = {
   source: Rect;
   target: Rect;
@@ -337,6 +344,114 @@ function transformMetadata<T extends ScheduleRenderResult>(
         : {}),
     }));
   return transformed;
+}
+
+export function phoneScheduleFrame(
+  model: Pick<ScheduleRenderResult["model"], "width" | "height">,
+): Rect {
+  return {
+    x: model.width * PHONE_SCHEDULE_FRAME.left,
+    y: model.height * PHONE_SCHEDULE_FRAME.top,
+    width:
+      model.width *
+      (1 - PHONE_SCHEDULE_FRAME.left - PHONE_SCHEDULE_FRAME.right),
+    height:
+      model.height *
+      (1 - PHONE_SCHEDULE_FRAME.top - PHONE_SCHEDULE_FRAME.bottom),
+  };
+}
+
+/**
+ * Phone wallpapers reserve their upper portion for lock-screen chrome. Keep
+ * schedule-first layouts in the compact frame below the clock; photo layouts
+ * deliberately skip this transform so artwork can continue behind the clock.
+ */
+export function fitScheduleIntoPhoneFrame<T extends ScheduleRenderResult>(
+  result: T,
+  variant: DeviceVariant,
+): T {
+  if (variant.category !== "phone" || variant.orientation !== "portrait")
+    return result;
+
+  const natural = result.scheduleBounds;
+  const frame = phoneScheduleFrame(result.model);
+  const scale = Math.min(
+    1,
+    frame.width / Math.max(1, natural.width),
+    frame.height / Math.max(1, natural.height),
+  );
+  const width = natural.width * scale;
+  const height = natural.height * scale;
+  const maxX = frame.x + Math.max(0, frame.width - width);
+  const maxY = frame.y + Math.max(0, frame.height - height);
+  const target: Rect = {
+    x: frame.x + (maxX - frame.x) * variant.schedulePosition.x,
+    y: frame.y + (maxY - frame.y) * variant.schedulePosition.y,
+    width,
+    height,
+  };
+  const transform: ResizeTransform = {
+    source: natural,
+    target,
+    scaleX: scale,
+    scaleY: scale,
+    fontScale: scale,
+  };
+  const metadata = transformMetadata(result, transform);
+  const [background, scenery, photos, schedule, foreground] =
+    result.model.layers;
+  const transformedScheduleNodes = schedule.nodes.map((node) =>
+    transformNode(node, transform),
+  );
+
+  return {
+    ...metadata,
+    model: {
+      ...result.model,
+      layers: [
+        background,
+        scenery,
+        photos,
+        {
+          ...schedule,
+          nodes: adaptCardsToVerticalSpace(
+            schedule.nodes,
+            transformedScheduleNodes,
+            transform,
+          ),
+        },
+        foreground,
+      ],
+    },
+    overlay: {
+      ...result.overlay,
+      ...(result.overlay.selection
+        ? { selection: transformRect(result.overlay.selection, transform) }
+        : {}),
+      warningRegions: result.overlay.warningRegions.map((region) =>
+        transformRect(region, transform),
+      ),
+    },
+    scheduleBounds: target,
+    positionRange: {
+      minX: frame.x,
+      maxX,
+      minY: frame.y,
+      maxY,
+    },
+    ...(scale < 1
+      ? {
+          scheduleResize: {
+            naturalBounds: natural,
+            scaleX: scale,
+            scaleY: scale,
+            fontScale: scale,
+            constrained: true,
+            readabilityWarning: scale < SCHEDULE_READABILITY_SCALE_THRESHOLD,
+          },
+        }
+      : {}),
+  } as T;
 }
 
 export function scheduleSizeLimits(result: ScheduleRenderResult): {

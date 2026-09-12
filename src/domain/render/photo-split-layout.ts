@@ -22,7 +22,13 @@ import {
   type PhotoMetrics,
   type PhotoTypography,
 } from "./photo-layout";
-import { clampPhotoTransform, photoTransformFor } from "./photo-crop";
+import {
+  DEFAULT_PHOTO_FRAME_SCALE,
+  clampPhotoTransform,
+  photoFrameScaleFor,
+  photoTransformFor,
+  resizePhotoFrameAroundCenter,
+} from "./photo-crop";
 import { fitText } from "./text-fit";
 import { CLEAN_SLATE_RENDER_THEME } from "./themes/clean-slate";
 import type { WallpaperThemeTokens } from "./themes/types";
@@ -89,31 +95,51 @@ export function resolvePhotoSplitMosaicFrames(
   count: SplitPhotoCount,
   portrait: boolean,
   requestedGap: number,
+  dividerScale: { x: number; y: number } = DEFAULT_PHOTO_FRAME_SCALE,
 ): readonly Rect[] {
   const gap = Math.max(
     0,
     Math.min(requestedGap, region.width / 4, region.height / 4),
   );
-  if (count === 1) return [region];
+  const columnRatio = Math.min(0.8, Math.max(0.2, dividerScale.x * 0.5));
+  const rowRatio = Math.min(0.8, Math.max(0.2, dividerScale.y * 0.5));
+  if (count === 1)
+    return [resizePhotoFrameAroundCenter(region, dividerScale)];
   if (count === 2) {
     if (portrait) {
-      const cellWidth = (region.width - gap) / 2;
+      const contentWidth = region.width - gap;
+      const cellWidth = contentWidth * columnRatio;
       return [
         { ...region, width: cellWidth },
-        { ...region, x: region.x + cellWidth + gap, width: cellWidth },
+        {
+          ...region,
+          x: region.x + cellWidth + gap,
+          width: contentWidth - cellWidth,
+        },
       ];
     }
-    const cellHeight = (region.height - gap) / 2;
+    const contentHeight = region.height - gap;
+    const cellHeight = contentHeight * rowRatio;
     return [
       { ...region, height: cellHeight },
-      { ...region, y: region.y + cellHeight + gap, height: cellHeight },
+      {
+        ...region,
+        y: region.y + cellHeight + gap,
+        height: contentHeight - cellHeight,
+      },
     ];
   }
   if (count === 3) {
     const contentHeight = region.height - gap;
-    const featuredHeight = contentHeight * (portrait ? 0.55 : 0.6);
+    const defaultFeaturedRatio = portrait ? 0.55 : 0.6;
+    const featuredRatio = Math.min(
+      0.8,
+      Math.max(0.2, defaultFeaturedRatio + rowRatio - 0.5),
+    );
+    const featuredHeight = contentHeight * featuredRatio;
     const lowerHeight = contentHeight - featuredHeight;
-    const lowerWidth = (region.width - gap) / 2;
+    const contentWidth = region.width - gap;
+    const lowerWidth = contentWidth * columnRatio;
     return [
       { ...region, height: featuredHeight },
       {
@@ -125,32 +151,34 @@ export function resolvePhotoSplitMosaicFrames(
       {
         x: region.x + lowerWidth + gap,
         y: region.y + featuredHeight + gap,
-        width: lowerWidth,
+        width: contentWidth - lowerWidth,
         height: lowerHeight,
       },
     ];
   }
-  const cellWidth = (region.width - gap) / 2;
-  const cellHeight = (region.height - gap) / 2;
+  const contentWidth = region.width - gap;
+  const contentHeight = region.height - gap;
+  const cellWidth = contentWidth * columnRatio;
+  const cellHeight = contentHeight * rowRatio;
   return [
     { x: region.x, y: region.y, width: cellWidth, height: cellHeight },
     {
       x: region.x + cellWidth + gap,
       y: region.y,
-      width: cellWidth,
+      width: contentWidth - cellWidth,
       height: cellHeight,
     },
     {
       x: region.x,
       y: region.y + cellHeight + gap,
       width: cellWidth,
-      height: cellHeight,
+      height: contentHeight - cellHeight,
     },
     {
       x: region.x + cellWidth + gap,
       y: region.y + cellHeight + gap,
-      width: cellWidth,
-      height: cellHeight,
+      width: contentWidth - cellWidth,
+      height: contentHeight - cellHeight,
     },
   ];
 }
@@ -416,6 +444,11 @@ export function buildPhotoSplitRenderModel(
           photoAssetIds.length as SplitPhotoCount,
           portrait,
           photoMosaicGap,
+          photoFrameScaleFor(
+            variant,
+            "split",
+            photoAssetIds[0]!,
+          ),
         )
       : [];
   const photoNodes: RenderNode[] = [];

@@ -149,6 +149,12 @@ export const photoTransformSchema = z.object({
   position: normalizedPointSchema,
   scale: z.number().finite().min(0.1).max(10),
   rotation: z.number().finite().min(-360).max(360),
+  frameScale: z
+    .object({
+      x: z.number().finite().min(0.4).max(1.6),
+      y: z.number().finite().min(0.4).max(1.6),
+    })
+    .optional(),
 });
 export type PhotoTransform = z.infer<typeof photoTransformSchema>;
 

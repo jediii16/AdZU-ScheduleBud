@@ -616,4 +616,30 @@ describe("Clean Slate Photo Polaroid", () => {
       expect(result.dayLayout).toHaveLength(5);
     },
   );
+
+  it("resizes one Polaroid card and its image frame together", () => {
+    const project = polaroidProject(2);
+    const variant = project.deviceVariants[0]!;
+    const natural = buildPhotoPolaroidRenderModel(project, variant);
+    variant.photoTransforms.polaroid["photo-1"] = {
+      position: { x: 0.5, y: 0.5 },
+      scale: 1,
+      rotation: 0,
+      frameScale: { x: 0.7, y: 1.35 },
+    };
+    const resized = buildPhotoPolaroidRenderModel(project, variant);
+    expect(resized.polaroids[0]!.paper.width).toBeCloseTo(
+      natural.polaroids[0]!.paper.width * 0.7,
+    );
+    expect(resized.polaroids[0]!.paper.height).toBeCloseTo(
+      natural.polaroids[0]!.paper.height * 1.35,
+    );
+    expect(resized.polaroids[0]!.image.width).toBeLessThan(
+      natural.polaroids[0]!.image.width,
+    );
+    expect(resized.polaroids[0]!.image.height).toBeGreaterThan(
+      natural.polaroids[0]!.image.height,
+    );
+    expect(resized.polaroids[1]).toEqual(natural.polaroids[1]);
+  });
 });
