@@ -28,6 +28,12 @@ function neutralChromeColor(tone: DeviceArtworkTone, opacity: number) {
     : `rgba(16,35,58,${opacity})`;
 }
 
+export function shouldShowGenericLockScreenClock(
+  variant: Pick<DeviceVariant, "category" | "preview">,
+): boolean {
+  return variant.preview.mode === "lock-screen" && variant.category === "phone";
+}
+
 function useDevicePreviewAssets(
   variant: DeviceVariant,
   tone: DeviceArtworkTone,
@@ -212,7 +218,7 @@ export function PreviewEnvironmentOverlay({
           height={height}
         />
       ) : null}
-      {variant.preview.mode === "lock-screen" &&
+      {shouldShowGenericLockScreenClock(variant) &&
       deviceAssetsReady &&
       !iphoneArtwork &&
       !androidArtwork ? (

@@ -36,6 +36,17 @@ const EXPECTED_SCHEDULE_FONTS = [
   ["quicksand-dm-sans", "dm-sans", "DM Sans"],
   ["league-spartan-inter", "inter", "Inter"],
   ["allura-manrope", "manrope", "Manrope"],
+  ["fraunces-manrope", "manrope", "Manrope"],
+  ["bodoni-inter", "inter", "Inter"],
+  ["space-grotesk-inter", "inter", "Inter"],
+  ["dm-serif-dm-sans", "dm-sans", "DM Sans"],
+] as const;
+
+const EXPECTED_TITLE_FONTS = [
+  ["fraunces-manrope", "fraunces", "Fraunces", 700],
+  ["bodoni-inter", "bodoni-moda", "Bodoni Moda", 700],
+  ["space-grotesk-inter", "space-grotesk", "Space Grotesk", 700],
+  ["dm-serif-dm-sans", "dm-serif-display", "DM Serif Display", 400],
 ] as const;
 
 const RENDER_CASES = [
@@ -214,6 +225,18 @@ describe("paired typography", () => {
         );
         if (composition === "polaroid") expect(captions).toHaveLength(1);
       }
+    },
+  );
+
+  it.each(EXPECTED_TITLE_FONTS)(
+    "%s applies the exact %s display face at a supported weight",
+    (presetId, expectedFontId, expectedFamily, expectedWeight) => {
+      const preset = resolveTypographyPreset(presetId);
+      expect(preset.titleFont).toBe(expectedFontId);
+      expect(fontRegistry[expectedFontId].label).toBe(expectedFamily);
+      expect(resolveAvailableWeight(expectedFontId, preset.titleWeight)).toBe(
+        expectedWeight,
+      );
     },
   );
 

@@ -320,6 +320,62 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   expect(await pngDimensions(desktop)).toEqual({ width: 1920, height: 1080 });
 });
 
+test("Studio persists edits across reload and reopens the active device", async ({
+  page,
+}) => {
+  await createStudioSchedule(page, "PERSIST 1", ["Mon", "Wed"]);
+  const title = page.getByLabel("Title", { exact: true });
+  await title.fill("Reload-safe schedule");
+  await title.press("Tab");
+  await page.reload();
+  await expect(page.getByTestId("artboard-preview")).toBeVisible();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Reload-safe schedule",
+  );
+
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
+  await page.reload();
+  await expect(page.getByLabel(/^Current device:/)).toContainText(
+    "Desktop Full HD",
+  );
+
+  const backgroundDataUrl = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 480;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#5B8DB8";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png");
+  });
+  await page.getByLabel("Choose background image").setInputFiles({
+    name: "reload-safe-background.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(backgroundDataUrl.split(",")[1]!, "base64"),
+  });
+  await expect(
+    page.getByRole("radio", { name: "Image", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.reload();
+  await expect(
+    page.getByRole("radio", { name: "Image", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    page.getByRole("button", { name: "Adjust background" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "ScheduleBud home" }).click();
+  await expect(page.getByRole("heading", { name: "Your schedules" })).toBeVisible();
+  await page.getByRole("button", { name: /Open My schedule/ }).click();
+  await expect(page).toHaveURL(/\/studio$/);
+  await expect(page.getByLabel(/^Current device:/)).toContainText(
+    "Desktop Full HD",
+  );
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Reload-safe schedule",
+  );
+});
+
 test("advanced export downloads full-size schedule/background PNGs and configured sizes as ZIP", async ({
   page,
 }) => {
@@ -1257,8 +1313,7 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
   await expect(preview).toHaveAttribute("data-target-width", "1536");
   await choosePreset(page, "Square", /Square 1080/);
   await expect(preview).toHaveAttribute("data-target-width", "1080");
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   const desktopDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await desktopDownload)).toEqual({
@@ -1347,8 +1402,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
   expect(tabletLandscapeTarget).toMatchSnapshot(
     "tablet-landscape-minimal-clean-target.png",
   );
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-minimal-clean-5-days.png", {
     animations: "disabled",
   });
@@ -1378,8 +1432,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
   await expect(preview).toHaveScreenshot("phone-minimal-clean-3-days.png", {
     animations: "disabled",
   });
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-minimal-clean-3-days.png", {
     animations: "disabled",
   });
@@ -1414,8 +1467,7 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
   expect(packedTabletLandscapeTarget).toMatchSnapshot(
     "tablet-landscape-minimal-clean-6-days-target.png",
   );
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-minimal-clean-6-days.png", {
     animations: "disabled",
   });
@@ -1692,8 +1744,7 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   await expect(preview).toHaveAttribute("data-target-width", "1536");
   await choosePreset(page, "Tablet", /iPad Landscape/);
   await expect(preview).toHaveAttribute("data-target-width", "2048");
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await page.getByRole("button", { name: "Design", exact: true }).click();
   await expect(page.getByRole("checkbox", { name: "Professor" })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Section" })).toBeVisible();
@@ -1931,8 +1982,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
     "tablet-landscape-grid-clean-5-days.png",
     { animations: "disabled" },
   );
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-5-days.png", {
     animations: "disabled",
   });
@@ -1964,8 +2014,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
     "tablet-portrait-grid-clean-6-days.png",
     { animations: "disabled" },
   );
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-6-days.png", {
     animations: "disabled",
   });
@@ -1978,8 +2027,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
       end: "15:00",
     },
   ]);
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-3-days.png", {
     animations: "disabled",
   });
@@ -2026,8 +2074,7 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
   await expect(preview).toHaveScreenshot("phone-grid-clean-overlap.png", {
     animations: "disabled",
   });
-  await openTargetPicker(page);
-  await choosePresetFromOpenPicker(page, "Desktop", /Desktop Full HD/);
+  await choosePreset(page, "Desktop", /Desktop Full HD/);
   await expect(preview).toHaveScreenshot("desktop-grid-clean-overlap.png", {
     animations: "disabled",
   });

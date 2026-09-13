@@ -10,6 +10,7 @@ import {
 import {
   DEVICE_CHROME_OPACITY,
   IPHONE_TIME_DATE_OPACITY,
+  shouldShowGenericLockScreenClock,
 } from "@/renderer/konva/editor-overlay/preview-environment";
 import { nextSplitPreviewCount } from "@/renderer/konva/editor-overlay/photo-overlay";
 
@@ -82,6 +83,17 @@ describe("device preview assets", () => {
         previewVariant(DEVICE_PRESET_IDS.iphone, "clean"),
       ),
     ).toEqual([]);
+  });
+
+  it("keeps the generic clock off iPad previews", () => {
+    const preview = previewVariant("tablet-4-3-portrait", "lock-screen").preview;
+
+    expect(
+      shouldShowGenericLockScreenClock({ category: "tablet", preview }),
+    ).toBe(false);
+    expect(
+      shouldShowGenericLockScreenClock({ category: "phone", preview }),
+    ).toBe(true);
   });
 
   it("selects contrasting artwork from the wallpaper background", () => {

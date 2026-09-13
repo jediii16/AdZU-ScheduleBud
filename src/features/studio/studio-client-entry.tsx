@@ -1,19 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { AppLoading } from "@/components/shared/app-loading";
 
 const StudioExperience = dynamic(
   () => import("./studio-experience").then((module) => module.StudioExperience),
   {
     ssr: false,
-    loading: () => (
-      <div
-        role="status"
-        className="flex min-h-screen items-center justify-center text-sm text-text-muted"
-      >
-        Preparing Studio…
-      </div>
-    ),
+    loading: () => <AppLoading message="Preparing Studio…" />,
   },
 );
 

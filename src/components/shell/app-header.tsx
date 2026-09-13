@@ -1,21 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { HardDrive, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 
 import { BrandLockup } from "@/components/shared/brand-lockup";
 import { useScheduleBudStore } from "@/state/react";
 
 export function AppHeader() {
-  const autosave = useScheduleBudStore((state) => state.autosave);
-  const status =
-    autosave.status === "saving"
-      ? "Saving…"
-      : autosave.status === "saved"
-        ? "Saved locally"
-        : autosave.status === "error"
-          ? "Couldn't save locally"
-          : null;
+  const autosaveError = useScheduleBudStore((state) =>
+    state.autosave.status === "error"
+      ? (state.autosave.error ?? "Couldn't save locally")
+      : null,
+  );
 
   return (
     <header className="border-b border-border-muted bg-background/95">
@@ -27,17 +23,13 @@ export function AppHeader() {
         >
           <BrandLockup descriptor />
         </Link>
-        {status ? (
+        {autosaveError ? (
           <p
-            aria-live="polite"
-            className={`flex items-center gap-1.5 text-xs font-medium ${autosave.status === "error" ? "text-destructive" : "text-text-muted"}`}
+            role="alert"
+            className="flex items-center gap-1.5 text-xs font-medium text-destructive"
           >
-            {autosave.status === "error" ? (
-              <TriangleAlert aria-hidden="true" className="size-3.5" />
-            ) : (
-              <HardDrive aria-hidden="true" className="size-3.5" />
-            )}
-            {status}
+            <TriangleAlert aria-hidden="true" className="size-3.5" />
+            {autosaveError}
           </p>
         ) : null}
       </div>

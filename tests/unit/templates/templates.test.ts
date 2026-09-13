@@ -199,6 +199,16 @@ describe("built-in templates", () => {
     expect(
       getTemplateById("folded-ivory")?.recipe.design.background,
     ).toMatchObject({ mode: "pattern", pattern: { type: "crumpled" } });
+    expect(
+      ["peach-halo", "prism-shift", "velvet-orbit", "folded-ivory"].map(
+        (id) => getTemplateById(id)?.recipe.design.typography.presetId,
+      ),
+    ).toEqual([
+      "dm-serif-dm-sans",
+      "space-grotesk-inter",
+      "bodoni-inter",
+      "fraunces-manrope",
+    ]);
   });
 
   it("carries only recognized IDs through query strings and anchors", () => {

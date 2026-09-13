@@ -1,8 +1,11 @@
 import {
   Allura,
+  Bodoni_Moda,
   Caveat,
   Cormorant_Garamond,
   DM_Sans,
+  DM_Serif_Display,
+  Fraunces,
   Geist,
   Geist_Mono,
   Inter,
@@ -14,6 +17,7 @@ import {
   Poppins,
   Quicksand,
   Source_Sans_3,
+  Space_Grotesk,
 } from "next/font/google";
 
 export const bodySans = Geist({
@@ -117,6 +121,34 @@ export const manrope = Manrope({
   weight: ["400", "500", "600", "700"],
   variable: "--font-manrope",
 });
+export const fraunces = Fraunces({
+  display: "swap",
+  preload: false,
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-fraunces",
+});
+export const bodoniModa = Bodoni_Moda({
+  display: "swap",
+  preload: false,
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-bodoni-moda",
+});
+export const spaceGrotesk = Space_Grotesk({
+  display: "swap",
+  preload: false,
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-space-grotesk",
+});
+export const dmSerifDisplay = DM_Serif_Display({
+  display: "swap",
+  preload: false,
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-dm-serif-display",
+});
 
 export const fontClassNames = [
   bodySans.variable,
@@ -134,4 +166,8 @@ export const fontClassNames = [
   leagueSpartan.variable,
   allura.variable,
   manrope.variable,
+  fraunces.variable,
+  bodoniModa.variable,
+  spaceGrotesk.variable,
+  dmSerifDisplay.variable,
 ].join(" ");

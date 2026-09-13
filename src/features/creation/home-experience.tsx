@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Copy, Ellipsis, Pencil, Trash2 } from "lucide-react";
 
-import heroVisual from "../../../hero.svg";
+import heroVisual from "../../../public/brand/hero.webp";
 import { BrandLockup } from "@/components/shared/brand-lockup";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { TEMPLATE_REGISTRY } from "@/domain/templates/registry";
@@ -17,7 +17,7 @@ import { TemplateCardPreview } from "./template-card-preview";
 import { devicePresetById } from "@/data/devices/registry";
 import type { ScheduleProject } from "@/domain/project";
 import { cn } from "@/lib/utils";
-import { useScheduleBudStore } from "@/state/react";
+import { useProjectLoadNotice, useScheduleBudStore } from "@/state/react";
 
 const ProjectCanvasPreview = dynamic(() => import("./project-canvas-preview"), {
   ssr: false,
@@ -270,6 +270,8 @@ function ProjectCard({
 }
 
 function ProjectDashboard({ projects }: { projects: ScheduleProject[] }) {
+  const { message: loadNotice, dismiss: dismissLoadNotice } =
+    useProjectLoadNotice();
   const router = useRouter();
   const setActiveProject = useScheduleBudStore(
     (state) => state.setActiveProject,
@@ -320,6 +322,22 @@ function ProjectDashboard({ projects }: { projects: ScheduleProject[] }) {
             New schedule
           </Link>
         </div>
+
+        {loadNotice ? (
+          <div
+            role="note"
+            className="mt-5 flex items-start gap-3 rounded-md border border-border-muted bg-background/60 px-3 py-2 text-xs leading-5 text-text-muted sm:items-center"
+          >
+            <p className="min-w-0 flex-1">{loadNotice}</p>
+            <button
+              type="button"
+              onClick={dismissLoadNotice}
+              className="min-h-9 shrink-0 rounded-sm px-2 font-semibold text-text-secondary hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
 
         <ul className="mt-7 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
@@ -488,6 +506,7 @@ function Footer() {
 }
 
 export function HomeExperience() {
+  const { message: loadNotice } = useProjectLoadNotice();
   const projectsById = useScheduleBudStore((state) => state.projectsById);
   const projects = Object.values(projectsById).toSorted((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt),
@@ -498,7 +517,9 @@ export function HomeExperience() {
       <PublicHeader />
       <main>
         <Hero />
-        {projects.length > 0 ? <ProjectDashboard projects={projects} /> : null}
+        {projects.length > 0 || loadNotice ? (
+          <ProjectDashboard projects={projects} />
+        ) : null}
         <TemplatesSection />
         <HowItWorks />
       </main>

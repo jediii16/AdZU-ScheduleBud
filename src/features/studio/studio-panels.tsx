@@ -3185,7 +3185,17 @@ export function DesignStudioPanel({
                     onChange={(event) => onField(field, event.target.checked)}
                   />
                 </label>
-              ) : null,
+              ) : (
+                <div
+                  key={field}
+                  className="flex min-h-11 items-center justify-between gap-3 px-2 py-2 text-sm"
+                >
+                  <span className="font-medium">{FIELD_LABELS[field]}</span>
+                  <span className="text-right text-xs font-medium text-text-muted">
+                    Larger Grid devices only
+                  </span>
+                </div>
+              ),
             )}
           </div>
         </section>

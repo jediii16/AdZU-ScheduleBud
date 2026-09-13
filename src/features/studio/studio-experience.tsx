@@ -237,12 +237,6 @@ const EXPORT_CONTENT_OPTIONS: readonly {
   },
 ];
 
-function autosaveCopy(status: string): string {
-  if (status === "saving" || status === "idle") return "Saving…";
-  if (status === "error") return "Couldn't save locally";
-  return "Saved locally";
-}
-
 function exportCopy(status: ExportStatus): string {
   if (status === "preparing") return "Preparing…";
   if (status === "exporting") return "Exporting…";
@@ -281,7 +275,11 @@ export function StudioExperience() {
     activeId ? state.projectsById[activeId] : undefined,
   );
   const editor = useScheduleBudStore((state) => state.editor);
-  const autosave = useScheduleBudStore((state) => state.autosave);
+  const autosaveError = useScheduleBudStore((state) =>
+    state.autosave.status === "error"
+      ? (state.autosave.error ?? "Couldn't save locally")
+      : null,
+  );
   const canUndo = useScheduleBudStore((state) => state.history.past.length > 0);
   const canRedo = useScheduleBudStore(
     (state) => state.history.future.length > 0,
@@ -806,18 +804,17 @@ export function StudioExperience() {
             Add a schedule before designing.
           </h1>
           <p className="mt-3 text-text-secondary">
-            Studio uses your real active project and never inserts sample
-            classes.
+            Create or open a schedule to start customizing your wallpaper.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link href="/create" className={buttonVariants({ size: "lg" })}>
               Create a schedule
             </Link>
             <Link
-              href="/review"
+              href="/"
               className={buttonVariants({ variant: "outline", size: "lg" })}
             >
-              Back to review
+              Back to Home
             </Link>
           </div>
         </div>
@@ -2022,12 +2019,11 @@ export function StudioExperience() {
             </Button>
           ) : null}
         </div>
-        <p
-          role="status"
-          className={`hidden text-xs font-medium sm:block ${autosave.status === "error" ? "text-destructive" : "text-text-muted"}`}
-        >
-          {autosaveCopy(autosave.status)}
-        </p>
+        {autosaveError ? (
+          <p role="alert" className="hidden text-xs font-medium text-destructive sm:block">
+            {autosaveError}
+          </p>
+        ) : null}
         <div ref={exportMenuRef} className="relative flex shrink-0">
           <Button
             onClick={() => guardedExport(exportContent)}

@@ -562,7 +562,7 @@ export const BETA_TEMPLATES: readonly TemplateDefinition[] = [
         surface: "#FFF9F6",
         border: "#EAC7BE",
       },
-      typography: { presetId: "playfair-inter" },
+      typography: { presetId: "dm-serif-dm-sans" },
       density: "comfortable",
       visibleFields: {
         time: true,
@@ -610,7 +610,7 @@ export const BETA_TEMPLATES: readonly TemplateDefinition[] = [
         surface: "#F9FBFF",
         border: "#B1C9DA",
       },
-      typography: { presetId: "league-spartan-inter" },
+      typography: { presetId: "space-grotesk-inter" },
       density: "comfortable",
       visibleFields: {
         time: false,
@@ -657,7 +657,7 @@ export const BETA_TEMPLATES: readonly TemplateDefinition[] = [
         surface: "#342351",
         border: "#745C92",
       },
-      typography: { presetId: "poppins-inter" },
+      typography: { presetId: "bodoni-inter" },
       density: "comfortable",
       visibleFields: {
         time: true,
@@ -708,7 +708,7 @@ export const BETA_TEMPLATES: readonly TemplateDefinition[] = [
         surface: "#FBF7F0",
         border: "#D8C9B7",
       },
-      typography: { presetId: "playfair-inter" },
+      typography: { presetId: "fraunces-manrope" },
       density: "detailed",
       visibleFields: {
         time: true,

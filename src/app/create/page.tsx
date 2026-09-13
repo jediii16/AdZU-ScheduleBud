@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { TemplateContext } from "@/features/creation/template-context";
 import {
   resolveCreationTemplate,
@@ -15,6 +16,11 @@ import {
 
 import { PageShell } from "@/components/shell/page-shell";
 import { PageReveal } from "@/components/shared/page-reveal";
+
+export const metadata: Metadata = {
+  title: "Create a schedule — ScheduleBud",
+  alternates: { canonical: "/create" },
+};
 
 const methods = [
   {

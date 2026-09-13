@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { resolveCreationTemplate } from "@/features/creation/template-handoff";
 import { ManualCreation } from "@/features/creation/manual-creation";
+
+export const metadata: Metadata = {
+  title: "Enter classes manually — ScheduleBud",
+  alternates: { canonical: "/create/manual" },
+};
 
 export default async function ManualPage({
   searchParams,

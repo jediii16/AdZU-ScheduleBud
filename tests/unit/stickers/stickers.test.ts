@@ -21,8 +21,8 @@ import { visualScheduleProject } from "../../fixtures/visual/schedules";
 describe("built-in sticker system", () => {
   it("catalogs only real assets and non-empty categories", () => {
     expect(emojiCatalog).toHaveLength(3145);
-    expect(stickerCatalog).toHaveLength(3160);
-    expect(stickerCategories).toEqual(["Capybara", "Emojis"]);
+    expect(stickerCatalog).toHaveLength(3165);
+    expect(stickerCategories).toEqual(["Capybara", "Study Buddy", "Emojis"]);
     expect(emojiCategories.map((category) => category.label)).toEqual([
       "Smileys & Emotion",
       "People & Body",

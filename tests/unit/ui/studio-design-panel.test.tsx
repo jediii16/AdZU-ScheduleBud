@@ -177,7 +177,7 @@ describe("layout design inspector", () => {
     expect(screen.getByText("Subject code")).toBeVisible();
     expect(screen.getByText("Always shown")).toBeVisible();
     expect(screen.queryByRole("checkbox", { name: "Section" })).toBeNull();
-    expect(screen.queryByText("Larger Grid devices only")).toBeNull();
+    expect(screen.getByText("Larger Grid devices only")).toBeVisible();
 
     rerender(
       <DesignStudioPanel

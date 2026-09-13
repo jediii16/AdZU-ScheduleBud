@@ -23,10 +23,9 @@ async function openDesign(page: Page) {
 }
 
 async function openTargetPicker(page: Page) {
-  await page.getByRole("button", { name: "Device", exact: true }).click();
-  await page.getByRole("button", { name: "Change device" }).click();
+  await page.getByLabel(/^Current device:/).click();
   await expect(
-    page.getByRole("dialog", { name: "Choose a device" }),
+    page.getByRole("radiogroup", { name: "Active preview device" }),
   ).toBeVisible();
 }
 
@@ -36,7 +35,10 @@ async function choosePreset(
   name: RegExp,
 ) {
   await openTargetPicker(page);
-  await page.getByRole("button", { name }).click();
+  await page
+    .getByRole("radiogroup", { name: "Active preview device" })
+    .getByRole("radio", { name })
+    .click();
 }
 
 async function uploadBackground(page: Page) {
@@ -204,6 +206,9 @@ test("Image adjustment has explicit controls and independent phone and desktop c
   await expect(preview).toHaveAttribute("data-target-width", "1080");
   await expect(preview).toHaveAttribute("data-background-position-x", "0.5");
   await expect(preview).toHaveAttribute("data-background-position-y", "0.5");
+  await expect(preview).toHaveAttribute("data-background-zoom", "1");
+  await choosePreset(page, "Phone", /iPhone/);
+  await expect(preview).toHaveAttribute("data-target-width", "1206");
   await expect(preview).toHaveAttribute("data-background-zoom", "1.5");
 });
 

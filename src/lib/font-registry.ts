@@ -15,6 +15,10 @@ export const FONT_IDS = [
   "league-spartan",
   "allura",
   "manrope",
+  "fraunces",
+  "bodoni-moda",
+  "space-grotesk",
+  "dm-serif-display",
 ] as const;
 export type FontId = (typeof FONT_IDS)[number];
 
@@ -126,6 +130,34 @@ export const fontRegistry: Record<FontId, FontDefinition> = {
     "--font-manrope",
     "body",
     [400, 500, 600, 700],
+  ),
+  fraunces: font(
+    "fraunces",
+    "Fraunces",
+    "--font-fraunces",
+    "heading",
+    [600, 700],
+  ),
+  "bodoni-moda": font(
+    "bodoni-moda",
+    "Bodoni Moda",
+    "--font-bodoni-moda",
+    "heading",
+    [600, 700],
+  ),
+  "space-grotesk": font(
+    "space-grotesk",
+    "Space Grotesk",
+    "--font-space-grotesk",
+    "heading",
+    [600, 700],
+  ),
+  "dm-serif-display": font(
+    "dm-serif-display",
+    "DM Serif Display",
+    "--font-dm-serif-display",
+    "heading",
+    [400],
   ),
 };
 

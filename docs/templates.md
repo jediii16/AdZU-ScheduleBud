@@ -17,10 +17,10 @@ The home page presents seventeen working phone-wallpaper recipes. The earlier St
 - **Golden Hour** — warm sunflower graphics; League Spartan + Inter.
 - **Ink Grid** — monochrome structure with cobalt accents; Outfit + DM Sans.
 - **Tidal Mint** — an elliptical aqua glow with crisp grid structure; Outfit + DM Sans.
-- **Peach Halo** — a warm peach-and-rose radial treatment; Playfair Display + Inter.
-- **Prism Shift** — a bright mint, sky, and lilac conic blend; League Spartan + Inter.
-- **Velvet Orbit** — a dark plum, cobalt, and berry conic atmosphere; Poppins + Inter.
-- **Folded Ivory** — tactile warm paper with terracotta details; Playfair Display + Inter.
+- **Peach Halo** — a warm peach-and-rose radial treatment; DM Serif Display + DM Sans.
+- **Prism Shift** — a bright mint, sky, and lilac conic blend; Space Grotesk + Inter.
+- **Velvet Orbit** — a dark plum, cobalt, and berry conic atmosphere; Bodoni Moda + Inter.
+- **Folded Ivory** — tactile warm paper with terracotta details; Fraunces + Manrope.
 
 The school-related templates are color interpretations, not official university branding. They use no institutional seals or protected marks.
 
