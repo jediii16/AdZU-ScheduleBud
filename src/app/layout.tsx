@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { Analytics } from "@vercel/analytics/next";
 import { ScheduleBudProvider } from "@/state/react";
 import { fontClassNames } from "@/lib/fonts";
 import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site-metadata";
@@ -62,6 +63,7 @@ export default function RootLayout({
     <html lang="en" className={fontClassNames}>
       <body>
         <ScheduleBudProvider>{children}</ScheduleBudProvider>
+        <Analytics />
       </body>
     </html>
   );
