@@ -1,5 +1,9 @@
 "use client";
 
+import { TemplateContext } from "@/features/creation/template-context";
+
+import { withCreationTemplate } from "./template-handoff";
+
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -475,7 +479,9 @@ export function PendingPortalReview({
   );
 }
 
-export function PortalCreation() {
+export function PortalCreation({
+  templateId,
+}: { templateId?: string | undefined } = {}) {
   const store = useScheduleBudStoreApi();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -540,18 +546,19 @@ export function PortalCreation() {
       term: { schoolYear, semester: null },
       curriculum: null,
     });
-    router.push("/review");
+    router.push(withCreationTemplate("/review", templateId));
   };
 
   return (
     <PageShell width={pending ? "standard" : "narrow"}>
       <PageReveal>
         <Link
-          href="/create"
+          href={withCreationTemplate("/create", templateId)}
           className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-brand"
         >
           <ArrowLeft aria-hidden="true" className="size-4" /> Creation methods
         </Link>
+        <TemplateContext templateId={templateId} />
         {pending ? (
           <PendingPortalReview
             pending={pending}

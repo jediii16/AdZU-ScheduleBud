@@ -1,5 +1,16 @@
 import { PortalCreation } from "@/features/creation/portal-creation";
-
-export default function PortalPage() {
-  return <PortalCreation />;
+import {
+  resolveCreationTemplate,
+  type TemplateSearchParams,
+} from "@/features/creation/template-handoff";
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<TemplateSearchParams>;
+}) {
+  return (
+    <PortalCreation
+      templateId={resolveCreationTemplate((await searchParams).template)}
+    />
+  );
 }

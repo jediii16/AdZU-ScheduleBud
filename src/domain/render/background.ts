@@ -12,6 +12,11 @@ import type {
   RenderNode,
   ScheduleRenderResult,
 } from "./types";
+import {
+  mixGradientColors,
+  resolveConicThirdColor,
+  resolveGradientColorStops,
+} from "./gradient";
 
 export const BACKGROUND_MODES = [
   "palette",
@@ -25,6 +30,7 @@ export const BACKGROUND_PATTERN_TYPES = [
   "grid",
   "checker",
   "diagonal",
+  "crumpled",
   "emoji",
 ] as const;
 
@@ -50,6 +56,13 @@ export function createDefaultBackgroundPattern(
       angle: 45,
       opacity: 0.14,
     };
+  if (type === "crumpled")
+    return {
+      type,
+      backgroundColor: theme.background,
+      scale: 1,
+      opacity: 0.72,
+    };
   if (type === "emoji")
     return {
       type,
@@ -73,9 +86,12 @@ export function initializeBackgroundMode(
   if (mode === "solid" && !next.solid) next.solid = { color: theme.background };
   if (mode === "gradient" && !next.gradient)
     next.gradient = {
+      type: "linear",
       color1: theme.background,
       color2: theme.surface,
+      color3: theme.dayAccent,
       direction: 135,
+      center: { x: 0.5, y: 0.5 },
     };
   if (mode === "pattern" && !next.pattern)
     next.pattern = createDefaultBackgroundPattern("dots", theme);
@@ -145,11 +161,50 @@ export function resolveBackgroundNodes(
       },
     ];
   if (background.mode === "gradient" && background.gradient) {
-    const { start, end } = gradientEndpoints(
-      width,
-      height,
-      background.gradient.direction,
-    );
+    const gradient = background.gradient;
+    const center = {
+      x: gradient.center.x * width,
+      y: gradient.center.y * height,
+    };
+    const colorStops = resolveGradientColorStops(gradient);
+    if (gradient.type === "radial") {
+      const horizontalReach = Math.max(center.x, width - center.x);
+      const verticalReach = Math.max(center.y, height - center.y);
+      const cornerScale = Math.SQRT2;
+      return [
+        {
+          id: "wallpaper-background",
+          kind: "rect",
+          geometry,
+          radialGradient: {
+            center,
+            radiusX: horizontalReach * cornerScale,
+            radiusY: verticalReach * cornerScale,
+            colorStops,
+          },
+        },
+      ];
+    }
+    if (gradient.type === "conic")
+      return [
+        {
+          id: "wallpaper-background",
+          kind: "rect",
+          geometry,
+          conicGradient: {
+            center,
+            angle: gradient.direction,
+            colorStops,
+            softCenterColor: mixGradientColors(
+              mixGradientColors(gradient.color1, gradient.color2, 0.5),
+              resolveConicThirdColor(gradient),
+              0.5,
+            ),
+            softCenterRadius: Math.min(width, height) * 0.2,
+          },
+        },
+      ];
+    const { start, end } = gradientEndpoints(width, height, gradient.direction);
     return [
       {
         id: "wallpaper-background",
@@ -158,12 +213,7 @@ export function resolveBackgroundNodes(
         linearGradient: {
           start,
           end,
-          colorStops: [
-            0,
-            background.gradient.color1,
-            1,
-            background.gradient.color2,
-          ],
+          colorStops,
         },
       },
     ];
@@ -179,6 +229,12 @@ export function resolveBackgroundNodes(
         kind: "rect",
         geometry,
         pattern: background.pattern,
+        ...(background.pattern.type === "crumpled"
+          ? {
+              patternTextureAssetId: "background-texture:crumpled-paper",
+              patternTextureSource: "/textures/crumpled-paper.webp",
+            }
+          : {}),
         ...(emoji
           ? {
               emojiAssetId: `background-emoji:${emoji.id}`,

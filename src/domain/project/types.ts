@@ -155,12 +155,19 @@ const emojiPatternSchema = z.object({
   rotation: z.number().finite().min(-180).max(180),
   layout: z.enum(["grid", "offset"]),
 });
+const crumpledPatternSchema = z.object({
+  type: z.literal("crumpled"),
+  backgroundColor: opaqueHexColorSchema,
+  scale: z.number().finite().min(0.75).max(2),
+  opacity: z.number().finite().min(0.05).max(1),
+});
 
 export const backgroundPatternSchema = z.discriminatedUnion("type", [
   dotsPatternSchema,
   gridPatternSchema,
   checkerPatternSchema,
   diagonalPatternSchema,
+  crumpledPatternSchema,
   emojiPatternSchema,
 ]);
 export type BackgroundPattern = z.infer<typeof backgroundPatternSchema>;
@@ -170,9 +177,17 @@ const backgroundDesignValueSchema = z.object({
   solid: z.object({ color: opaqueHexColorSchema }).optional(),
   gradient: z
     .object({
+      type: z.enum(["linear", "radial", "conic"]).default("linear"),
       color1: opaqueHexColorSchema,
       color2: opaqueHexColorSchema,
+      color3: opaqueHexColorSchema.optional(),
       direction: gradientDirectionSchema,
+      center: z
+        .object({
+          x: z.number().finite().min(0).max(1),
+          y: z.number().finite().min(0).max(1),
+        })
+        .default({ x: 0.5, y: 0.5 }),
     })
     .optional(),
   pattern: backgroundPatternSchema.optional(),

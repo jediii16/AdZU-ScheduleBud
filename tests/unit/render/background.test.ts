@@ -5,6 +5,7 @@ import {
   BACKGROUND_PATTERN_TYPES,
   buildScheduleRenderModel,
   createDefaultBackgroundPattern,
+  mixGradientColors,
   resolveBackgroundNodes,
   resolveWallpaperTheme,
 } from "@/domain/render";
@@ -22,7 +23,7 @@ describe("background render system", () => {
     });
   });
 
-  it("resolves exact solid and deterministic two-color gradient backgrounds", () => {
+  it("resolves deterministic perceptual linear gradients", () => {
     const base = visualScheduleProject();
     const variant = base.deviceVariants[0]!;
     const solid = {
@@ -43,9 +44,11 @@ describe("background render system", () => {
         background: {
           mode: "gradient" as const,
           gradient: {
+            type: "linear" as const,
             color1: "#112233",
             color2: "#AABBCC",
             direction: 45 as const,
+            center: { x: 0.5, y: 0.5 },
           },
         },
       },
@@ -57,16 +60,104 @@ describe("background render system", () => {
     expect(first).toEqual(second);
     expect(first).toMatchObject({
       kind: "rect",
-      linearGradient: { colorStops: [0, "#112233", 1, "#AABBCC"] },
     });
+    if (first?.kind !== "rect" || !first.linearGradient)
+      throw new Error("Expected a linear gradient background");
+    expect(first.linearGradient.colorStops).toEqual([
+      0,
+      "#112233",
+      0.25,
+      "#334456",
+      0.5,
+      "#586A7B",
+      0.75,
+      "#8091A3",
+      1,
+      "#AABBCC",
+    ]);
+    expect(mixGradientColors("#112233", "#AABBCC", 0.5)).toBe("#586A7B");
   });
 
-  it("registers all five target-relative deterministic patterns", () => {
+  it("resolves radial and conic gradients around a configurable center", () => {
+    const base = visualScheduleProject();
+    const variant = base.deviceVariants[0]!;
+    const makeProject = (type: "radial" | "conic") => ({
+      ...base,
+      design: {
+        ...base.design,
+        background: {
+          mode: "gradient" as const,
+          gradient: {
+            type,
+            color1: "#112233",
+            color2: "#AABBCC",
+            color3: "#DDEEFF",
+            direction: 90 as const,
+            center: { x: 0.2, y: 0.8 },
+          },
+        },
+      },
+    });
+    expect(
+      buildScheduleRenderModel(makeProject("radial"), variant).model.layers[0]
+        .nodes[0],
+    ).toMatchObject({
+      radialGradient: {
+        center: {
+          x: variant.dimensions.width * 0.2,
+          y: variant.dimensions.height * 0.8,
+        },
+        radiusX:
+          Math.max(
+            variant.dimensions.width * 0.2,
+            variant.dimensions.width * 0.8,
+          ) * Math.SQRT2,
+        radiusY:
+          Math.max(
+            variant.dimensions.height * 0.8,
+            variant.dimensions.height * 0.2,
+          ) * Math.SQRT2,
+      },
+    });
+    const radial = buildScheduleRenderModel(makeProject("radial"), variant)
+      .model.layers[0].nodes[0];
+    if (radial?.kind !== "rect" || !radial.radialGradient)
+      throw new Error("Expected a radial gradient background");
+    expect(radial.radialGradient.colorStops.at(0)).toBe(0);
+    expect(radial.radialGradient.colorStops.at(1)).toBe("#112233");
+    expect(radial.radialGradient.colorStops.at(-2)).toBe(1);
+    expect(radial.radialGradient.colorStops.at(-1)).toBe("#AABBCC");
+    expect(
+      buildScheduleRenderModel(makeProject("conic"), variant).model.layers[0]
+        .nodes[0],
+    ).toMatchObject({
+      conicGradient: {
+        center: {
+          x: variant.dimensions.width * 0.2,
+          y: variant.dimensions.height * 0.8,
+        },
+        angle: 90,
+        softCenterColor: expect.stringMatching(/^#[0-9A-F]{6}$/),
+        softCenterRadius:
+          Math.min(variant.dimensions.width, variant.dimensions.height) * 0.2,
+      },
+    });
+    const conic = buildScheduleRenderModel(makeProject("conic"), variant).model
+      .layers[0].nodes[0];
+    if (conic?.kind !== "rect" || !conic.conicGradient)
+      throw new Error("Expected a conic gradient background");
+    expect(conic.conicGradient.colorStops).toContain("#DDEEFF");
+    expect(conic.conicGradient.colorStops.at(1)).toBe("#112233");
+    expect(conic.conicGradient.colorStops.at(-1)).toBe("#112233");
+  });
+
+  it("registers all six target-relative deterministic patterns", () => {
     expect(BACKGROUND_PATTERN_TYPES).toEqual([
       "dots",
       "grid",
       "checker",
       "diagonal",
+      "crumpled",
       "emoji",
     ]);
     const base = visualScheduleProject();
@@ -88,6 +179,11 @@ describe("background render system", () => {
         geometry: variant.dimensions,
         pattern: { type },
       });
+      if (type === "crumpled")
+        expect(first[0]).toMatchObject({
+          patternTextureAssetId: "background-texture:crumpled-paper",
+          patternTextureSource: "/textures/crumpled-paper.webp",
+        });
     }
   });
 

@@ -70,6 +70,9 @@ import type { StickerInstance } from "@/domain/stickers/types";
 import type { Subject } from "@/domain/schedule/types";
 import {
   createDefaultBackgroundPattern,
+  mixGradientColors,
+  resolveConicThirdColor,
+  resolveGradientColorStops,
   type LayoutDetailCapabilities,
   type Rect,
 } from "@/domain/render";
@@ -1486,8 +1489,94 @@ const PATTERN_LABELS = {
   grid: "Grid",
   checker: "Checker",
   diagonal: "Diagonal",
+  crumpled: "Crumpled",
   emoji: "Emoji",
 } as const;
+const GRADIENT_TYPE_LABELS = {
+  linear: "Linear",
+  radial: "Radial",
+  conic: "Conic",
+} as const;
+type StudioGradient = NonNullable<BackgroundDesign["gradient"]>;
+
+const GRADIENT_PRESETS = [
+  {
+    id: "blue-hour",
+    name: "Blue Hour",
+    gradient: {
+      type: "linear",
+      color1: "#E4EEFF",
+      color2: "#7899ED",
+      color3: "#B9D4FF",
+      direction: 90,
+      center: { x: 0.5, y: 0.5 },
+    },
+  },
+  {
+    id: "peach-sky",
+    name: "Peach Sky",
+    gradient: {
+      type: "linear",
+      color1: "#FFF0D8",
+      color2: "#EE9FC0",
+      color3: "#FFC9A8",
+      direction: 45,
+      center: { x: 0.5, y: 0.5 },
+    },
+  },
+  {
+    id: "sea-glass",
+    name: "Sea Glass",
+    gradient: {
+      type: "radial",
+      color1: "#E1FFF5",
+      color2: "#4399AE",
+      color3: "#9DE4D5",
+      direction: 0,
+      center: { x: 0.2, y: 0.2 },
+    },
+  },
+  {
+    id: "lilac-bloom",
+    name: "Lilac Bloom",
+    gradient: {
+      type: "radial",
+      color1: "#F8EDFF",
+      color2: "#8875D1",
+      color3: "#D7B8F5",
+      direction: 0,
+      center: { x: 0.2, y: 0.2 },
+    },
+  },
+  {
+    id: "aurora",
+    name: "Aurora",
+    gradient: {
+      type: "conic",
+      color1: "#B8F3D3",
+      color2: "#70C7F5",
+      color3: "#B9A7F4",
+      direction: 315,
+      center: { x: 0.5, y: 0.5 },
+    },
+  },
+  {
+    id: "sorbet",
+    name: "Sorbet",
+    gradient: {
+      type: "conic",
+      color1: "#FFD9A8",
+      color2: "#FF90AF",
+      color3: "#C7B5F3",
+      direction: 270,
+      center: { x: 0.5, y: 0.5 },
+    },
+  },
+] as const satisfies readonly {
+  id: string;
+  name: string;
+  gradient: StudioGradient;
+}[];
 const GRADIENT_DIRECTIONS = [
   [0, "To right", "Left to right"],
   [45, "To bottom-right", "Top left to bottom right"],
@@ -1510,20 +1599,177 @@ const GRADIENT_DIRECTION_POSITIONS = {
   315: { gridColumn: 3, gridRow: 1 },
 } as const;
 
+const GRADIENT_CENTERS = [
+  [0.2, 0.2, "Top left"],
+  [0.5, 0.2, "Top center"],
+  [0.8, 0.2, "Top right"],
+  [0.2, 0.5, "Center left"],
+  [0.5, 0.5, "Center"],
+  [0.8, 0.5, "Center right"],
+  [0.2, 0.8, "Bottom left"],
+  [0.5, 0.8, "Bottom center"],
+  [0.8, 0.8, "Bottom right"],
+] as const;
+
+function gradientPreviewStyle(
+  type: StudioGradient["type"],
+  gradient: StudioGradient,
+) {
+  const previewGradient = { ...gradient, type };
+  const center = `${previewGradient.center.x * 100}% ${previewGradient.center.y * 100}%`;
+  const stops = resolveGradientColorStops(previewGradient);
+  const cssStops = Array.from({ length: stops.length / 2 }, (_, index) => {
+    const offset = stops[index * 2] as number;
+    const color = stops[index * 2 + 1] as string;
+    return `${color} ${Math.round(offset * 1000) / 10}%`;
+  }).join(", ");
+  if (type === "radial")
+    return `radial-gradient(ellipse at ${center}, ${cssStops})`;
+  if (type === "conic") {
+    const softCenter = mixGradientColors(
+      mixGradientColors(previewGradient.color1, previewGradient.color2, 0.5),
+      resolveConicThirdColor(previewGradient),
+      0.5,
+    );
+    return `radial-gradient(circle at ${center}, ${softCenter} 0 3%, ${softCenter}F2 6%, ${softCenter}00 24%), conic-gradient(from ${previewGradient.direction}deg at ${center}, ${cssStops})`;
+  }
+  return `linear-gradient(${previewGradient.direction + 90}deg, ${cssStops})`;
+}
+
+function GradientPresetControl({
+  onChange,
+}: {
+  onChange(gradient: StudioGradient): void;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-end justify-between gap-3">
+        <p className="text-xs font-medium">Curated looks</p>
+        <p className="text-[10px] text-text-muted">Ready to customize</p>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {GRADIENT_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            aria-label={`Apply ${preset.name} gradient`}
+            className="group overflow-hidden rounded-md border border-border bg-surface-elevated text-left transition-[border-color,box-shadow,transform] hover:border-brand/35 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 active:scale-[0.98] motion-reduce:transition-none"
+            onClick={() => onChange({ ...preset.gradient })}
+          >
+            <span
+              aria-hidden="true"
+              className="block h-9 w-full border-b border-black/5"
+              style={{
+                background: gradientPreviewStyle(
+                  preset.gradient.type,
+                  preset.gradient,
+                ),
+              }}
+            />
+            <span className="block px-2 py-1.5 text-[10px] font-semibold text-foreground">
+              {preset.name}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GradientTypeControl({
+  gradient,
+  onChange,
+}: {
+  gradient: StudioGradient;
+  onChange(type: StudioGradient["type"]): void;
+}) {
+  return (
+    <div>
+      <p className="mb-1 text-xs font-medium">Gradient type</p>
+      <div className="grid grid-cols-3 gap-1" role="radiogroup">
+        {Object.entries(GRADIENT_TYPE_LABELS).map(([type, label]) => {
+          const value = type as StudioGradient["type"];
+          return (
+            <button
+              key={type}
+              type="button"
+              role="radio"
+              aria-checked={gradient.type === value}
+              className={`flex min-h-14 min-w-0 flex-col items-center gap-1 rounded-sm border p-1 text-[10px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${gradient.type === value ? "border-brand bg-accent text-brand" : "border-border hover:bg-muted"}`}
+              onClick={() => onChange(value)}
+            >
+              <span
+                aria-hidden="true"
+                className="block h-6 w-full rounded-[3px] border border-black/10"
+                style={{ background: gradientPreviewStyle(value, gradient) }}
+              />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GradientCenterControl({
+  gradient,
+  onChange,
+}: {
+  gradient: StudioGradient;
+  onChange(center: StudioGradient["center"]): void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/25 p-2.5">
+      <div>
+        <p className="text-xs font-semibold text-foreground">Focal point</p>
+        <p className="mt-0.5 text-[11px] leading-4 text-text-muted">
+          Place the gradient center
+        </p>
+      </div>
+      <div
+        className="grid shrink-0 grid-cols-3 gap-1"
+        role="radiogroup"
+        aria-label="Gradient focal point"
+      >
+        {GRADIENT_CENTERS.map(([x, y, label]) => {
+          const checked = gradient.center.x === x && gradient.center.y === y;
+          return (
+            <button
+              key={label}
+              type="button"
+              role="radio"
+              aria-label={label}
+              aria-checked={checked}
+              title={label}
+              className={`size-7 rounded-md border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 ${checked ? "border-brand bg-brand shadow-sm ring-2 ring-brand/15" : "border-border bg-surface-elevated hover:border-brand/40 hover:bg-accent"}`}
+              onClick={() => onChange({ x, y })}
+            >
+              <span
+                aria-hidden="true"
+                className={`mx-auto block size-1.5 rounded-full ${checked ? "bg-white" : "bg-text-muted"}`}
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function GradientDirectionControl({
   gradient,
   onChange,
 }: {
-  gradient: NonNullable<BackgroundDesign["gradient"]>;
-  onChange(
-    direction: NonNullable<BackgroundDesign["gradient"]>["direction"],
-  ): void;
+  gradient: StudioGradient;
+  onChange(direction: StudioGradient["direction"]): void;
 }) {
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedIndex = GRADIENT_DIRECTIONS.findIndex(
     ([angle]) => angle === gradient.direction,
   );
   const selected = GRADIENT_DIRECTIONS[selectedIndex]!;
+  const isConic = gradient.type === "conic";
   const selectIndex = (index: number) => {
     const wrapped =
       (index + GRADIENT_DIRECTIONS.length) % GRADIENT_DIRECTIONS.length;
@@ -1534,15 +1780,17 @@ function GradientDirectionControl({
   return (
     <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/25 p-2.5">
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-foreground">Direction</p>
+        <p className="text-xs font-semibold text-foreground">
+          {isConic ? "Rotation" : "Direction"}
+        </p>
         <p className="mt-0.5 max-w-28 text-[11px] leading-4 text-text-muted">
-          {selected[1]}
+          {isConic ? `Starts ${selected[1].toLowerCase()}` : selected[1]}
         </p>
       </div>
       <div
         className="grid shrink-0 grid-cols-[repeat(3,2rem)] grid-rows-[repeat(3,2rem)] gap-1"
         role="radiogroup"
-        aria-label="Gradient direction"
+        aria-label={isConic ? "Gradient rotation" : "Gradient direction"}
       >
         <span
           aria-hidden="true"
@@ -1550,7 +1798,7 @@ function GradientDirectionControl({
           style={{
             gridColumn: 2,
             gridRow: 2,
-            background: `linear-gradient(${gradient.direction + 90}deg, ${gradient.color1}, ${gradient.color2})`,
+            background: gradientPreviewStyle(gradient.type, gradient),
           }}
         />
         {GRADIENT_DIRECTIONS.map(([angle, , label], index) => {
@@ -1686,6 +1934,21 @@ function PatternChoicePreview({
       </span>
     );
   }
+  if (preview.type === "crumpled")
+    return (
+      <span
+        aria-hidden="true"
+        data-testid={`pattern-preview-${type}`}
+        className="block h-6 w-full rounded-[3px] border border-black/10"
+        style={{
+          ...common,
+          backgroundImage: "url('/textures/crumpled-paper.webp')",
+          backgroundPosition: "center",
+          backgroundSize: "cover",
+          backgroundBlendMode: "multiply",
+        }}
+      />
+    );
   const color = preview.color;
   const backgroundImage =
     preview.type === "dots"
@@ -1893,9 +2156,12 @@ function BackgroundInspectorSection({
       onBackground({
         ...background,
         gradient: {
+          type: "linear",
           color1: theme.background,
           color2: theme.surface,
+          color3: theme.dayAccent,
           direction: 135,
+          center: { x: 0.5, y: 0.5 },
         },
       });
     else if (background.mode === "pattern")
@@ -1994,6 +2260,23 @@ function BackgroundInspectorSection({
           />
         ) : background.mode === "gradient" && background.gradient ? (
           <>
+            <GradientPresetControl
+              onChange={(gradient) => update({ gradient })}
+            />
+            <GradientTypeControl
+              gradient={background.gradient}
+              onChange={(type) =>
+                update({
+                  gradient: {
+                    ...background.gradient!,
+                    type,
+                    ...(type === "conic" && !background.gradient!.color3
+                      ? { color3: theme.dayAccent }
+                      : {}),
+                  },
+                })
+              }
+            />
             {(["color1", "color2"] as const).map((key, index) => (
               <ColorInputRow
                 key={key}
@@ -2013,20 +2296,50 @@ function BackgroundInspectorSection({
                 {...colorProps}
               />
             ))}
-            <GradientDirectionControl
-              gradient={background.gradient}
-              onChange={(direction) =>
-                update({
-                  gradient: { ...background.gradient!, direction },
-                })
-              }
-            />
+            {background.gradient.type === "conic" ? (
+              <ColorInputRow
+                id="background-gradient-color3"
+                label="Color 3"
+                value={resolveConicThirdColor(background.gradient)}
+                onColor={(color) =>
+                  update({
+                    gradient: { ...background.gradient!, color3: color },
+                  })
+                }
+                onPickerPreview={(color) =>
+                  update({
+                    gradient: { ...background.gradient!, color3: color },
+                  })
+                }
+                {...colorProps}
+              />
+            ) : null}
+            {background.gradient.type !== "linear" ? (
+              <GradientCenterControl
+                gradient={background.gradient}
+                onChange={(center) =>
+                  update({
+                    gradient: { ...background.gradient!, center },
+                  })
+                }
+              />
+            ) : null}
+            {background.gradient.type !== "radial" ? (
+              <GradientDirectionControl
+                gradient={background.gradient}
+                onChange={(direction) =>
+                  update({
+                    gradient: { ...background.gradient!, direction },
+                  })
+                }
+              />
+            ) : null}
           </>
         ) : background.mode === "pattern" && background.pattern ? (
           <>
             <div>
               <p className="mb-1 text-xs font-medium">Pattern</p>
-              <div className="grid grid-cols-5 gap-1" role="radiogroup">
+              <div className="grid grid-cols-3 gap-1" role="radiogroup">
                 {Object.entries(PATTERN_LABELS).map(([type, label]) => (
                   <button
                     key={type}
@@ -2069,7 +2382,8 @@ function BackgroundInspectorSection({
               }
               {...colorProps}
             />
-            {background.pattern.type !== "emoji" ? (
+            {background.pattern.type !== "emoji" &&
+            background.pattern.type !== "crumpled" ? (
               <ColorInputRow
                 id="background-pattern-color"
                 label={
@@ -2100,7 +2414,7 @@ function BackgroundInspectorSection({
                 }
                 {...colorProps}
               />
-            ) : (
+            ) : background.pattern.type === "emoji" ? (
               <BackgroundEmojiPicker
                 value={background.pattern.emojiId}
                 onChange={(emojiId) =>
@@ -2112,7 +2426,7 @@ function BackgroundInspectorSection({
                   })
                 }
               />
-            )}
+            ) : null}
             {background.pattern.type === "dots" ? (
               <>
                 <RangeRow
@@ -2285,6 +2599,25 @@ function BackgroundInspectorSection({
                   ))}
                 </div>
               </>
+            ) : background.pattern.type === "crumpled" ? (
+              <RangeRow
+                label="Texture scale"
+                value={background.pattern.scale}
+                min={0.75}
+                max={2}
+                step={0.05}
+                formatValue={(scale) => `${scale.toFixed(2)}×`}
+                onStart={onGestureStart}
+                onValue={(scale) =>
+                  update({
+                    pattern: {
+                      ...background.pattern!,
+                      scale,
+                    } as BackgroundPattern,
+                  })
+                }
+                onEnd={onGestureEnd}
+              />
             ) : (
               <>
                 <RangeRow

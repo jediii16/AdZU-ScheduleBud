@@ -619,6 +619,10 @@ export function buildPhotoHeroRenderModel(
     { spacing: 0.9, type: 1 },
     { spacing: 0.82, type: 0.96 },
     { spacing: 0.74, type: 0.92 },
+    { spacing: 0.62, type: 0.86 },
+    { spacing: 0.5, type: 0.78 },
+    { spacing: 0.4, type: 0.7 },
+    { spacing: 0.32, type: 0.62 },
   ];
   let verticalFit: VerticalFit | null = null;
   for (const candidate of fitCandidates) {

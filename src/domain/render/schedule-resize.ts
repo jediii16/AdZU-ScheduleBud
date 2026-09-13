@@ -14,11 +14,13 @@ import type {
 export const SCHEDULE_READABILITY_SCALE_THRESHOLD = 0.62;
 
 export const PHONE_SCHEDULE_FRAME = {
-  left: 0.1,
+  left: 0.12,
   top: 0.3,
-  right: 0.1,
+  right: 0.12,
   bottom: 0.09,
 } as const;
+
+const SQUARE_SCHEDULE_MARGIN_RATIO = 0.05;
 
 type ResizeTransform = {
   source: Rect;
@@ -362,13 +364,15 @@ export function phoneScheduleFrame(
 }
 
 /**
- * Phone wallpapers reserve their upper portion for lock-screen chrome. Keep
- * schedule-first layouts in the compact frame below the clock; photo layouts
- * deliberately skip this transform so artwork can continue behind the clock.
+ * Phone wallpapers reserve their upper portion for lock-screen chrome. Scale
+ * schedule-first layouts for a compact, readable default below the clock while
+ * retaining a full-canvas position range. Photo layouts deliberately skip this
+ * transform so artwork can continue behind the clock.
  */
 export function fitScheduleIntoPhoneFrame<T extends ScheduleRenderResult>(
   result: T,
   variant: DeviceVariant,
+  balancedY: number,
 ): T {
   if (variant.category !== "phone" || variant.orientation !== "portrait")
     return result;
@@ -382,11 +386,34 @@ export function fitScheduleIntoPhoneFrame<T extends ScheduleRenderResult>(
   );
   const width = natural.width * scale;
   const height = natural.height * scale;
-  const maxX = frame.x + Math.max(0, frame.width - width);
-  const maxY = frame.y + Math.max(0, frame.height - height);
+  const rightInset = Math.max(
+    0,
+    result.model.width -
+      (result.positionRange.maxX + result.scheduleBounds.width),
+  );
+  const bottomInset = Math.max(
+    0,
+    result.model.height -
+      (result.positionRange.maxY + result.scheduleBounds.height),
+  );
+  const minX = result.positionRange.minX;
+  const minY = result.positionRange.minY;
+  const maxX = Math.max(minX, result.model.width - rightInset - width);
+  const maxY = Math.max(minY, result.model.height - bottomInset - height);
+  const balancedTop = clamp(frame.y, minY, maxY);
+  const normalizedBalancedY = clamp(balancedY, 0.001, 0.999);
+  const y =
+    variant.schedulePosition.y <= normalizedBalancedY
+      ? minY +
+        (balancedTop - minY) *
+          (variant.schedulePosition.y / normalizedBalancedY)
+      : balancedTop +
+        (maxY - balancedTop) *
+          ((variant.schedulePosition.y - normalizedBalancedY) /
+            (1 - normalizedBalancedY));
   const target: Rect = {
-    x: frame.x + (maxX - frame.x) * variant.schedulePosition.x,
-    y: frame.y + (maxY - frame.y) * variant.schedulePosition.y,
+    x: minX + (maxX - minX) * variant.schedulePosition.x,
+    y,
     width,
     height,
   };
@@ -434,9 +461,9 @@ export function fitScheduleIntoPhoneFrame<T extends ScheduleRenderResult>(
     },
     scheduleBounds: target,
     positionRange: {
-      minX: frame.x,
+      minX,
       maxX,
-      minY: frame.y,
+      minY,
       maxY,
     },
     ...(scale < 1
@@ -449,6 +476,137 @@ export function fitScheduleIntoPhoneFrame<T extends ScheduleRenderResult>(
             constrained: true,
             readabilityWarning: scale < SCHEDULE_READABILITY_SCALE_THRESHOLD,
           },
+        }
+      : {}),
+  } as T;
+}
+
+/**
+ * Dense Square schedules can be taller than their canvas. Fit only overflowing
+ * compositions, preserve their aspect ratio, and keep the resized group freely
+ * movable within an even outer margin.
+ */
+export function fitScheduleIntoSquareCanvas<T extends ScheduleRenderResult>(
+  result: T,
+  variant: DeviceVariant,
+): T {
+  if (variant.category !== "square" && variant.orientation !== "square")
+    return result;
+
+  const natural = result.scheduleBounds;
+  const margin =
+    Math.min(result.model.width, result.model.height) *
+    SQUARE_SCHEDULE_MARGIN_RATIO;
+  const availableWidth = Math.max(1, result.model.width - margin * 2);
+  const availableHeight = Math.max(1, result.model.height - margin * 2);
+  const overflows =
+    natural.x < 0 ||
+    natural.y < 0 ||
+    natural.x + natural.width > result.model.width ||
+    natural.y + natural.height > result.model.height;
+  if (!overflows) return result;
+
+  const scale = Math.min(
+    1,
+    availableWidth / Math.max(1, natural.width),
+    availableHeight / Math.max(1, natural.height),
+  );
+  const width = natural.width * scale;
+  const height = natural.height * scale;
+  const minX = margin;
+  const minY = margin;
+  const maxX = Math.max(minX, result.model.width - margin - width);
+  const maxY = Math.max(minY, result.model.height - margin - height);
+  const target: Rect = {
+    x: minX + (maxX - minX) * variant.schedulePosition.x,
+    y: minY + (maxY - minY) * variant.schedulePosition.y,
+    width,
+    height,
+  };
+  const transform: ResizeTransform = {
+    source: natural,
+    target,
+    scaleX: scale,
+    scaleY: scale,
+    fontScale: scale,
+  };
+  const metadata = transformMetadata(result, transform);
+  const [background, scenery, photos, schedule, foreground] =
+    result.model.layers;
+  const resizedScheduleNodes = schedule.nodes.map((node) =>
+    transformNode(node, transform),
+  );
+
+  return {
+    ...metadata,
+    model: {
+      ...result.model,
+      layers: [
+        background,
+        scenery,
+        {
+          ...photos,
+          nodes: photos.nodes.map((node) => transformNode(node, transform)),
+        },
+        {
+          ...schedule,
+          nodes: adaptCardsToVerticalSpace(
+            schedule.nodes,
+            resizedScheduleNodes,
+            transform,
+          ),
+        },
+        foreground,
+      ],
+    },
+    overlay: {
+      ...result.overlay,
+      ...(result.overlay.selection
+        ? { selection: transformRect(result.overlay.selection, transform) }
+        : {}),
+      warningRegions: result.overlay.warningRegions.map((region) =>
+        transformRect(region, transform),
+      ),
+    },
+    scheduleBounds: target,
+    positionRange: { minX, maxX, minY, maxY },
+    scheduleResize: {
+      naturalBounds: natural,
+      scaleX: scale,
+      scaleY: scale,
+      fontScale: scale,
+      constrained: true,
+      readabilityWarning: scale < SCHEDULE_READABILITY_SCALE_THRESHOLD,
+    },
+    ...(result.photoFrame
+      ? { photoFrame: transformRect(result.photoFrame, transform) }
+      : {}),
+    ...(result.photoFrames
+      ? {
+          photoFrames: result.photoFrames.map((photo) => ({
+            ...photo,
+            frame: transformRect(photo.frame, transform),
+          })),
+        }
+      : {}),
+    ...(result.photoPlaceholders
+      ? {
+          photoPlaceholders: result.photoPlaceholders.map((placeholder) => ({
+            ...placeholder,
+            paper: transformRect(placeholder.paper, transform),
+            frame: transformRect(placeholder.frame, transform),
+          })),
+        }
+      : {}),
+    ...(result.photoPlaceholderSets
+      ? {
+          photoPlaceholderSets: result.photoPlaceholderSets.map((set) =>
+            set.map((placeholder) => ({
+              ...placeholder,
+              paper: transformRect(placeholder.paper, transform),
+              frame: transformRect(placeholder.frame, transform),
+            })),
+          ),
         }
       : {}),
   } as T;

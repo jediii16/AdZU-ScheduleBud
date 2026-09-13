@@ -160,6 +160,45 @@ const rawThemes: ThemeDefinition[] = [
     },
     assets: {},
   },
+  {
+    id: "wmsu-crimson",
+    name: "WMSU Crimson",
+    description: "Crimson and white with a strong collegiate rhythm.",
+    fontId: "inter",
+    headingFontId: "league-spartan",
+    previewColors: {
+      background: "#FFF8F7",
+      foreground: "#4C0D1E",
+      accent: "#A61937",
+    },
+    assets: {},
+  },
+  {
+    id: "uz-moss",
+    name: "UZ Moss",
+    description: "Moss green and ivory with a calm academic character.",
+    fontId: "inter",
+    headingFontId: "playfair-display",
+    previewColors: {
+      background: "#F7F5E9",
+      foreground: "#263D2A",
+      accent: "#596B43",
+    },
+    assets: {},
+  },
+  {
+    id: "zppsu-maroon-gold",
+    name: "ZPPSU Maroon & Gold",
+    description: "Maroon and gold with a practical, structured feel.",
+    fontId: "dm-sans",
+    headingFontId: "outfit",
+    previewColors: {
+      background: "#FFF9F0",
+      foreground: "#541B25",
+      accent: "#B58520",
+    },
+    assets: {},
+  },
 ];
 
 export const themeRegistry = themeDefinitionSchema.array().parse(rawThemes);

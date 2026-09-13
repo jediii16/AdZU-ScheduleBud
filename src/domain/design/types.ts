@@ -78,6 +78,9 @@ export const builtInThemeIdSchema = z.enum([
   "matcha-study",
   "girlfriends-choice",
   "pink-diary",
+  "wmsu-crimson",
+  "uz-moss",
+  "zppsu-maroon-gold",
 ]);
 export type BuiltInThemeId = z.infer<typeof builtInThemeIdSchema>;
 

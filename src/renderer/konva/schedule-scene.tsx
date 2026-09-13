@@ -19,6 +19,14 @@ import { fontFamilyForId } from "./font-loading";
 
 export type RenderAssetImages = ReadonlyMap<string, HTMLImageElement>;
 
+function addCanvasGradientStops(
+  gradient: CanvasGradient,
+  stops: readonly (number | string)[],
+) {
+  for (let index = 0; index < stops.length; index += 2)
+    gradient.addColorStop(stops[index] as number, stops[index + 1] as string);
+}
+
 function SceneNode({
   node,
   assets,
@@ -35,6 +43,87 @@ function SceneNode({
   switch (node.kind) {
     case "rect": {
       const pattern = node.pattern;
+      if (node.conicGradient) {
+        return (
+          <Shape
+            {...common}
+            {...node.geometry}
+            sceneFunc={(context) => {
+              const { width, height, x, y } = node.geometry;
+              const gradient = node.conicGradient!;
+              const centerX = gradient.center.x - x;
+              const centerY = gradient.center.y - y;
+              const start = (gradient.angle * Math.PI) / 180;
+              const nativeContext = (
+                context as unknown as {
+                  _context: CanvasRenderingContext2D;
+                }
+              )._context;
+              context.save();
+              context.beginPath();
+              context.rect(0, 0, width, height);
+              context.clip();
+              const fill = nativeContext.createConicGradient(
+                start,
+                centerX,
+                centerY,
+              );
+              addCanvasGradientStops(fill, gradient.colorStops);
+              context.fillStyle = fill;
+              context.fillRect(0, 0, width, height);
+              const softCenter = nativeContext.createRadialGradient(
+                centerX,
+                centerY,
+                0,
+                centerX,
+                centerY,
+                gradient.softCenterRadius,
+              );
+              softCenter.addColorStop(0, gradient.softCenterColor);
+              softCenter.addColorStop(0.12, `${gradient.softCenterColor}F2`);
+              softCenter.addColorStop(1, `${gradient.softCenterColor}00`);
+              context.fillStyle = softCenter;
+              context.fillRect(0, 0, width, height);
+              context.restore();
+            }}
+          />
+        );
+      }
+      if (node.radialGradient) {
+        return (
+          <Shape
+            {...common}
+            {...node.geometry}
+            sceneFunc={(context) => {
+              const { width, height, x, y } = node.geometry;
+              const gradient = node.radialGradient!;
+              const centerX = gradient.center.x - x;
+              const centerY = gradient.center.y - y;
+              const nativeContext = (
+                context as unknown as {
+                  _context: CanvasRenderingContext2D;
+                }
+              )._context;
+              nativeContext.save();
+              nativeContext.beginPath();
+              nativeContext.rect(0, 0, width, height);
+              nativeContext.clip();
+              nativeContext.translate(centerX, centerY);
+              nativeContext.scale(gradient.radiusX, gradient.radiusY);
+              const fill = nativeContext.createRadialGradient(0, 0, 0, 0, 0, 1);
+              addCanvasGradientStops(fill, gradient.colorStops);
+              nativeContext.fillStyle = fill;
+              nativeContext.fillRect(
+                -centerX / gradient.radiusX,
+                -centerY / gradient.radiusY,
+                width / gradient.radiusX,
+                height / gradient.radiusY,
+              );
+              nativeContext.restore();
+            }}
+          />
+        );
+      }
       if (!pattern)
         return (
           <Rect
@@ -74,6 +163,9 @@ function SceneNode({
         );
       const emojiImage = node.emojiAssetId
         ? assets?.get(node.emojiAssetId)
+        : undefined;
+      const patternTextureImage = node.patternTextureAssetId
+        ? assets?.get(node.patternTextureAssetId)
         : undefined;
       return (
         <Shape
@@ -145,6 +237,41 @@ function SceneNode({
                   span * 2,
                 );
               context.restore();
+            } else if (pattern.type === "crumpled") {
+              if (patternTextureImage) {
+                const imageWidth =
+                  patternTextureImage.naturalWidth || patternTextureImage.width;
+                const imageHeight =
+                  patternTextureImage.naturalHeight ||
+                  patternTextureImage.height;
+                const coverScale =
+                  Math.max(width / imageWidth, height / imageHeight) *
+                  pattern.scale;
+                const sourceWidth = width / coverScale;
+                const sourceHeight = height / coverScale;
+                const sourceX = (imageWidth - sourceWidth) / 2;
+                const sourceY = (imageHeight - sourceHeight) / 2;
+                const nativeContext = (
+                  context as unknown as {
+                    _context: CanvasRenderingContext2D;
+                  }
+                )._context;
+                context.save();
+                context.globalAlpha = pattern.opacity;
+                nativeContext.globalCompositeOperation = "multiply";
+                context.drawImage(
+                  patternTextureImage,
+                  sourceX,
+                  sourceY,
+                  sourceWidth,
+                  sourceHeight,
+                  0,
+                  0,
+                  width,
+                  height,
+                );
+                context.restore();
+              }
             } else if (emojiImage) {
               const size = Math.max(18, pattern.size * edge);
               const step = Math.max(size * 1.1, pattern.spacing * edge);

@@ -11,6 +11,9 @@ import { ArrowRight, Copy, Ellipsis, Pencil, Trash2 } from "lucide-react";
 import heroVisual from "../../../hero.svg";
 import { BrandLockup } from "@/components/shared/brand-lockup";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { TEMPLATE_REGISTRY } from "@/domain/templates/registry";
+import { withCreationTemplate } from "./template-handoff";
+import { TemplateCardPreview } from "./template-card-preview";
 import { devicePresetById } from "@/data/devices/registry";
 import type { ScheduleProject } from "@/domain/project";
 import { cn } from "@/lib/utils";
@@ -335,7 +338,7 @@ function ProjectDashboard({ projects }: { projects: ScheduleProject[] }) {
   );
 }
 
-function TemplatesPlaceholder() {
+function TemplatesSection() {
   return (
     <section
       aria-labelledby="templates-heading"
@@ -348,7 +351,52 @@ function TemplatesPlaceholder() {
         >
           Templates
         </h2>
-        <div aria-hidden="true" className="h-12 sm:h-16" />
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary sm:text-base">
+          Start with a complete color, type, and layout direction. You can still
+          change every detail in Studio.
+        </p>
+        <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {TEMPLATE_REGISTRY.map((template) => (
+            <article
+              key={template.id}
+              className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-brand/35 hover:shadow-[0_18px_44px_-28px_rgba(20,65,110,.55)] motion-reduce:transform-none motion-reduce:transition-none"
+            >
+              <div className="h-48 border-b border-border-muted">
+                <TemplateCardPreview template={template} />
+              </div>
+              <div className="flex flex-1 flex-col p-5">
+                <div className="flex flex-wrap gap-1.5">
+                  {template.presentation.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-muted px-2 py-1 text-[11px] leading-none font-semibold text-text-secondary"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-3">
+                  <h3 className="font-heading text-xl leading-tight font-bold text-foreground">
+                    {template.name}
+                  </h3>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-text-secondary">
+                  {template.description}
+                </p>
+                <div className="mt-auto pt-5">
+                  <Link
+                    href={withCreationTemplate("/create", template.id)}
+                    className={buttonVariants({ size: "sm" })}
+                    aria-label={`Use template: ${template.name}`}
+                  >
+                    Use template{" "}
+                    <ArrowRight aria-hidden="true" className="size-4" />
+                  </Link>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -451,7 +499,7 @@ export function HomeExperience() {
       <main>
         <Hero />
         {projects.length > 0 ? <ProjectDashboard projects={projects} /> : null}
-        <TemplatesPlaceholder />
+        <TemplatesSection />
         <HowItWorks />
       </main>
       <Footer />

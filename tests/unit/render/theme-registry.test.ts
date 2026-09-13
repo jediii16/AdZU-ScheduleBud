@@ -35,6 +35,9 @@ describe("wallpaper theme registry", () => {
       "matcha-study",
       "girlfriends-choice",
       "pink-diary",
+      "wmsu-crimson",
+      "uz-moss",
+      "zppsu-maroon-gold",
     ]);
     expect(
       availableThemes

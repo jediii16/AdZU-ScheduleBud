@@ -269,17 +269,17 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   test.setTimeout(60_000);
   await createStudioSchedule(page);
   const preview = page.getByTestId("artboard-preview");
-  await expect(preview).toHaveAttribute("data-target-width", "1080");
-  await expect(preview).toHaveAttribute("data-target-height", "2400");
+  await expect(preview).toHaveAttribute("data-target-width", "1206");
+  await expect(preview).toHaveAttribute("data-target-height", "2622");
 
   await page.getByRole("button", { name: /Zoom in/i }).click();
   const phoneDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   const phone = await phoneDownload;
   expect(phone.suggestedFilename()).toBe(
-    "schedulebud-my-schedule-android-phone.png",
+    "schedulebud-my-schedule-iphone.png",
   );
-  expect(await pngDimensions(phone)).toEqual({ width: 1080, height: 2400 });
+  expect(await pngDimensions(phone)).toEqual({ width: 1206, height: 2622 });
 
   await page.getByRole("button", { name: "Device", exact: true }).click();
   const changeDevice = page.getByRole("button", { name: "Change device" });
@@ -303,7 +303,7 @@ test("Studio preserves target positions and exports exact Phone and Desktop PNGs
   await expect(preview).toHaveAttribute("data-target-height", "1080");
   await horizontal.fill("20");
   await page.getByRole("button", { name: "Change device" }).click();
-  await choosePresetFromOpenPicker(page, "Phone", /Android Phone/);
+  await choosePresetFromOpenPicker(page, "Phone", /iPhone/);
   await expect(switchOrientation).toBeVisible();
   await expect(horizontal).toHaveValue("80");
   await page.getByRole("button", { name: "Change device" }).click();
@@ -339,9 +339,9 @@ test("advanced export downloads full-size schedule/background PNGs and configure
   await page.getByRole("button", { name: "Export PNG" }).click();
   const schedule = await scheduleDownload;
   expect(schedule.suggestedFilename()).toBe(
-    "schedulebud-my-schedule-android-phone-schedule.png",
+    "schedulebud-my-schedule-iphone-schedule.png",
   );
-  expect(await pngDimensions(schedule)).toEqual({ width: 1080, height: 2400 });
+  expect(await pngDimensions(schedule)).toEqual({ width: 1206, height: 2622 });
 
   await page.getByRole("button", { name: "More download options" }).click();
   await exportDialog.getByRole("radio", { name: /Background only/ }).click();
@@ -355,11 +355,11 @@ test("advanced export downloads full-size schedule/background PNGs and configure
     .click();
   const background = await backgroundDownload;
   expect(background.suggestedFilename()).toBe(
-    "schedulebud-my-schedule-android-phone-background.png",
+    "schedulebud-my-schedule-iphone-background.png",
   );
   expect(await pngDimensions(background)).toEqual({
-    width: 1080,
-    height: 2400,
+    width: 1206,
+    height: 2622,
   });
 
   await page.getByRole("button", { name: "More download options" }).click();
@@ -383,16 +383,16 @@ test("advanced export downloads full-size schedule/background PNGs and configure
     new Uint8Array(await downloadBuffer(archiveDownload)),
   );
   expect(Object.keys(archive).sort()).toEqual([
-    "schedulebud-my-schedule-android-phone-schedule.png",
     "schedulebud-my-schedule-desktop-full-hd-schedule.png",
+    "schedulebud-my-schedule-iphone-schedule.png",
   ]);
   expect(
     pngBufferDimensions(
       Buffer.from(
-        archive["schedulebud-my-schedule-android-phone-schedule.png"]!,
+        archive["schedulebud-my-schedule-iphone-schedule.png"]!,
       ),
     ),
-  ).toEqual({ width: 1080, height: 2400 });
+  ).toEqual({ width: 1206, height: 2622 });
   expect(
     pngBufferDimensions(
       Buffer.from(
@@ -729,8 +729,8 @@ test("Studio resizes a schedule with locked and freeform dimensions", async ({
   const resizedDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await resizedDownload)).toEqual({
-    width: 1080,
-    height: 2400,
+    width: 1206,
+    height: 2622,
   });
 
   await page.getByRole("button", { name: "Reset size" }).click();
@@ -981,7 +981,7 @@ test("Match My Screen uses dimensions locally and persists a guide only when req
       ),
     );
   await expect(
-    page.getByText("1080 × 2400", { exact: true }).last(),
+    page.getByText("1206 × 2622", { exact: true }).last(),
   ).toBeVisible();
   await page.getByLabel("Use as preview guide").check();
   await page.getByRole("button", { name: "Use screenshot dimensions" }).click();
@@ -1031,7 +1031,7 @@ test("top navigation lists every preset and opens custom or matched device manag
   ).toBeVisible();
   await page.getByRole("button", { name: "Show wallpaper only" }).click();
   await expect(
-    page.getByRole("button", { name: "Preview Android lock screen" }),
+    page.getByRole("button", { name: "Preview iPhone lock screen" }),
   ).toBeVisible();
   await centerCalendar.click();
   await page.getByRole("button", { name: "Device", exact: true }).click();
@@ -1243,8 +1243,8 @@ test("Minimal layout switches, shares editor behavior, and exports exact target 
   const phoneDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await phoneDownload)).toEqual({
-    width: 1080,
-    height: 2400,
+    width: 1206,
+    height: 2622,
   });
 
   await page.getByRole("button", { name: "Device", exact: true }).click();
@@ -1302,8 +1302,8 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
   );
   const phoneTarget = await exportedPng(page);
   expect(pngBufferDimensions(phoneTarget)).toEqual({
-    width: 1080,
-    height: 2400,
+    width: 1206,
+    height: 2622,
   });
   expect(phoneTarget).toMatchSnapshot(
     "phone-minimal-clean-5-days-title-target.png",
@@ -1451,8 +1451,8 @@ test("Minimal visual baselines cover dense, sparse, long, and target-specific co
   );
   const longPhoneTarget = await exportedPng(page);
   expect(pngBufferDimensions(longPhoneTarget)).toEqual({
-    width: 1080,
-    height: 2400,
+    width: 1206,
+    height: 2622,
   });
   expect(longPhoneTarget).toMatchSnapshot(
     "phone-minimal-clean-long-content-target.png",
@@ -1678,8 +1678,8 @@ test("Grid shares Studio controls, history, guides, safe areas, and exact export
   const phoneDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export|Download again/i }).click();
   expect(await pngDimensions(await phoneDownload)).toEqual({
-    width: 1080,
-    height: 2400,
+    width: 1206,
+    height: 2622,
   });
 
   await page.getByRole("button", { name: "Device", exact: true }).click();
@@ -1902,8 +1902,8 @@ test("Grid visual baselines cover target families, temporal range, and overlaps"
   });
   const phoneTarget = await exportedPng(page);
   expect(pngBufferDimensions(phoneTarget)).toEqual({
-    width: 1080,
-    height: 2400,
+    width: 1206,
+    height: 2622,
   });
   expect(phoneTarget).toMatchSnapshot(
     "phone-grid-clean-5-days-title-target.png",

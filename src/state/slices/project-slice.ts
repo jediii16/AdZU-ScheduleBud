@@ -1,3 +1,5 @@
+import { applyTemplateToProject } from "@/domain/templates/apply-template";
+import { getTemplateById } from "@/domain/templates/registry";
 import {
   createBlankProject,
   scheduleProjectSchema,
@@ -227,6 +229,17 @@ export function createProjectSlice(context: StoreContext): ProjectSlice {
       });
       void context.dependencies.applicationMetadata.writeActiveProjectId(
         projectId,
+      );
+    },
+    applyTemplate(templateId) {
+      const template = getTemplateById(templateId);
+      if (!template) return;
+      context.commit(`Apply ${template.name}`, (project) =>
+        applyTemplateToProject(
+          project,
+          template,
+          context.dependencies.idFactory!,
+        ),
       );
     },
     resetProject() {

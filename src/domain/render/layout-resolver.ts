@@ -1,3 +1,4 @@
+import { balancedPositionFor } from "@/data/devices/studio-targets";
 import { layoutById } from "@/data/layouts/registry";
 import type { LayoutId } from "@/domain/design/types";
 import type { DeviceVariant } from "@/domain/device/types";
@@ -20,6 +21,7 @@ import { applyScheduleBudWatermark } from "./watermark";
 import {
   applyScheduleSize,
   fitScheduleIntoPhoneFrame,
+  fitScheduleIntoSquareCanvas,
 } from "./schedule-resize";
 
 export function resolveProjectLayout(
@@ -66,8 +68,19 @@ export function buildScheduleRenderModel(
       ),
       resolvedStyle: style.tokens,
     };
-    const framed =
-      layout === "photo" ? styled : fitScheduleIntoPhoneFrame(styled, variant);
+    const phoneFramed =
+      layout === "photo"
+        ? styled
+        : fitScheduleIntoPhoneFrame(
+            styled,
+            variant,
+            balancedPositionFor(
+              variant.category,
+              layout,
+              variant.orientation,
+            ).y,
+          );
+    const framed = fitScheduleIntoSquareCanvas(phoneFramed, variant);
     return applyStickers(
       applyScheduleSize(
         applyScheduleBudWatermark(framed, theme, variant),

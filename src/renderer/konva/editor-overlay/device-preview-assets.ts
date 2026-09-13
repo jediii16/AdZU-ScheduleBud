@@ -56,16 +56,19 @@ export function deviceArtworkToneForModel(
       node.kind === "rect" && node.id.startsWith("wallpaper-background"),
   );
   if (!background || background.kind !== "rect") return "light";
+  const gradientColors = (stops: readonly (number | string)[]) =>
+    stops.filter((value): value is string => typeof value === "string");
   const colors = background.fill
     ? [background.fill]
     : background.pattern
       ? [background.pattern.backgroundColor]
       : background.linearGradient
-        ? [
-            background.linearGradient.colorStops[1],
-            background.linearGradient.colorStops[3],
-          ]
-        : [];
+        ? gradientColors(background.linearGradient.colorStops)
+        : background.radialGradient
+          ? gradientColors(background.radialGradient.colorStops)
+          : background.conicGradient
+            ? gradientColors(background.conicGradient.colorStops)
+            : [];
   const luminances = colors
     .map(colorLuminance)
     .filter((value): value is number => value !== null);

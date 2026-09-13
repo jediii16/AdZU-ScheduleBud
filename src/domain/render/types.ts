@@ -1,6 +1,7 @@
 import type { FontId } from "@/lib/font-registry";
 import type { ResolvedLayoutStyleTokens } from "./layout-style";
 import type { BackgroundPattern } from "@/domain/project";
+import type { GradientColorStops } from "./gradient";
 
 export const EXPORT_LAYER_IDS = [
   "background",
@@ -28,9 +29,24 @@ export type RectRenderNode = BaseRenderNode & {
   linearGradient?: {
     start: Point;
     end: Point;
-    colorStops: readonly [number, string, number, string];
+    colorStops: GradientColorStops;
+  };
+  radialGradient?: {
+    center: Point;
+    radiusX: number;
+    radiusY: number;
+    colorStops: GradientColorStops;
+  };
+  conicGradient?: {
+    center: Point;
+    angle: number;
+    colorStops: GradientColorStops;
+    softCenterColor: string;
+    softCenterRadius: number;
   };
   pattern?: BackgroundPattern;
+  patternTextureAssetId?: string;
+  patternTextureSource?: string;
   emojiAssetId?: string;
   emojiSource?: string;
   stroke?: string;

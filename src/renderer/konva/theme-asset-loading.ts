@@ -18,6 +18,12 @@ export function renderAssetSourceEntries(
         entries.set(node.assetId, node.source);
       if (node.kind === "rect" && node.emojiAssetId && node.emojiSource)
         entries.set(node.emojiAssetId, node.emojiSource);
+      if (
+        node.kind === "rect" &&
+        node.patternTextureAssetId &&
+        node.patternTextureSource
+      )
+        entries.set(node.patternTextureAssetId, node.patternTextureSource);
     }
   }
   return [...entries.entries()];

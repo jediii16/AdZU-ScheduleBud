@@ -60,6 +60,33 @@ describe("ScheduleProject", () => {
       });
   });
 
+  it("loads existing linear gradients with the new type and center defaults", () => {
+    const project = createBlankProject({ id: "project-1", now: NOW });
+    const result = migrateProject({
+      ...project,
+      design: {
+        ...project.design,
+        background: {
+          mode: "gradient",
+          gradient: {
+            color1: "#112233",
+            color2: "#AABBCC",
+            direction: 45,
+          },
+        },
+      },
+    });
+    expect(result.status).toBe("success");
+    if (result.status === "success")
+      expect(result.project.design.background.gradient).toEqual({
+        type: "linear",
+        color1: "#112233",
+        color2: "#AABBCC",
+        direction: 45,
+        center: { x: 0.5, y: 0.5 },
+      });
+  });
+
   it("loads missing Subject Colors as Automatic and accepts legacy per-subject state", () => {
     const project = createBlankProject({ id: "project-1", now: NOW });
     const missing = structuredClone(project) as unknown as {

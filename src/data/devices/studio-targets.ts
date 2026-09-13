@@ -3,7 +3,7 @@ import type { DeviceVariant, Orientation } from "@/domain/device/types";
 import type { LayoutId } from "@/domain/design/types";
 
 export const INITIAL_STUDIO_PRESET_IDS = [
-  DEVICE_PRESET_IDS.android,
+  DEVICE_PRESET_IDS.iphone,
   "desktop-1920x1080",
 ] as const;
 export type StudioTargetId = "phone" | "desktop";

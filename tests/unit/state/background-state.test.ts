@@ -32,9 +32,12 @@ describe("background state", () => {
     const synced = selectActiveProject(store.getState())!.design.background;
     expect(synced.solid?.color).toBe("#F5F3E9");
     expect(synced.gradient).toEqual({
+      type: "linear",
       color1: "#F5F3E9",
       color2: "#445566",
+      color3: "#145F9B",
       direction: 90,
+      center: { x: 0.5, y: 0.5 },
     });
     expect(synced.pattern).toMatchObject({
       backgroundColor: "#F5F3E9",
@@ -87,9 +90,11 @@ describe("background state", () => {
     store.getState().setBackground({
       ...gradient,
       gradient: {
+        type: "linear",
         color1: "#112233",
         color2: "#445566",
         direction: 90,
+        center: { x: 0.5, y: 0.5 },
       },
     });
     store.getState().setBackgroundMode("pattern");
@@ -97,9 +102,11 @@ describe("background state", () => {
     const after = selectActiveProject(store.getState())!;
 
     expect(after.design.background.gradient).toEqual({
+      type: "linear",
       color1: "#112233",
       color2: "#445566",
       direction: 90,
+      center: { x: 0.5, y: 0.5 },
     });
     expect(after.design.themeId).toBe("matcha-study");
     expect(after.design.typography).toEqual(before.design.typography);

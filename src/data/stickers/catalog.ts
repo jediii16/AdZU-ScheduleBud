@@ -147,8 +147,57 @@ export const emojiStickerCatalog: readonly StickerDefinition[] =
     defaultWidthRatio: 0.16,
   }));
 
+export const templateStickerCatalog: readonly StickerDefinition[] = [
+  {
+    id: "template.study-buddy.capybara-reading",
+    label: "Capybara Reading",
+    category: "Study Buddy",
+    src: "/templates/study-buddy-phone/assets/capybara-reading.svg",
+    crop: { x: 0, y: 0, width: 100, height: 100 },
+    intrinsic: { width: 100, height: 100 },
+    defaultWidthRatio: 0.22,
+  },
+  {
+    id: "template.study-buddy.books-stack",
+    label: "Books Stack",
+    category: "Study Buddy",
+    src: "/templates/study-buddy-phone/assets/books-stack.svg",
+    crop: { x: 0, y: 0, width: 100, height: 100 },
+    intrinsic: { width: 100, height: 100 },
+    defaultWidthRatio: 0.22,
+  },
+  {
+    id: "template.study-buddy.mug",
+    label: "Mug",
+    category: "Study Buddy",
+    src: "/templates/study-buddy-phone/assets/mug.svg",
+    crop: { x: 0, y: 0, width: 100, height: 100 },
+    intrinsic: { width: 100, height: 100 },
+    defaultWidthRatio: 0.22,
+  },
+  {
+    id: "template.study-buddy.plant",
+    label: "Plant",
+    category: "Study Buddy",
+    src: "/templates/study-buddy-phone/assets/plant.svg",
+    crop: { x: 0, y: 0, width: 100, height: 100 },
+    intrinsic: { width: 100, height: 100 },
+    defaultWidthRatio: 0.22,
+  },
+  {
+    id: "template.study-buddy.sparkle",
+    label: "Sparkle",
+    category: "Study Buddy",
+    src: "/templates/study-buddy-phone/assets/sparkle.svg",
+    crop: { x: 0, y: 0, width: 100, height: 100 },
+    intrinsic: { width: 100, height: 100 },
+    defaultWidthRatio: 0.22,
+  },
+];
+
 export const stickerCatalog: readonly StickerDefinition[] = [
   ...capybaraStickerCatalog,
+  ...templateStickerCatalog,
   ...emojiStickerCatalog,
 ];
 

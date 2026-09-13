@@ -1,5 +1,9 @@
 "use client";
 
+import { TemplateContext } from "@/features/creation/template-context";
+
+import { withCreationTemplate } from "./template-handoff";
+
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useState } from "react";
@@ -15,7 +19,9 @@ import { useScheduleBudStore, useScheduleBudStoreApi } from "@/state/react";
 import { ProgramCombobox } from "./program-combobox";
 import { ensureCreationProject } from "./project-policy";
 
-export function CurriculumCreation() {
+export function CurriculumCreation({
+  templateId,
+}: { templateId?: string | undefined } = {}) {
   const store = useScheduleBudStoreApi();
   const replaceSchedule = useScheduleBudStore((state) => state.replaceSchedule);
   const activeId = useScheduleBudStore((state) => state.activeProjectId);
@@ -88,7 +94,7 @@ export function CurriculumCreation() {
     <PageShell>
       <PageReveal>
         <Link
-          href="/create"
+          href={withCreationTemplate("/create", templateId)}
           className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-brand"
         >
           <ArrowLeft aria-hidden="true" className="size-4" /> Creation methods
@@ -103,6 +109,7 @@ export function CurriculumCreation() {
             own days, times, section, room, and professor.
           </p>
         </header>
+        <TemplateContext templateId={templateId} />
         {!committed ? (
           <div className="max-w-3xl space-y-7">
             <section aria-labelledby="program-heading">
@@ -230,7 +237,10 @@ export function CurriculumCreation() {
                 </p>
               </div>
               {activeSubjects.length > 0 ? (
-                <Link href="/review" className={buttonVariants({ size: "lg" })}>
+                <Link
+                  href={withCreationTemplate("/review", templateId)}
+                  className={buttonVariants({ size: "lg" })}
+                >
                   Review schedule <ArrowRight aria-hidden="true" />
                 </Link>
               ) : null}

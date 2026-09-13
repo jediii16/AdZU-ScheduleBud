@@ -1,5 +1,9 @@
 "use client";
 
+import { TemplateContext } from "@/features/creation/template-context";
+
+import { withCreationTemplate } from "./template-handoff";
+
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
@@ -27,8 +31,10 @@ const newMeeting = (): Meeting => ({
 
 export function ManualCreation({
   editingExisting = false,
+  templateId,
 }: {
   editingExisting?: boolean;
+  templateId?: string | undefined;
 }) {
   const store = useScheduleBudStoreApi();
   const addSubject = useScheduleBudStore((state) => state.addSubject);
@@ -106,7 +112,10 @@ export function ManualCreation({
     <PageShell>
       <PageReveal>
         <Link
-          href={editingExisting ? "/review" : "/create"}
+          href={withCreationTemplate(
+            editingExisting ? "/review" : "/create",
+            templateId,
+          )}
           className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-brand"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />{" "}
@@ -122,6 +131,7 @@ export function ManualCreation({
             you can add more than one meeting.
           </p>
         </header>
+        <TemplateContext templateId={templateId} />
         <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]">
           <form
             noValidate
@@ -212,7 +222,10 @@ export function ManualCreation({
                 </p>
               </div>
               {subjects.length > 0 ? (
-                <Link href="/review" className={buttonVariants({ size: "lg" })}>
+                <Link
+                  href={withCreationTemplate("/review", templateId)}
+                  className={buttonVariants({ size: "lg" })}
+                >
                   Review schedule <ArrowRight aria-hidden="true" />
                 </Link>
               ) : null}

@@ -96,6 +96,7 @@ export interface ProjectSlice {
   deleteProject(projectId?: string): Promise<void>;
   setActiveProject(projectId: string | null): void;
   resetProject(): void;
+  applyTemplate(templateId: string): void;
 }
 
 export interface ScheduleSlice {

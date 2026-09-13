@@ -1,12 +1,5 @@
-import type {
-  BuiltInThemeId,
-  LayoutId,
-  ThemeId,
-} from "@/domain/design/types";
-import type {
-  CustomPalette,
-  CustomPaletteColorRole,
-} from "@/domain/project";
+import type { BuiltInThemeId, LayoutId, ThemeId } from "@/domain/design/types";
+import type { CustomPalette, CustomPaletteColorRole } from "@/domain/project";
 import { AAO_YELLOW_THEME } from "./aao-yellow";
 import { ADZU_CLASSIC_THEME } from "./adzu-classic";
 import { CLEAN_SLATE_RENDER_THEME } from "./clean-slate";
@@ -19,6 +12,9 @@ import { MATCHA_STUDY_THEME } from "./matcha-study";
 import { NAO_WHITE_THEME } from "./nao-white";
 import { PINK_DIARY_THEME } from "./pink-diary";
 import { SITEAO_ORANGE_THEME } from "./siteao-orange";
+import { UZ_MOSS_THEME } from "./uz-moss";
+import { WMSU_CRIMSON_THEME } from "./wmsu-crimson";
+import { ZPPSU_MAROON_GOLD_THEME } from "./zppsu-maroon-gold";
 import type { WallpaperThemeDefinition, WallpaperThemeTokens } from "./types";
 
 const WALLPAPER_THEMES: Record<BuiltInThemeId, WallpaperThemeDefinition> = {
@@ -34,6 +30,9 @@ const WALLPAPER_THEMES: Record<BuiltInThemeId, WallpaperThemeDefinition> = {
   "matcha-study": MATCHA_STUDY_THEME,
   "girlfriends-choice": GIRLFRIENDS_CHOICE_THEME,
   "pink-diary": PINK_DIARY_THEME,
+  "wmsu-crimson": WMSU_CRIMSON_THEME,
+  "uz-moss": UZ_MOSS_THEME,
+  "zppsu-maroon-gold": ZPPSU_MAROON_GOLD_THEME,
 };
 
 export function resolveWallpaperThemeDefinition(

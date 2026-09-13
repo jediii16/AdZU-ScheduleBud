@@ -350,6 +350,8 @@ function resolveScheduleFit(
     { spacing: 0.62, type: 0.88 },
     { spacing: 0.52, type: 0.82 },
     { spacing: 0.44, type: 0.76 },
+    { spacing: 0.36, type: 0.68 },
+    { spacing: 0.3, type: 0.6 },
   ];
   let result: ScheduleFit | null = null;
   for (const candidate of candidates) {

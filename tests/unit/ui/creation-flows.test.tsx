@@ -53,7 +53,7 @@ function fixtureFile(name: string): File {
 beforeEach(() => push.mockClear());
 
 describe("landing and creation entry", () => {
-  it("shows the primary creation CTA and all creation routes", () => {
+  it("shows the primary creation CTA and all creation routes", async () => {
     renderWithStore(<HomeExperience />);
     expect(
       screen.getByRole("heading", {
@@ -79,7 +79,9 @@ describe("landing and creation entry", () => {
     expect(
       screen.queryByRole("heading", { name: "Your schedules" }),
     ).toBeNull();
-    const { container } = render(<CreatePage />);
+    const { container } = render(
+      await CreatePage({ searchParams: Promise.resolve({}) }),
+    );
     expect(
       within(container).getByRole("link", {
         name: "ScheduleBud for AdZU students",

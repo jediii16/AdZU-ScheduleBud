@@ -1,3 +1,9 @@
+import { TemplateContext } from "@/features/creation/template-context";
+import {
+  resolveCreationTemplate,
+  withCreationTemplate,
+  type TemplateSearchParams,
+} from "@/features/creation/template-handoff";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -35,7 +41,12 @@ const methods = [
   },
 ] as const;
 
-export default function CreatePage() {
+export default async function CreatePage({
+  searchParams,
+}: {
+  searchParams: Promise<TemplateSearchParams>;
+}) {
+  const templateId = resolveCreationTemplate((await searchParams).template);
   return (
     <PageShell width="narrow">
       <PageReveal>
@@ -57,12 +68,13 @@ export default function CreatePage() {
             class before designing.
           </p>
         </header>
+        <TemplateContext templateId={templateId} />
         <div className="divide-y divide-border border-y border-border">
           {methods.map(
             ({ href, icon: Icon, title, description, ...method }) => (
               <Link
                 key={href}
-                href={href}
+                href={withCreationTemplate(href, templateId)}
                 className="group grid min-h-24 grid-cols-[2.75rem_1fr_auto] items-center gap-4 px-1 py-5 hover:bg-card sm:px-4"
               >
                 <span className="flex size-10 items-center justify-center rounded-md bg-accent text-brand">

@@ -4,6 +4,7 @@ import {
   deviceCategoryRegistry,
   devicePresetRegistry,
 } from "@/data/devices/registry";
+import { STUDIO_TARGETS } from "@/data/devices/studio-targets";
 import { resolveTargetComposition } from "@/domain/device/composition";
 import {
   deviceDimensionsSchema,
@@ -132,6 +133,14 @@ describe("device category and screen matching", () => {
       "Desktop Full HD",
       "Square 1080",
     ]);
+  });
+
+  it("starts new Studio projects with the iPhone target", () => {
+    expect(STUDIO_TARGETS[0]).toMatchObject({
+      id: "phone",
+      presetId: "iphone-1206x2622",
+      dimensions: { width: 1206, height: 2622 },
+    });
   });
 
   it("enforces edge and sixteen-megapixel canvas safety", () => {

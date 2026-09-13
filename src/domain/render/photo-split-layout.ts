@@ -361,6 +361,10 @@ export function buildPhotoSplitRenderModel(
     { spacing: portrait ? 0.9 : 0.94, type: 1 },
     { spacing: portrait ? 0.8 : 0.84, type: 0.97 },
     { spacing: 0.72, type: 0.92 },
+    { spacing: 0.6, type: 0.85 },
+    { spacing: 0.48, type: 0.77 },
+    { spacing: 0.38, type: 0.68 },
+    { spacing: 0.3, type: 0.6 },
   ];
   let fit: ScheduleFit | null = null;
   let photoHeight = 1;

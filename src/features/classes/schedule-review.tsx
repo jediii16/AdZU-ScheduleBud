@@ -1,9 +1,13 @@
 "use client";
 
+import { TemplateContext } from "@/features/creation/template-context";
+
+import { withCreationTemplate } from "@/features/creation/template-handoff";
+
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Clock3 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { PageShell } from "@/components/shell/page-shell";
 import { PageReveal } from "@/components/shared/page-reveal";
@@ -35,7 +39,11 @@ function displayTime(time: string): string {
   return `${hour}:${String(minute).padStart(2, "0")} ${hourValue! < 12 ? "AM" : "PM"}`;
 }
 
-export function ScheduleReview() {
+export function ScheduleReview({
+  templateId,
+}: { templateId?: string | undefined } = {}) {
+  const applyTemplate = useScheduleBudStore((state) => state.applyTemplate);
+  const applied = useRef(false);
   const ready = useScheduleBudReady();
   const router = useRouter();
   const activeId = useScheduleBudStore((state) => state.activeProjectId);
@@ -92,7 +100,7 @@ export function ScheduleReview() {
             Add your classes first, then return here to check them.
           </p>
           <Link
-            href="/create"
+            href={withCreationTemplate("/create", templateId)}
             className={`${buttonVariants({ size: "lg" })} mt-7`}
           >
             Create a schedule
@@ -112,14 +120,20 @@ export function ScheduleReview() {
   const attemptDesign = () => {
     const result = attemptWarningGate(issueCount > 0, gate);
     setGate(result.state);
-    if (result.allowed) router.push("/studio");
+    if (result.allowed && !applied.current) {
+      applied.current = true;
+      if (templateId) applyTemplate(templateId);
+      // Consume the creation URL so browser Back cannot reapply the recipe.
+      if (templateId) router.replace("/studio");
+      else router.push("/studio");
+    }
   };
 
   return (
     <PageShell width="wide">
       <PageReveal>
         <Link
-          href="/create/manual?edit=1"
+          href={withCreationTemplate("/create/manual?edit=1", templateId)}
           className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-brand"
         >
           <ArrowLeft aria-hidden="true" className="size-4" /> Edit classes
@@ -136,6 +150,7 @@ export function ScheduleReview() {
             {issueCount} {issueCount === 1 ? "issue" : "issues"}
           </p>
         </header>
+        <TemplateContext templateId={templateId} />
         {issueCount > 0 ? (
           <section aria-labelledby="issues-heading" className="mb-10 space-y-4">
             <h2 id="issues-heading" className="sb-section-title">
@@ -152,7 +167,10 @@ export function ScheduleReview() {
                   below.
                 </p>
                 <Link
-                  href={`/create/manual?edit=1#subject-${subject.id}`}
+                  href={withCreationTemplate(
+                    `/create/manual?edit=1#subject-${subject.id}`,
+                    templateId,
+                  )}
                   className="mt-2 inline-flex items-center gap-1 font-semibold text-brand hover:text-brand-hover"
                 >
                   Fix class{" "}
@@ -256,7 +274,10 @@ export function ScheduleReview() {
               {issueCount > 0 ? (
                 <>
                   <Link
-                    href="/create/manual?edit=1"
+                    href={withCreationTemplate(
+                      "/create/manual?edit=1",
+                      templateId,
+                    )}
                     className={buttonVariants({
                       size: "lg",
                     })}

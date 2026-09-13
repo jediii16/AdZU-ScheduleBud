@@ -219,9 +219,11 @@ describe("layout design inspector", () => {
       background: {
         mode: "gradient" as const,
         gradient: {
+          type: "linear" as const,
           color1: "#112233",
           color2: "#AABBCC",
           direction: 45 as const,
+          center: { x: 0.5, y: 0.5 },
         },
       },
       subjectColors: {
@@ -1280,9 +1282,11 @@ describe("layout design inspector", () => {
           background: {
             mode: "gradient",
             gradient: {
+              type: "linear",
               color1: "#112233",
               color2: "#AABBCC",
               direction: 0,
+              center: { x: 0.5, y: 0.5 },
             },
           },
         }}
@@ -1292,6 +1296,31 @@ describe("layout design inspector", () => {
       screen.getByRole("radiogroup", { name: "Gradient direction" }),
     ).toBeVisible();
     expect(screen.getByText("To right")).toBeVisible();
+    expect(screen.getByRole("radio", { name: "Linear" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "Apply Aurora gradient" }),
+    ).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Apply Sea Glass gradient" }),
+    );
+    expect(onBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        gradient: expect.objectContaining({
+          type: "radial",
+          color1: "#E1FFF5",
+          color2: "#4399AE",
+        }),
+      }),
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Radial" }));
+    expect(onBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        gradient: expect.objectContaining({ type: "radial" }),
+      }),
+    );
     const leftToRight = screen.getByRole("radio", {
       name: "Left to right",
     });
@@ -1308,12 +1337,69 @@ describe("layout design inspector", () => {
     expect(onBackground).toHaveBeenLastCalledWith(
       expect.objectContaining({
         gradient: {
+          type: "linear",
           color1: "#F7F8FA",
           color2: "#FFFFFF",
+          color3: "#145F9B",
           direction: 135,
+          center: { x: 0.5, y: 0.5 },
         },
       }),
     );
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        design={{
+          ...project.design,
+          background: {
+            mode: "gradient",
+            gradient: {
+              type: "radial",
+              color1: "#112233",
+              color2: "#AABBCC",
+              direction: 0,
+              center: { x: 0.5, y: 0.5 },
+            },
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("radiogroup", { name: "Gradient focal point" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("radiogroup", { name: "Gradient direction" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "Bottom right" }));
+    expect(onBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        gradient: expect.objectContaining({ center: { x: 0.8, y: 0.8 } }),
+      }),
+    );
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        design={{
+          ...project.design,
+          background: {
+            mode: "gradient",
+            gradient: {
+              type: "conic",
+              color1: "#112233",
+              color2: "#AABBCC",
+              direction: 0,
+              center: { x: 0.5, y: 0.5 },
+            },
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("radiogroup", { name: "Gradient rotation" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Color 3 HEX")).toBeVisible();
 
     rerender(
       <DesignStudioPanel
@@ -1345,8 +1431,42 @@ describe("layout design inspector", () => {
       screen.getByRole("radiogroup", { name: "Emoji layout" }),
     ).toBeVisible();
     expect(screen.queryByText("Dot color")).toBeNull();
-    for (const type of ["dots", "grid", "checker", "diagonal", "emoji"])
+    for (const type of [
+      "dots",
+      "grid",
+      "checker",
+      "diagonal",
+      "crumpled",
+      "emoji",
+    ])
       expect(screen.getByTestId(`pattern-preview-${type}`)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Crumpled" }));
+    expect(onBackground).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        pattern: expect.objectContaining({ type: "crumpled" }),
+      }),
+    );
+
+    rerender(
+      <DesignStudioPanel
+        {...common}
+        design={{
+          ...project.design,
+          background: {
+            mode: "pattern",
+            pattern: {
+              type: "crumpled",
+              backgroundColor: "#F8F4EA",
+              scale: 1,
+              opacity: 0.72,
+            },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByLabelText("Texture scale")).toBeVisible();
+    expect(screen.queryByLabelText("Crease color HEX")).toBeNull();
 
     rerender(
       <DesignStudioPanel
