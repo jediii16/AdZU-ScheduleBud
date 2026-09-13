@@ -1,6 +1,11 @@
 import type { CSSProperties } from "react";
 
 import { resolveWallpaperTheme } from "@/domain/render/themes/registry";
+import {
+  mixGradientColors,
+  resolveConicThirdColor,
+  resolveGradientColorStops,
+} from "@/domain/render/gradient";
 import type { TemplateDefinition } from "@/domain/templates/schema";
 import { resolveTypographyPreset } from "@/data/typography/registry";
 import { fontRegistry } from "@/lib/font-registry";
@@ -39,11 +44,23 @@ function previewBackground(
   if (background.mode === "gradient" && background.gradient) {
     const gradient = background.gradient;
     const center = `${gradient.center.x * 100}% ${gradient.center.y * 100}%`;
+    const stops = resolveGradientColorStops(gradient);
+    const cssStops = Array.from({ length: stops.length / 2 }, (_, index) => {
+      const offset = stops[index * 2] as number;
+      const color = stops[index * 2 + 1] as string;
+      return `${color} ${Math.round(offset * 1000) / 10}%`;
+    }).join(", ");
     if (gradient.type === "radial")
-      return `radial-gradient(circle at ${center}, ${gradient.color1}, ${gradient.color2})`;
-    if (gradient.type === "conic")
-      return `conic-gradient(from ${gradient.direction}deg at ${center}, ${gradient.color1}, ${gradient.color2}, ${gradient.color1})`;
-    return `linear-gradient(${gradient.direction + 90}deg, ${gradient.color1}, ${gradient.color2})`;
+      return `radial-gradient(ellipse at ${center}, ${cssStops})`;
+    if (gradient.type === "conic") {
+      const softCenter = mixGradientColors(
+        mixGradientColors(gradient.color1, gradient.color2, 0.5),
+        resolveConicThirdColor(gradient),
+        0.5,
+      );
+      return `radial-gradient(circle at ${center}, ${softCenter} 0 3%, ${softCenter}F2 6%, ${softCenter}00 24%), conic-gradient(from ${gradient.direction}deg at ${center}, ${cssStops})`;
+    }
+    return `linear-gradient(${gradient.direction + 90}deg, ${cssStops})`;
   }
   if (background.mode === "pattern" && background.pattern) {
     const pattern = background.pattern;

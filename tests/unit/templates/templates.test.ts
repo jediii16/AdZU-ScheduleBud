@@ -176,10 +176,10 @@ describe("built-in templates", () => {
     expect(remove).not.toHaveBeenCalled();
   });
 
-  it("ships twelve distinct beta templates for phone wallpapers", () => {
-    expect(TEMPLATE_REGISTRY).toHaveLength(12);
+  it("ships seventeen distinct beta templates for phone wallpapers", () => {
+    expect(TEMPLATE_REGISTRY).toHaveLength(17);
     expect(new Set(TEMPLATE_REGISTRY.map((template) => template.id)).size).toBe(
-      12,
+      17,
     );
     expect(
       TEMPLATE_REGISTRY.every(
@@ -190,6 +190,15 @@ describe("built-in templates", () => {
       ),
     ).toBe(true);
     expect(getTemplatesByDevice("phone")).toEqual(TEMPLATE_REGISTRY);
+    expect(
+      getTemplateById("tidal-mint")?.recipe.design.background,
+    ).toMatchObject({ mode: "gradient", gradient: { type: "radial" } });
+    expect(
+      getTemplateById("prism-shift")?.recipe.design.background,
+    ).toMatchObject({ mode: "gradient", gradient: { type: "conic" } });
+    expect(
+      getTemplateById("folded-ivory")?.recipe.design.background,
+    ).toMatchObject({ mode: "pattern", pattern: { type: "crumpled" } });
   });
 
   it("carries only recognized IDs through query strings and anchors", () => {

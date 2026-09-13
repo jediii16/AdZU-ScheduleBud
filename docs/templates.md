@@ -1,6 +1,6 @@
 # Beta template collection
 
-The home page presents twelve working phone-wallpaper recipes. The earlier Study Buddy and Night Shift cards are no longer part of the template registry.
+The home page presents seventeen working phone-wallpaper recipes. The earlier Study Buddy and Night Shift cards are no longer part of the template registry.
 
 ## Included templates
 
@@ -16,6 +16,11 @@ The home page presents twelve working phone-wallpaper recipes. The earlier Study
 - **Lilac Bloom** — layered lavender tones; Quicksand + DM Sans.
 - **Golden Hour** — warm sunflower graphics; League Spartan + Inter.
 - **Ink Grid** — monochrome structure with cobalt accents; Outfit + DM Sans.
+- **Tidal Mint** — an elliptical aqua glow with crisp grid structure; Outfit + DM Sans.
+- **Peach Halo** — a warm peach-and-rose radial treatment; Playfair Display + Inter.
+- **Prism Shift** — a bright mint, sky, and lilac conic blend; League Spartan + Inter.
+- **Velvet Orbit** — a dark plum, cobalt, and berry conic atmosphere; Poppins + Inter.
+- **Folded Ivory** — tactile warm paper with terracotta details; Playfair Display + Inter.
 
 The school-related templates are color interpretations, not official university branding. They use no institutional seals or protected marks.
 
@@ -29,4 +34,4 @@ Every beta recipe uses automatic subject colors, no bundled stickers, an intenti
 
 ## Design basis
 
-The collection uses a distinctive display face for titles and a quieter sans serif for schedule details. Palettes favor one dominant family, one controlled accent, and readable foreground/background contrast. School-inspired directions are based on public institutional color references for AdZU blue and white, WMSU crimson and white, Universidad de Zamboanga moss green and white, and ZPPSU maroon and gold.
+The collection uses a distinctive display face for titles and a quieter sans serif for schedule details. Palettes favor one dominant family, one controlled accent, and readable foreground/background contrast. Gradient recipes use perceptual multi-stop blending, aspect-ratio-aware radial fields, and softened three-color conic centers. School-inspired directions are based on public institutional color references for AdZU blue and white, WMSU crimson and white, Universidad de Zamboanga moss green and white, and ZPPSU maroon and gold.

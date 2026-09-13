@@ -48,7 +48,7 @@ describe("template creation handoff", () => {
         }),
       ).toHaveAttribute("href", `/create?template=${template.id}`);
     }
-    expect(within(section).getAllByRole("link")).toHaveLength(12);
+    expect(within(section).getAllByRole("link")).toHaveLength(17);
     expect(store.getState().activeProjectId).toBeNull();
   });
 
